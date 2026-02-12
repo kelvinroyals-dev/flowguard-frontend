@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="en" class="light">
-    <!-- API Client -->
-    <script src="js/api.js"></script>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flow Guard Operations Center - Internal Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Socket.io Client Library -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <!-- API Client -->
+    <script src="js/api.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         * { 
@@ -1462,6 +1464,86 @@
             alert(`✅ Dispatch Confirmed!\n\nTicket: ${ticketId}\nTeam: ${teamId}\nLocation: ${location}\n\nTeam notified via SMS. Track progress in Fleet & Teams tab.`);
             document.querySelector('.fixed.inset-0').remove();
         }
+        
+        // ============================================
+        // WEBSOCKET REAL-TIME CONNECTION
+        // ============================================
+        
+        const SOCKET_URL = 'http://localhost:5000';
+        let socket = null;
+        
+        function initWebSocket() {
+            try {
+                socket = io(SOCKET_URL, {
+                    reconnection: true,
+                    reconnectionDelay: 1000,
+                    reconnectionAttempts: 5
+                });
+                
+                socket.on('connect', () => {
+                    console.log('✅ WebSocket connected to backend');
+                    
+                    // Subscribe to real-time channels
+                    socket.emit('subscribe', 'alerts');
+                    socket.emit('subscribe', 'sensors');
+                    socket.emit('subscribe', 'teams');
+                });
+                
+                // Listen for sensor updates
+                socket.on('sensor:update', (data) => {
+                    console.log('📡 Sensor update received:', data);
+                    // Update sensor on map
+                    if (window.mapSensors) {
+                        const sensor = window.mapSensors.find(s => s.id === data.sensorId);
+                        if (sensor) {
+                            sensor.level = data.waterLevel;
+                            sensor.status = data.status;
+                            initEnhancedMap(); // Re-render map with new data
+                        }
+                    }
+                });
+                
+                // Listen for new alerts
+                socket.on('alert:new', (alert) => {
+                    console.log('🚨 New alert received:', alert);
+                    // Show browser notification
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification('Flow Guard Alert', {
+                            body: `${alert.severity.toUpperCase()}: ${alert.alertType} at ${alert.location}`,
+                        });
+                    }
+                    // Add alert to Live Alerts tab (would need implementation)
+                });
+                
+                // Listen for team status updates
+                socket.on('team:status', (team) => {
+                    console.log('👥 Team update received:', team);
+                    // Update team status in Fleet & Teams tab (would need implementation)
+                });
+                
+                socket.on('disconnect', () => {
+                    console.log('❌ WebSocket disconnected from backend');
+                });
+                
+                socket.on('connect_error', (error) => {
+                    console.log('⚠️ WebSocket connection failed - Backend not running');
+                });
+                
+            } catch (error) {
+                console.log('⚠️ WebSocket initialization error:', error.message);
+            }
+        }
+        
+        // Add WebSocket initialization to existing DOMContentLoaded
+        // This runs after the existing DOMContentLoaded listener above
+        window.addEventListener('load', function() {
+            initWebSocket();
+            
+            // Request notification permission
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        });
         
     </script>
 
