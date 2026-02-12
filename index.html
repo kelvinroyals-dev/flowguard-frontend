@@ -1,9 +1,88 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta http-equiv="refresh" content="0; url=/flowguard-client-portal.html">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Guard - Drainage Management Platform</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .container {
+            text-align: center;
+            padding: 40px;
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        p {
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+        .buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 15px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.2s;
+            display: inline-block;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .btn-primary {
+            background: white;
+            color: #667eea;
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+        }
+        .status {
+            margin-top: 40px;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+    </style>
 </head>
 <body>
-    <p>Redirecting to Operations Center...</p>
+    <div class="container">
+        <h1>⚡ Flow Guard</h1>
+        <p>Real-Time Drainage Management for Lagos</p>
+        
+        <div class="buttons">
+            <a href="flowguard-operations-center.html" class="btn btn-primary">
+                🎛️ Operations Center
+            </a>
+            <a href="flowguard-client-portal.html" class="btn btn-secondary">
+                👤 Client Portal
+            </a>
+        </div>
+        
+        <div class="status">
+            <p>🟢 Frontend Status: Online</p>
+            <p>🔴 Backend Status: Not Connected</p>
+            <p><small>Backend integration coming soon</small></p>
+        </div>
+    </div>
 </body>
 </html>

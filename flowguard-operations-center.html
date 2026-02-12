@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+    <!-- API Client -->
+    <script src="js/api.js"></script>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Guard Operations Center - Internal Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { 
+            font-family: 'Inter', sans-serif; 
+        }
+        
+        body { 
+            background: #FAFBFC;
+            color: #1A1D1F;
+        }
+        
+        .dark body {
+            background: #0F1117;
+            color: #E8ECEF;
+        }
+        
+        .header-bg {
+            background: #FFFFFF;
+            border-bottom: 1px solid #E5E7EB;
+        }
+        
+        .dark .header-bg {
+            background: #1F2937;
+            border-bottom: 1px solid #374151;
+        }
+        
+        .font-space { 
+            font-family: 'Space Grotesk', sans-serif; 
+        }
+        
+        .modern-card { 
+            background: white; 
+            border-radius: 12px; 
+            border: 1px solid #E8ECEF;
+        }
+        
+        .dark .modern-card {
+            background: #1A1F2E;
+            border-color: #2A3142;
+        }
+        
+        .stat-card {
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid #E8ECEF;
+            background: white;
+        }
+        
+        .dark .stat-card {
+            background: #1A1F2E;
+            border-color: #2A3142;
+        }
+        
+        .badge { 
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px; 
+            border-radius: 6px; 
+            font-size: 11px; 
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .badge-success { background: #D1FAE5; color: #065F46; }
+        .dark .badge-success { background: #064E3B; color: #6EE7B7; }
+        
+        .badge-good { background: #DBEAFE; color: #1E40AF; }
+        .dark .badge-good { background: #1E3A8A; color: #93C5FD; }
+        
+        .badge-warning { background: #FEF3C7; color: #92400E; }
+        .dark .badge-warning { background: #78350F; color: #FCD34D; }
+        
+        .badge-danger { background: #FEE2E2; color: #991B1B; }
+        .dark .badge-danger { background: #7F1D1D; color: #FCA5A5; }
+        
+        .text-primary { color: #1A1D1F; }
+        .dark .text-primary { color: #E8ECEF; }
+        
+        .text-secondary { color: #6B7280; }
+        .dark .text-secondary { color: #9CA3AF; }
+        
+        
+        /* Theme toggle button */
+        .theme-toggle {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: #F3F4F6;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        
+        .dark .theme-toggle {
+            background: #2A3142;
+        }
+        
+        .theme-toggle:hover {
+            background: #E5E7EB;
+        }
+        
+        .dark .theme-toggle:hover {
+            background: #374151;
+        }
+        
+        .tab-item { 
+            padding: 16px 24px; 
+            font-weight: 600; 
+            font-size: 14px;
+            color: #6B7280; 
+            border-bottom: 2px solid transparent; 
+            cursor: pointer;
+            background: transparent;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+        }
+        
+        .tab-item.active { 
+            color: #0066FF; 
+            border-bottom-color: #0066FF; 
+        }
+        
+        .hidden { display: none !important; }
+        
+        .metric-large {
+            font-size: 36px;
+            font-weight: 700;
+            line-height: 1;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: #E5E7EB;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .dark .progress-bar {
+            background: #374151;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0066FF, #0080FF);
+            transition: width 0.3s ease;
+        }
+        
+        .alert-item {
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border-width: 2px;
+            border-style: solid;
+        }
+        
+        .alert-critical {
+            background: #FEE2E2;
+            border-color: #DC2626;
+            border-left-width: 4px;
+        }
+        
+        .dark .alert-critical {
+            background: #7F1D1D;
+            border-color: #F87171;
+        }
+        
+        .alert-moderate {
+            background: #FEF3C7;
+            border-color: #F59E0B;
+            border-left-width: 4px;
+        }
+        
+        .dark .alert-moderate {
+            background: #78350F;
+            border-color: #FBBF24;
+        }
+        
+        .alert-title-critical {
+            color: #7F1D1D;
+            font-weight: 700;
+        }
+        
+        .dark .alert-title-critical {
+            color: #FEE2E2;
+        }
+        
+        .alert-text-critical {
+            color: #991B1B;
+        }
+        
+        .dark .alert-text-critical {
+            color: #FECACA;
+        }
+        
+        .alert-title-moderate {
+            color: #78350F;
+            font-weight: 700;
+        }
+        
+        .dark .alert-title-moderate {
+            color: #FEF3C7;
+        }
+        
+        .alert-text-moderate {
+            color: #92400E;
+        }
+        
+        .dark .alert-text-moderate {
+            color: #FDE68A;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="header-bg sticky top-0 z-50">
+        <div class="max-w-[1600px] mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold font-space text-primary">Flow Guard Operations Center</h1>
+                        <p class="text-xs text-secondary">Company-Wide Dashboard • Real-Time Monitoring</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div class="text-xs text-secondary">
+                        <span id="current-time">Loading...</span>
+                    </div>
+                    <!-- Dark Mode Toggle -->
+                    <button id="theme-toggle" class="theme-toggle" title="Toggle dark mode">
+                        <svg id="theme-icon-sun" class="w-5 h-5 text-gray-600 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        </svg>
+                        <svg id="theme-icon-moon" class="w-5 h-5 text-gray-400 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                        </svg>
+                    </button>
+                    <div class="text-right">
+                        <p class="text-sm font-medium text-primary">Operations Team</p>
+                        <p class="text-xs text-secondary">Internal Access</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tabs -->
+            <nav class="flex items-center mt-4 -mb-px">
+                <button id="tab-overview" class="tab-item active">Overview</button>
+                <button id="tab-clients" class="tab-item">All Clients</button>
+                <button id="tab-fleet" class="tab-item">Fleet & Teams</button>
+                <button id="tab-live-alerts" class="tab-item">Live Alerts</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-[1600px] mx-auto px-6 py-8">
+        
+        <!-- OVERVIEW TAB -->
+        <div id="content-overview" class="space-y-6">
+            
+            <!-- Top KPIs -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="stat-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-sm font-medium text-secondary mb-2">Active Clients</p>
+                    <p class="metric-large font-space text-primary">18</p>
+                    <p class="text-xs text-green-600 dark:text-green-400 mt-2 font-semibold">+3 this month</p>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+                            <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-sm font-medium text-secondary mb-2">Monthly Recurring Revenue</p>
+                    <p class="metric-large font-space text-primary">₦8.5M</p>
+                    <p class="text-xs text-green-600 dark:text-green-400 mt-2 font-semibold">+12% vs last month</p>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center">
+                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-sm font-medium text-secondary mb-2">Total Coverage Area</p>
+                    <p class="metric-large font-space text-primary">47.3 km</p>
+                    <p class="text-xs text-secondary mt-2">Across Lagos</p>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center">
+                            <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-sm font-medium text-secondary mb-2">Active Alerts</p>
+                    <p class="metric-large font-space text-primary">23</p>
+                    <p class="text-xs text-orange-600 dark:text-orange-400 mt-2 font-semibold">3 critical</p>
+                </div>
+            </div>
+            
+            <!-- Live Operations Map -->
+            <div class="modern-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-primary">Live Operations Map</h3>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Real-time sensor monitoring across 18 clients</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="toggle-weather" class="text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
+                            </svg>
+                            Weather
+                        </button>
+                        <button id="toggle-sensors" class="text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                            <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                            </svg>
+                            Sensors
+                        </button>
+                        <button id="toggle-heatmap" class="text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                            Risk
+                        </button>
+                    </div>
+                </div>
+                <div id="operations-map" class="relative h-96 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                    <!-- Map will be rendered here -->
+                </div>
+                
+                <!-- Weather Info Panel (Hidden by default) -->
+                <div id="weather-panel" class="hidden mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-bold text-gray-900 dark:text-gray-100">Current Weather: Lagos</p>
+                            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Partly Cloudy • 28°C</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs text-gray-600 dark:text-gray-400">24hr Rainfall</p>
+                            <p class="text-2xl font-bold text-blue-600">12mm</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 grid grid-cols-3 gap-3 text-xs">
+                        <div>
+                            <p class="text-gray-600 dark:text-gray-400">Storm Risk</p>
+                            <p class="text-sm font-semibold text-yellow-600">Moderate</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600 dark:text-gray-400">Next 6hrs</p>
+                            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Light Rain</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600 dark:text-gray-400">Wind</p>
+                            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">15 km/h SW</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Stats Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- System Health -->
+                <div class="modern-card p-6">
+                    <h3 class="text-sm font-bold text-primary mb-4">System Health</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-xs mb-2">
+                                <span class="text-secondary">Network Uptime</span>
+                                <span class="font-semibold text-primary">98.7%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 98.7%; background: linear-gradient(90deg, #10B981, #059669);"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-2">
+                                <span class="text-secondary">Sensors Online</span>
+                                <span class="font-semibold text-primary">142/148</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 95.9%; background: linear-gradient(90deg, #3B82F6, #2563EB);"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-2">
+                                <span class="text-secondary">Response Time (Avg)</span>
+                                <span class="font-semibold text-primary">78 min</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 65%; background: linear-gradient(90deg, #8B5CF6, #7C3AED);"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Today's Activity -->
+                <div class="modern-card p-6">
+                    <h3 class="text-sm font-bold text-primary mb-4">Today's Activity</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800">
+                            <span class="text-sm text-secondary">Alerts Resolved</span>
+                            <span class="text-sm font-semibold text-primary">47</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800">
+                            <span class="text-sm text-secondary">Field Dispatches</span>
+                            <span class="text-sm font-semibold text-primary">23</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800">
+                            <span class="text-sm text-secondary">Maintenance Tasks</span>
+                            <span class="text-sm font-semibold text-primary">12</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2">
+                            <span class="text-sm text-secondary">SMS Alerts Sent</span>
+                            <span class="text-sm font-semibold text-primary">1,847</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Revenue Breakdown -->
+                <div class="modern-card p-6">
+                    <h3 class="text-sm font-bold text-primary mb-4">Revenue by Tier</h3>
+                    <div class="space-y-3">
+                        <div class="p-4 rounded-lg border-2 border-emerald-600 bg-emerald-600 dark:bg-emerald-700" style="border-left-width: 4px;">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-bold" style="color: #FFFFFF;">PREMIUM TIER</span>
+                                <span class="text-2xl font-bold" style="color: #FFFFFF;">₦5.2M</span>
+                            </div>
+                            <p class="text-xs font-semibold" style="color: #F0FDF4;">6 clients • 61% of revenue</p>
+                        </div>
+                        <div class="p-4 rounded-lg border-2 border-blue-600 bg-blue-600 dark:bg-blue-700" style="border-left-width: 4px;">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-bold" style="color: #FFFFFF;">STANDARD TIER</span>
+                                <span class="text-2xl font-bold" style="color: #FFFFFF;">₦2.8M</span>
+                            </div>
+                            <p class="text-xs font-semibold" style="color: #EFF6FF;">8 clients • 33% of revenue</p>
+                        </div>
+                        <div class="p-4 rounded-lg border-2 border-gray-600 bg-gray-600 dark:bg-gray-700" style="border-left-width: 4px;">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-bold" style="color: #FFFFFF;">BASIC TIER</span>
+                                <span class="text-2xl font-bold" style="color: #FFFFFF;">₦500K</span>
+                            </div>
+                            <p class="text-xs font-semibold" style="color: #F3F4F6;">4 clients • 6% of revenue</p>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <!-- Client Health Distribution & Alert Trends -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- Client Health Distribution -->
+                <div class="modern-card p-6">
+                    <h3 class="text-sm font-bold text-primary mb-4">Client Health Distribution</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                                    <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Excellent (95%+)</span>
+                                </div>
+                                <span class="text-lg font-bold text-green-600">8 clients</span>
+                            </div>
+                            <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-green-500" style="width: 44.4%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-blue-500"></div>
+                                    <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Good (85-94%)</span>
+                                </div>
+                                <span class="text-lg font-bold text-blue-600">7 clients</span>
+                            </div>
+                            <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-blue-500" style="width: 38.9%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-orange-500"></div>
+                                    <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Needs Attention (<85%)</span>
+                                </div>
+                                <span class="text-lg font-bold text-orange-600">3 clients</span>
+                            </div>
+                            <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-orange-500" style="width: 16.7%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Alert Distribution -->
+                <div class="modern-card p-6">
+                    <h3 class="text-sm font-bold text-primary mb-4">Alert Distribution (Last 7 Days)</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Total Alerts This Week</span>
+                            <span class="text-2xl font-bold text-primary">87</span>
+                        </div>
+                        <div class="space-y-3 mt-4">
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs text-gray-600 dark:text-gray-400">Critical</span>
+                                    <span class="text-sm font-bold text-red-600">12</span>
+                                </div>
+                                <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full bg-red-500" style="width: 13.8%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs text-gray-600 dark:text-gray-400">Moderate</span>
+                                    <span class="text-sm font-bold text-orange-600">45</span>
+                                </div>
+                                <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full bg-orange-500" style="width: 51.7%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs text-gray-600 dark:text-gray-400">Minor</span>
+                                    <span class="text-sm font-bold text-yellow-600">30</span>
+                                </div>
+                                <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full bg-yellow-500" style="width: 34.5%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 dark:text-gray-500 mt-4 text-center">14% decrease vs last week</p>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <!-- Flood Forecasting Widget -->
+            <div class="modern-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-primary">24-Hour Flood Forecast</h3>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">AI-powered predictive analytics</p>
+                    </div>
+                    <span class="text-xs px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded font-semibold">BETA</span>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- High Risk Clients -->
+                    <div class="p-4 rounded-lg border-2 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-red-900 dark:text-red-200">HIGH RISK</span>
+                            <span class="text-2xl font-bold text-red-600">3</span>
+                        </div>
+                        <div class="space-y-2 mt-3">
+                            <div class="text-xs">
+                                <p class="font-semibold text-red-900 dark:text-red-200">Lekki Phase 1</p>
+                                <p class="text-red-700 dark:text-red-300">Probability: 78% • Next 6hrs</p>
+                            </div>
+                            <div class="text-xs">
+                                <p class="font-semibold text-red-900 dark:text-red-200">Eko Atlantic</p>
+                                <p class="text-red-700 dark:text-red-300">Probability: 65% • Next 12hrs</p>
+                            </div>
+                            <div class="text-xs">
+                                <p class="font-semibold text-red-900 dark:text-red-200">Parkview Estate</p>
+                                <p class="text-red-700 dark:text-red-300">Probability: 62% • Next 18hrs</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Medium Risk Clients -->
+                    <div class="p-4 rounded-lg border-2 border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-yellow-900 dark:text-yellow-200">MEDIUM RISK</span>
+                            <span class="text-2xl font-bold text-yellow-600">5</span>
+                        </div>
+                        <div class="space-y-2 mt-3">
+                            <div class="text-xs">
+                                <p class="font-semibold text-yellow-900 dark:text-yellow-200">Banana Island</p>
+                                <p class="text-yellow-700 dark:text-yellow-300">Probability: 45% • Next 12hrs</p>
+                            </div>
+                            <div class="text-xs">
+                                <p class="font-semibold text-yellow-900 dark:text-yellow-200">Oniru Estate</p>
+                                <p class="text-yellow-700 dark:text-yellow-300">Probability: 42% • Next 18hrs</p>
+                            </div>
+                            <div class="text-xs text-yellow-700 dark:text-yellow-300">+ 3 more</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Low Risk Clients -->
+                    <div class="p-4 rounded-lg border-2 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-green-900 dark:text-green-200">LOW RISK</span>
+                            <span class="text-2xl font-bold text-green-600">10</span>
+                        </div>
+                        <p class="text-xs text-green-700 dark:text-green-300 mt-3">
+                            All other clients showing normal conditions with <20% flood probability in next 24 hours.
+                        </p>
+                        <button class="mt-3 text-xs text-green-700 dark:text-green-300 hover:underline">View All →</button>
+                    </div>
+                </div>
+                
+                <!-- Recommended Actions -->
+                <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p class="text-xs font-bold text-blue-900 dark:text-blue-200 mb-2">🎯 RECOMMENDED ACTIONS</p>
+                    <ul class="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                        <li>• Pre-position Team Bravo near Lekki Phase 1 (highest risk)</li>
+                        <li>• Conduct preventative clearing at Eko Atlantic drainage line C</li>
+                        <li>• Alert estate managers for 3 high-risk locations</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- ALL CLIENTS TAB -->
+        <div id="content-clients" class="space-y-6 hidden">
+            <div class="modern-card p-6">
+                <h3 class="text-lg font-bold text-primary mb-4">Client Portfolio</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200 dark:border-gray-700">
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Client</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Location</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Coverage</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Health</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">MRR</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Uptime</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Alerts</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clients-table-body">
+                            <!-- Will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLEET & TEAMS TAB -->
+        <div id="content-fleet" class="space-y-6 hidden">
+            
+            <!-- Field Teams Status -->
+            <div class="modern-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-primary">Field Teams Status</h3>
+                    <button class="btn-primary text-xs">Dispatch Team</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200 dark:border-gray-700">
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Team ID</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Status</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Current Location</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Assigned To</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">ETA</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Last Check-in</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-100 dark:border-gray-800">
+                                <td class="py-4 px-4 text-sm font-semibold text-primary">Team Alpha</td>
+                                <td class="py-4 px-4"><span class="badge badge-success">On Site</span></td>
+                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">Lekki Phase 1</td>
+                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">Lekki Gardens</td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">--</td>
+                                <td class="py-4 px-4 text-xs text-gray-500 dark:text-gray-500">10 min ago</td>
+                            </tr>
+                            <tr class="border-b border-gray-100 dark:border-gray-800">
+                                <td class="py-4 px-4 text-sm font-semibold text-primary">Team Bravo</td>
+                                <td class="py-4 px-4"><span class="badge badge-good">En Route</span></td>
+                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">Victoria Island</td>
+                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">VI Plaza</td>
+                                <td class="py-4 px-4 text-sm font-semibold text-blue-600">15 min</td>
+                                <td class="py-4 px-4 text-xs text-gray-500 dark:text-gray-500">5 min ago</td>
+                            </tr>
+                            <tr class="border-b border-gray-100 dark:border-gray-800">
+                                <td class="py-4 px-4 text-sm font-semibold text-primary">Team Charlie</td>
+                                <td class="py-4 px-4"><span class="badge" style="background: #E5E7EB; color: #6B7280;">Idle</span></td>
+                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">HQ</td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">--</td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">--</td>
+                                <td class="py-4 px-4 text-xs text-gray-500 dark:text-gray-500">2 min ago</td>
+                            </tr>
+                            <tr class="border-b border-gray-100 dark:border-gray-800">
+                                <td class="py-4 px-4 text-sm font-semibold text-primary">Team Delta</td>
+                                <td class="py-4 px-4"><span class="badge" style="background: #DDD6FE; color: #6B21A8;">Returning</span></td>
+                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">Ikoyi</td>
+                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">Banana Island</td>
+                                <td class="py-4 px-4 text-sm font-semibold text-purple-600">20 min</td>
+                                <td class="py-4 px-4 text-xs text-gray-500 dark:text-gray-500">8 min ago</td>
+                            </tr>
+                            <tr class="border-b border-gray-100 dark:border-gray-800">
+                                <td class="py-4 px-4 text-sm font-semibold text-primary">Team Echo</td>
+                                <td class="py-4 px-4"><span class="badge" style="background: #E5E7EB; color: #6B7280;">Idle</span></td>
+                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">HQ</td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">--</td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">--</td>
+                                <td class="py-4 px-4 text-xs text-gray-500 dark:text-gray-500">1 min ago</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Equipment Inventory -->
+            <div class="modern-card p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-primary">Equipment Inventory</h3>
+                    <button class="btn-secondary text-xs">Add Equipment</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200 dark:border-gray-700">
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Equipment Type</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Unit ID</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Status</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Assigned To</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Last Service</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Next Service</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-100 dark:border-gray-800">
+                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">Pump Truck</td>
+                                <td class="py-4 px-4 text-sm font-mono text-primary">PT-001</td>
+                                <td class="py-4 px-4"><span class="badge badge-good">In Use</span></td>
+                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">Team Alpha</td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">Jan 15, 2026</td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">Apr 15, 2026</td>
+                            </tr>
+                            <tr class="border-b border-gray-100 dark:border-gray-800">
+                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">Pump Truck</td>
+                                <td class="py-4 px-4 text-sm font-mono text-primary">PT-002</td>
+                                <td class="py-4 px-4"><span class="badge badge-success">Available</span></td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">--</td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">Jan 20, 2026</td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">Apr 20, 2026</td>
+                            </tr>
+                            <tr class="border-b border-gray-100 dark:border-gray-800">
+                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">Jetting Machine</td>
+                                <td class="py-4 px-4 text-sm font-mono text-primary">JM-001</td>
+                                <td class="py-4 px-4"><span class="badge badge-good">In Use</span></td>
+                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">Team Bravo</td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">Feb 1, 2026</td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">May 1, 2026</td>
+                            </tr>
+                            <tr class="border-b border-gray-100 dark:border-gray-800">
+                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">Jetting Machine</td>
+                                <td class="py-4 px-4 text-sm font-mono text-primary">JM-002</td>
+                                <td class="py-4 px-4"><span class="badge badge-warning">Maintenance</span></td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">--</td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">Dec 10, 2025</td>
+                                <td class="py-4 px-4 text-sm font-semibold text-orange-600">Overdue</td>
+                            </tr>
+                            <tr class="border-b border-gray-100 dark:border-gray-800">
+                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">CCTV Camera</td>
+                                <td class="py-4 px-4 text-sm font-mono text-primary">CC-001</td>
+                                <td class="py-4 px-4"><span class="badge badge-good">In Use</span></td>
+                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">Team Delta</td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">Jan 25, 2026</td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">Apr 25, 2026</td>
+                            </tr>
+                            <tr class="border-b border-gray-100 dark:border-gray-800">
+                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">CCTV Camera</td>
+                                <td class="py-4 px-4 text-sm font-mono text-primary">CC-002</td>
+                                <td class="py-4 px-4"><span class="badge badge-success">Available</span></td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">--</td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">Feb 5, 2026</td>
+                                <td class="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">May 5, 2026</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- LIVE ALERTS TAB -->
+        <div id="content-live-alerts" class="space-y-6 hidden">
+            
+            <!-- Filter Controls -->
+            <div class="modern-card p-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Severity</label>
+                        <select class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary">
+                            <option>All Severities</option>
+                            <option>Critical</option>
+                            <option>Moderate</option>
+                            <option>Minor</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Client</label>
+                        <select class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary">
+                            <option>All Clients</option>
+                            <option>Banana Island</option>
+                            <option>Lekki Gardens</option>
+                            <option>Victoria Island Plaza</option>
+                            <option>Eko Atlantic</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Status</label>
+                        <select class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary">
+                            <option>All Statuses</option>
+                            <option>Active</option>
+                            <option>Acknowledged</option>
+                            <option>Resolved</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Time Range</label>
+                        <select class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary">
+                            <option>Today</option>
+                            <option>This Week</option>
+                            <option>This Month</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Alerts List -->
+            <div class="modern-card p-6">
+                <h3 class="text-lg font-bold text-primary mb-4">Active Alerts (23)</h3>
+                <div class="space-y-3">
+                    
+                    <!-- Critical Alerts -->
+                    <div class="alert-item alert-critical">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm alert-title-critical">Major Blockage Detected</p>
+                                <p class="text-xs font-medium alert-text-critical mt-1">Lekki Phase 1, Zone A • Sensor LK-A-047</p>
+                                <p class="text-xs font-medium alert-text-critical mt-1">14 minutes ago</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Dispatch</button>
+                                <button class="text-xs px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300">Acknowledge</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert-item alert-critical">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm alert-title-critical">Sensor Offline</p>
+                                <p class="text-xs font-medium alert-text-critical mt-1">Victoria Island Plaza • Sensor VI-B-023</p>
+                                <p class="text-xs font-medium alert-text-critical mt-1">28 minutes ago</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Dispatch</button>
+                                <button class="text-xs px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300">Acknowledge</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert-item alert-critical">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm alert-title-critical">Overflow Risk - High Capacity</p>
+                                <p class="text-xs font-medium alert-text-critical mt-1">Eko Atlantic City • Sensor EA-D-091</p>
+                                <p class="text-xs font-medium alert-text-critical mt-1">45 minutes ago</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Dispatch</button>
+                                <button class="text-xs px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300">Acknowledge</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Moderate Alerts -->
+                    <div class="alert-item alert-moderate">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm alert-title-moderate">Water Level Rising</p>
+                                <p class="text-xs font-medium alert-text-moderate mt-1">Banana Island Estates • Sensor BI-C-012</p>
+                                <p class="text-xs font-medium alert-text-moderate mt-1">1 hour ago</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Dispatch</button>
+                                <button class="text-xs px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300">Acknowledge</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert-item alert-moderate">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm alert-title-moderate">Debris Accumulation</p>
+                                <p class="text-xs font-medium alert-text-moderate mt-1">Parkview Estate, Zone C • Sensor PV-C-034</p>
+                                <p class="text-xs font-medium alert-text-moderate mt-1">2 hours ago</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Dispatch</button>
+                                <button class="text-xs px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300">Acknowledge</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert-item alert-moderate">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm alert-title-moderate">Flow Rate Anomaly</p>
+                                <p class="text-xs font-medium alert-text-moderate mt-1">Ikoyi Estate Management • Sensor IK-A-008</p>
+                                <p class="text-xs font-medium alert-text-moderate mt-1">3 hours ago</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Dispatch</button>
+                                <button class="text-xs px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300">Acknowledge</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert-item alert-moderate">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm alert-title-moderate">Maintenance Required</p>
+                                <p class="text-xs font-medium alert-text-moderate mt-1">Oniru Estate • Sensor ON-B-019</p>
+                                <p class="text-xs font-medium alert-text-moderate mt-1">5 hours ago</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Dispatch</button>
+                                <button class="text-xs px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300">Acknowledge</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Client portfolio data
+        const allClients = [
+            { name: 'Banana Island Estates', location: 'Ikoyi', coverage: '5.2 km', health: 95, mrr: '₦850,000', uptime: 99.1, alerts: 0, status: 'excellent' },
+            { name: 'Lekki Gardens Phase 2', location: 'Lekki', coverage: '3.8 km', health: 88, mrr: '₦450,000', uptime: 96.2, alerts: 2, status: 'good' },
+            { name: 'Ikoyi Estate Management', location: 'Ikoyi', coverage: '2.4 km', health: 92, mrr: '₦300,000', uptime: 97.8, alerts: 1, status: 'excellent' },
+            { name: 'Victoria Island Plaza', location: 'Victoria Island', coverage: '3.1 km', health: 94, mrr: '₦420,000', uptime: 98.5, alerts: 0, status: 'excellent' },
+            { name: 'Parkview Estate', location: 'Ikoyi', coverage: '2.9 km', health: 89, mrr: '₦380,000', uptime: 95.8, alerts: 1, status: 'good' },
+            { name: 'Eko Atlantic City', location: 'Victoria Island', coverage: '6.8 km', health: 96, mrr: '₦950,000', uptime: 99.3, alerts: 0, status: 'excellent' },
+            { name: 'Oniru Estate', location: 'Lekki', coverage: '2.1 km', health: 87, mrr: '₦280,000', uptime: 94.2, alerts: 2, status: 'good' },
+            { name: 'Osborne Foreshore', location: 'Ikoyi', coverage: '3.5 km', health: 91, mrr: '₦400,000', uptime: 96.7, alerts: 1, status: 'excellent' },
+            { name: 'Lekki Phase 1', location: 'Lekki', coverage: '4.2 km', health: 85, mrr: '₦380,000', uptime: 93.4, alerts: 3, status: 'fair' },
+            { name: 'Ikate Elegushi', location: 'Lekki', coverage: '2.7 km', health: 90, mrr: '₦320,000', uptime: 95.1, alerts: 1, status: 'good' },
+            { name: 'Lagos Island CBD', location: 'Lagos Island', coverage: '5.5 km', health: 93, mrr: '₦780,000', uptime: 97.9, alerts: 1, status: 'excellent' },
+            { name: 'Ikoyi Club', location: 'Ikoyi', coverage: '1.8 km', health: 94, mrr: '₦350,000', uptime: 98.2, alerts: 0, status: 'excellent' },
+            { name: 'Chevron Estate', location: 'Lekki', coverage: '3.3 km', health: 88, mrr: '₦360,000', uptime: 94.8, alerts: 2, status: 'good' },
+            { name: 'VGC Estate', location: 'Lekki', coverage: '4.1 km', health: 86, mrr: '₦390,000', uptime: 93.9, alerts: 2, status: 'good' },
+            { name: 'Dolphin Estate', location: 'Ikoyi', coverage: '2.3 km', health: 91, mrr: '₦310,000', uptime: 96.4, alerts: 1, status: 'excellent' },
+            { name: 'Crown Estate', location: 'Lekki', coverage: '3.6 km', health: 84, mrr: '₦340,000', uptime: 92.7, alerts: 3, status: 'fair' },
+            { name: 'Ajah New Town', location: 'Ajah', coverage: '2.9 km', health: 82, mrr: '₦270,000', uptime: 91.5, alerts: 4, status: 'fair' },
+            { name: 'Sangotedo Gardens', location: 'Sangotedo', coverage: '2.4 km', health: 87, mrr: '₦290,000', uptime: 94.3, alerts: 2, status: 'good' }
+        ];
+
+        // Theme Management
+        function loadTheme() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.classList.add(theme);
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+            html.classList.remove('dark', 'light');
+            html.classList.add(isDark ? 'light' : 'dark');
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        }
+
+        // Tab Switching
+        function switchTab(tab) {
+            ['overview', 'clients', 'fleet', 'live-alerts'].forEach(t => {
+                const content = document.getElementById(`content-${t}`);
+                const tabBtn = document.getElementById(`tab-${t}`);
+                if (content) content.classList.add('hidden');
+                if (tabBtn) tabBtn.classList.remove('active');
+            });
+            
+            const targetContent = document.getElementById(`content-${tab}`);
+            const targetTab = document.getElementById(`tab-${tab}`);
+            if (targetContent) targetContent.classList.remove('hidden');
+            if (targetTab) targetTab.classList.add('active');
+        }
+
+        // Update Time
+        function updateTime() {
+            const now = new Date();
+            const timeEl = document.getElementById('current-time');
+            if (timeEl) {
+                timeEl.textContent = now.toLocaleString('en-NG', {
+                    timeZone: 'Africa/Lagos',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    month: 'short',
+                    day: 'numeric'
+                }) + ' WAT';
+            }
+        }
+
+        // Populate Clients Table
+        function populateClientsTable() {
+            const tbody = document.getElementById('clients-table-body');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            allClients.forEach(client => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50';
+                
+                const statusBadge = client.status === 'excellent' ? 'badge-success' : 
+                                   client.status === 'good' ? 'badge-good' : 'badge-warning';
+                const statusText = client.status === 'excellent' ? 'Excellent' : 
+                                  client.status === 'good' ? 'Good' : 'Fair';
+                
+                row.innerHTML = `
+                    <td class="py-4 px-4">
+                        <p class="text-sm font-semibold text-primary">${client.name}</p>
+                    </td>
+                    <td class="py-4 px-4 text-sm text-secondary">${client.location}</td>
+                    <td class="py-4 px-4 text-sm text-secondary">${client.coverage}</td>
+                    <td class="py-4 px-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-semibold ${client.health >= 90 ? 'text-green-600' : client.health >= 85 ? 'text-yellow-600' : 'text-orange-600'}">${client.health}%</span>
+                        </div>
+                    </td>
+                    <td class="py-4 px-4 text-sm font-semibold text-primary">${client.mrr}</td>
+                    <td class="py-4 px-4 text-sm font-semibold ${client.uptime >= 98 ? 'text-green-600' : 'text-yellow-600'}">${client.uptime}%</td>
+                    <td class="py-4 px-4">
+                        <span class="text-sm font-semibold ${client.alerts === 0 ? 'text-green-600' : 'text-orange-600'}">${client.alerts}</span>
+                    </td>
+                    <td class="py-4 px-4">
+                        <span class="badge ${statusBadge}">${statusText}</span>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTheme();
+            updateTime();
+            setInterval(updateTime, 1000);
+            populateClientsTable();
+            
+            // Theme toggle
+            document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+            
+            // Tab buttons
+            document.getElementById('tab-overview').addEventListener('click', () => switchTab('overview'));
+            document.getElementById('tab-clients').addEventListener('click', () => switchTab('clients'));
+            document.getElementById('tab-fleet').addEventListener('click', () => switchTab('fleet'));
+            document.getElementById('tab-live-alerts').addEventListener('click', () => switchTab('live-alerts'));
+        });
+        
+        // Enhanced Map Initialization with Sensors
+        function initEnhancedMap() {
+            const mapContainer = document.getElementById('operations-map');
+            if (!mapContainer) return;
+            
+            const isDark = document.documentElement.classList.contains('dark');
+            
+            // Create SVG canvas
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("viewBox", "0 0 800 460");
+            svg.setAttribute("width", "100%");
+            svg.setAttribute("height", "460");
+            svg.style.background = isDark ? "#1F2937" : "#F3F4F6";
+            
+            // Lagos outline (simplified)
+            const lagosPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            lagosPath.setAttribute("d", "M150,200 L200,150 L300,120 L400,130 L500,140 L600,160 L650,200 L660,250 L640,300 L600,340 L500,360 L400,370 L300,350 L200,320 L150,280 Z");
+            lagosPath.setAttribute("fill", isDark ? "#374151" : "#E5E7EB");
+            lagosPath.setAttribute("stroke", isDark ? "#4B5563" : "#D1D5DB");
+            lagosPath.setAttribute("stroke-width", "2");
+            svg.appendChild(lagosPath);
+            
+            // Sensor locations with realistic data
+            const sensors = [
+                { id: 'LK-A-047', name: 'Lekki Phase 1', x: 520, y: 240, level: 85, status: 'critical', client: 'Lekki Gardens' },
+                { id: 'BI-C-012', name: 'Banana Island', x: 380, y: 280, level: 65, status: 'rising', client: 'Banana Island Estates' },
+                { id: 'VI-B-023', name: 'Victoria Island', x: 340, y: 260, level: 45, status: 'normal', client: 'VI Plaza' },
+                { id: 'EA-D-091', name: 'Eko Atlantic', x: 300, y: 250, level: 78, status: 'high', client: 'Eko Atlantic City' },
+                { id: 'IK-A-008', name: 'Ikoyi', x: 360, y: 270, level: 52, status: 'normal', client: 'Ikoyi Estate' },
+                { id: 'PV-C-034', name: 'Parkview', x: 400, y: 290, level: 68, status: 'rising', client: 'Parkview Estate' },
+                { id: 'ON-B-019', name: 'Oniru', x: 450, y: 260, level: 55, status: 'normal', client: 'Oniru Estate' },
+                { id: 'LG-E-056', name: 'Lagos Island', x: 320, y: 240, level: 72, status: 'high', client: 'Lagos Island CBD' }
+            ];
+            
+            // Draw sensors
+            sensors.forEach(sensor => {
+                const color = sensor.status === 'critical' ? '#EF4444' : 
+                             sensor.status === 'high' ? '#F59E0B' :
+                             sensor.status === 'rising' ? '#3B82F6' : '#10B981';
+                
+                // Sensor circle
+                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("cx", sensor.x);
+                circle.setAttribute("cy", sensor.y);
+                circle.setAttribute("r", "8");
+                circle.setAttribute("fill", color);
+                circle.setAttribute("stroke", "#FFFFFF");
+                circle.setAttribute("stroke-width", "2");
+                circle.setAttribute("opacity", "0.9");
+                circle.style.cursor = "pointer";
+                
+                // Pulse animation for critical/high sensors
+                if (sensor.status === 'critical' || sensor.status === 'high') {
+                    const pulse = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                    pulse.setAttribute("cx", sensor.x);
+                    pulse.setAttribute("cy", sensor.y);
+                    pulse.setAttribute("r", "8");
+                    pulse.setAttribute("fill", "none");
+                    pulse.setAttribute("stroke", color);
+                    pulse.setAttribute("stroke-width", "2");
+                    pulse.setAttribute("opacity", "0.6");
+                    
+                    const animate = document.createElementNS("http://www.w3.org/2000/svg", "animate");
+                    animate.setAttribute("attributeName", "r");
+                    animate.setAttribute("from", "8");
+                    animate.setAttribute("to", "20");
+                    animate.setAttribute("dur", "2s");
+                    animate.setAttribute("repeatCount", "indefinite");
+                    pulse.appendChild(animate);
+                    
+                    const animateOpacity = document.createElementNS("http://www.w3.org/2000/svg", "animate");
+                    animateOpacity.setAttribute("attributeName", "opacity");
+                    animateOpacity.setAttribute("from", "0.6");
+                    animateOpacity.setAttribute("to", "0");
+                    animateOpacity.setAttribute("dur", "2s");
+                    animateOpacity.setAttribute("repeatCount", "indefinite");
+                    pulse.appendChild(animateOpacity);
+                    
+                    svg.appendChild(pulse);
+                }
+                
+                // Add click handler
+                circle.addEventListener('click', () => showSensorDetail(sensor));
+                circle.addEventListener('mouseenter', () => showSensorTooltip(sensor, circle));
+                circle.addEventListener('mouseleave', () => hideSensorTooltip());
+                
+                svg.appendChild(circle);
+                
+                // Label
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", sensor.x);
+                text.setAttribute("y", sensor.y - 15);
+                text.setAttribute("text-anchor", "middle");
+                text.setAttribute("font-size", "10");
+                text.setAttribute("fill", isDark ? "#E5E7EB" : "#374151");
+                text.setAttribute("font-weight", "600");
+                text.textContent = sensor.level + "%";
+                svg.appendChild(text);
+            });
+            
+            // Clear container and add map
+            mapContainer.innerHTML = '';
+            mapContainer.appendChild(svg);
+            
+            // Store sensors globally for tooltips
+            window.mapSensors = sensors;
+        }
+        
+        // Sensor detail modal
+        function showSensorDetail(sensor) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">${sensor.name}</h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600 dark:text-gray-400">Sensor ID</span>
+                            <span class="text-sm font-mono text-gray-900 dark:text-white">${sensor.id}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600 dark:text-gray-400">Client</span>
+                            <span class="text-sm font-semibold text-gray-900 dark:text-white">${sensor.client}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600 dark:text-gray-400">Water Level</span>
+                            <span class="text-2xl font-bold ${sensor.level > 85 ? 'text-red-600' : sensor.level > 70 ? 'text-orange-600' : sensor.level > 50 ? 'text-blue-600' : 'text-green-600'}">${sensor.level}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                            <div class="h-3 rounded-full ${sensor.level > 85 ? 'bg-red-500' : sensor.level > 70 ? 'bg-orange-500' : sensor.level > 50 ? 'bg-blue-500' : 'bg-green-500'}" style="width: ${sensor.level}%"></div>
+                        </div>
+                        ${sensor.level > 70 ? `
+                        <div class="mt-4 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                            <p class="text-xs font-bold text-orange-900 dark:text-orange-200">⚠️ TIME TO OVERFLOW</p>
+                            <p class="text-2xl font-bold text-orange-600 mt-1">${calculateTimeToOverflow(sensor.level)} min</p>
+                            <p class="text-xs text-orange-700 dark:text-orange-300 mt-1">Based on current inflow rate</p>
+                        </div>
+                        ` : ''}
+                        <div class="mt-4 grid grid-cols-2 gap-3 text-xs">
+                            <div class="p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                                <p class="text-gray-600 dark:text-gray-400">Battery</p>
+                                <p class="text-sm font-bold text-gray-900 dark:text-white">78%</p>
+                            </div>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-900 rounded">
+                                <p class="text-gray-600 dark:text-gray-400">Signal</p>
+                                <p class="text-sm font-bold text-gray-900 dark:text-white">-72 dBm</p>
+                            </div>
+                        </div>
+                        <button onclick="this.closest('.fixed').remove()" class="w-full mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        
+        // Calculate time to overflow (placeholder algorithm)
+        function calculateTimeToOverflow(currentLevel) {
+            const remainingCapacity = 100 - currentLevel;
+            const fillRate = 2.5; // % per minute (placeholder)
+            return Math.round(remainingCapacity / fillRate);
+        }
+        
+        // Tooltip functions
+        function showSensorTooltip(sensor, element) {
+            const tooltip = document.createElement('div');
+            tooltip.id = 'sensor-tooltip';
+            tooltip.className = 'absolute bg-gray-900 text-white text-xs rounded px-3 py-2 z-50 pointer-events-none';
+            tooltip.style.left = (element.getBoundingClientRect().left + window.scrollX) + 'px';
+            tooltip.style.top = (element.getBoundingClientRect().top + window.scrollY - 60) + 'px';
+            tooltip.innerHTML = `
+                <div class="font-semibold">${sensor.name}</div>
+                <div class="text-gray-300">${sensor.id} • ${sensor.level}%</div>
+            `;
+            document.body.appendChild(tooltip);
+        }
+        
+        function hideSensorTooltip() {
+            const tooltip = document.getElementById('sensor-tooltip');
+            if (tooltip) tooltip.remove();
+        }
+        
+        // Map toggle functions
+        let weatherVisible = false;
+        let sensorsVisible = true;
+        let heatmapVisible = false;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize enhanced map
+            initEnhancedMap();
+            
+            // Weather toggle
+            const weatherBtn = document.getElementById('toggle-weather');
+            if (weatherBtn) {
+                weatherBtn.addEventListener('click', function() {
+                    weatherVisible = !weatherVisible;
+                    const panel = document.getElementById('weather-panel');
+                    if (panel) {
+                        panel.classList.toggle('hidden');
+                    }
+                    this.classList.toggle('bg-blue-600');
+                    this.classList.toggle('text-white');
+                    this.classList.toggle('bg-white');
+                    this.classList.toggle('dark:bg-gray-800');
+                });
+            }
+            
+            // Sensors toggle
+            const sensorsBtn = document.getElementById('toggle-sensors');
+            if (sensorsBtn) {
+                sensorsBtn.addEventListener('click', function() {
+                    sensorsVisible = !sensorsVisible;
+                    this.classList.toggle('bg-blue-600');
+                    this.classList.toggle('text-white');
+                    this.classList.toggle('bg-white');
+                    this.classList.toggle('dark:bg-gray-800');
+                    // Re-render map
+                    if (sensorsVisible) {
+                        initEnhancedMap();
+                    }
+                });
+            }
+            
+            // Heatmap toggle
+            const heatmapBtn = document.getElementById('toggle-heatmap');
+            if (heatmapBtn) {
+                heatmapBtn.addEventListener('click', function() {
+                    heatmapVisible = !heatmapVisible;
+                    this.classList.toggle('bg-orange-600');
+                    this.classList.toggle('text-white');
+                    this.classList.toggle('bg-white');
+                    this.classList.toggle('dark:bg-gray-800');
+                    // TODO: Add heatmap overlay
+                });
+            }
+            
+            // Smart Dispatch handlers
+            const dispatchButtons = document.querySelectorAll('button:not([id])');
+            dispatchButtons.forEach(btn => {
+                if (btn.textContent.includes('Dispatch')) {
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        showSmartDispatchModal(this);
+                    });
+                }
+            });
+        });
+        
+        // Smart Dispatch Modal
+        function showSmartDispatchModal(button) {
+            // Get alert context from button's parent
+            const alertCard = button.closest('.alert-item');
+            const alertTitle = alertCard ? alertCard.querySelector('p').textContent : 'Unknown Alert';
+            const alertLocation = alertCard ? alertCard.querySelectorAll('p')[1].textContent.split('•')[0].trim() : 'Unknown Location';
+            
+            // Find nearest available team (placeholder logic)
+            const availableTeams = [
+                { id: 'Team Charlie', status: 'Idle', location: 'HQ', eta: '12 min', distance: '3.2 km' },
+                { id: 'Team Echo', status: 'Idle', location: 'HQ', eta: '12 min', distance: '3.2 km' },
+                { id: 'Team Bravo', status: 'Returning', location: 'Victoria Island', eta: '18 min', distance: '5.1 km' }
+            ];
+            
+            const recommended = availableTeams[0];
+            
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+            modal.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white">Smart Dispatch</h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <!-- Alert Info -->
+                    <div class="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 mb-4">
+                        <p class="text-sm font-bold text-red-900 dark:text-red-200">${alertTitle}</p>
+                        <p class="text-xs text-red-700 dark:text-red-300 mt-1">📍 ${alertLocation}</p>
+                    </div>
+                    
+                    <!-- Recommended Team -->
+                    <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-blue-500 mb-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <p class="text-xs font-bold text-blue-900 dark:text-blue-200 mb-1">✨ RECOMMENDED</p>
+                                <p class="text-lg font-bold text-blue-600">${recommended.id}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-blue-700 dark:text-blue-300">ETA</p>
+                                <p class="text-2xl font-bold text-blue-600">${recommended.eta}</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 text-xs">
+                            <div>
+                                <p class="text-blue-700 dark:text-blue-300">Current Status</p>
+                                <p class="font-semibold text-blue-900 dark:text-blue-200">${recommended.status}</p>
+                            </div>
+                            <div>
+                                <p class="text-blue-700 dark:text-blue-300">Distance</p>
+                                <p class="font-semibold text-blue-900 dark:text-blue-200">${recommended.distance}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Alternative Teams -->
+                    <div class="mb-4">
+                        <p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Alternative Teams:</p>
+                        <div class="space-y-2">
+                            ${availableTeams.slice(1).map(team => `
+                                <div class="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm font-semibold text-gray-900 dark:text-white">${team.id}</p>
+                                        <p class="text-xs text-gray-600 dark:text-gray-400">${team.status} • ${team.location}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-xs text-gray-600 dark:text-gray-400">ETA</p>
+                                        <p class="text-sm font-bold text-gray-900 dark:text-white">${team.eta}</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- SOP Preview -->
+                    <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                        <p class="text-xs font-bold text-gray-900 dark:text-white mb-2">📋 Standard Operating Procedure</p>
+                        <ul class="text-xs text-gray-700 dark:text-gray-300 space-y-1">
+                            <li>✓ Confirm alert via sensor verification</li>
+                            <li>✓ Notify estate management</li>
+                            <li>✓ Deploy jetting equipment</li>
+                            <li>✓ Clear blockage and verify flow</li>
+                            <li>✓ Document incident and close ticket</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="flex gap-3">
+                        <button onclick="confirmDispatch('${recommended.id}', '${alertLocation}')" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">
+                            Dispatch ${recommended.id}
+                        </button>
+                        <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        
+        // Confirm dispatch
+        function confirmDispatch(teamId, location) {
+            const ticketId = 'TKT-' + Math.floor(Math.random() * 9000 + 1000);
+            alert(`✅ Dispatch Confirmed!\n\nTicket: ${ticketId}\nTeam: ${teamId}\nLocation: ${location}\n\nTeam notified via SMS. Track progress in Fleet & Teams tab.`);
+            document.querySelector('.fixed.inset-0').remove();
+        }
+        
+    </script>
+
+</body>
+</html>
