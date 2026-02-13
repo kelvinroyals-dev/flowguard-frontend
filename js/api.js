@@ -3,8 +3,8 @@
 // ============================================
 
 // CONFIGURATION - Change this to your server IP
-const API_BASE_URL = 'http://localhost:5000/api/v1';  // We'll update this later
-const SOCKET_URL = 'http://localhost:5000';            // We'll update this later
+const API_BASE_URL = 'https://api.flowguard.ng/api/v1';  // We'll update this later
+const SOCKET_URL = 'https://api.flowguard.ng:5000';            // We'll update this later
 
 class FlowGuardAPI {
     constructor() {

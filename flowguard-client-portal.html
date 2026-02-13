@@ -418,7 +418,9 @@
             color: #059669 !important;
         }
     </style>
-	    <!-- API Client -->
+    <!-- Socket.io Client Library -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <!-- API Client -->
     <script src="js/api.js"></script>
 </head>
 <body>
@@ -1734,6 +1736,53 @@
                 });
             }
         });
+	// ============================================
+    // WEBSOCKET REAL-TIME CONNECTION
+    // ============================================
+    
+    const SOCKET_URL = 'https://api.flowguard.ng';
+    let socket = null;
+    
+    function initWebSocket() {
+        try {
+            socket = io(SOCKET_URL, {
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionAttempts: 5
+            });
+            
+            socket.on('connect', () => {
+                console.log('✅ WebSocket connected to backend');
+                
+                // Subscribe to client-specific channel
+                const currentEstate = localStorage.getItem('selectedEstate') || 'ikoyi';
+                socket.emit('subscribe', `client:${currentEstate}`);
+            });
+            
+            socket.on('alert:new', (alert) => {
+                console.log('🚨 New alert for your estate:', alert);
+            });
+            
+            socket.on('sensor:update', (data) => {
+                console.log('📡 Sensor update:', data);
+            });
+            
+            socket.on('disconnect', () => {
+                console.log('❌ WebSocket disconnected');
+            });
+            
+            socket.on('connect_error', () => {
+                console.log('⚠️ WebSocket connection failed');
+            });
+        } catch (error) {
+            console.log('⚠️ WebSocket error:', error);
+        }
+    }
+    
+    // Initialize WebSocket after page loads
+    window.addEventListener('load', function() {
+        initWebSocket();
+    });
     </script>
 </body>
 </html>

@@ -223,6 +223,47 @@
         .dark .alert-text-moderate {
             color: #FDE68A;
         }
+        
+        /* Button Styles */
+        .btn-primary {
+            background: #0066FF;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary:hover {
+            background: #0052CC;
+        }
+        
+        .btn-secondary {
+            background: #F3F4F6;
+            color: #374151;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid #D1D5DB;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .btn-secondary:hover {
+            background: #E5E7EB;
+        }
+        
+        .dark .btn-secondary {
+            background: #374151;
+            color: #E5E7EB;
+            border-color: #4B5563;
+        }
+        
+        .dark .btn-secondary:hover {
+            background: #4B5563;
+        }
     </style>
 </head>
 <body>
@@ -1469,7 +1510,7 @@
         // WEBSOCKET REAL-TIME CONNECTION
         // ============================================
         
-        const SOCKET_URL = 'http://api.flowguard.ng';
+        const SOCKET_URL = 'https://api.flowguard.ng';
         let socket = null;
         
         function initWebSocket() {
