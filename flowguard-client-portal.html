@@ -9,7 +9,32 @@
 	<!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="flowguard-logo.svg">
     <title>Flow Guard Client Portal</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com">
+	// Check authentication on page load
+(function checkAuth() {
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    
+    if (!token || !user) {
+        // Not logged in - redirect to login
+        window.location.href = 'login.html';
+        return;
+    }
+    
+    // Optional: Check token expiry
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.exp * 1000 < Date.now()) {
+            // Token expired
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        }
+    } catch(e) {
+        window.location.href = 'login.html';
+    }
+})();
+</script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         * { 

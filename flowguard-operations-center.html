@@ -10,7 +10,32 @@
     <!-- Socket.io Client Library -->
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <!-- API Client -->
-    <script src="js/api.js"></script>
+    <script src="js/api.js">
+	// Check authentication on page load
+(function checkAuth() {
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    
+    if (!token || !user) {
+        // Not logged in - redirect to login
+        window.location.href = 'login.html';
+        return;
+    }
+    
+    // Optional: Check token expiry
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.exp * 1000 < Date.now()) {
+            // Token expired
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        }
+    } catch(e) {
+        window.location.href = 'login.html';
+    }
+})();
+</script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         * { 
@@ -1018,6 +1043,7 @@
     </main>
 
     <script>
+	
         // Client portfolio data
         const allClients = [
             { name: 'Banana Island Estates', location: 'Ikoyi', coverage: '5.2 km', health: 95, mrr: '₦850,000', uptime: 99.1, alerts: 0, status: 'excellent' },
