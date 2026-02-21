@@ -126,29 +126,29 @@ function renderPropertyRegistration(container) {
                         <div class="mb-6">
                             <label class="block text-sm font-semibold text-gray-700 mb-4">What drainage problems are you experiencing? (Select all that apply)</label>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <label class="flex items-center p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-[#2c9aa3] transition-all">
+                                <label class="flex items-center p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:border-[#2c9aa3] transition-all bg-white dark:bg-gray-800">
                                     <input type="checkbox" name="issue_flooding" value="true" class="w-5 h-5 text-[#2c9aa3] rounded focus:ring-[#2c9aa3]">
-                                    <span class="ml-3 font-medium text-gray-900">Flooding</span>
+                                    <span class="ml-3 font-medium text-gray-900 dark:text-gray-100">Flooding</span>
                                 </label>
-                                <label class="flex items-center p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-[#2c9aa3] transition-all">
+                                <label class="flex items-center p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:border-[#2c9aa3] transition-all bg-white dark:bg-gray-800">
                                     <input type="checkbox" name="issue_blockage" value="true" class="w-5 h-5 text-[#2c9aa3] rounded focus:ring-[#2c9aa3]">
-                                    <span class="ml-3 font-medium text-gray-900">Blockage</span>
+                                    <span class="ml-3 font-medium text-gray-900 dark:text-gray-100">Blockage</span>
                                 </label>
-                                <label class="flex items-center p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-[#2c9aa3] transition-all">
+                                <label class="flex items-center p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:border-[#2c9aa3] transition-all bg-white dark:bg-gray-800">
                                     <input type="checkbox" name="issue_overflow" value="true" class="w-5 h-5 text-[#2c9aa3] rounded focus:ring-[#2c9aa3]">
-                                    <span class="ml-3 font-medium text-gray-900">Overflow</span>
+                                    <span class="ml-3 font-medium text-gray-900 dark:text-gray-100">Overflow</span>
                                 </label>
-                                <label class="flex items-center p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-[#2c9aa3] transition-all">
+                                <label class="flex items-center p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:border-[#2c9aa3] transition-all bg-white dark:bg-gray-800">
                                     <input type="checkbox" name="issue_slowDrainage" value="true" class="w-5 h-5 text-[#2c9aa3] rounded focus:ring-[#2c9aa3]">
-                                    <span class="ml-3 font-medium text-gray-900">Slow Drainage</span>
+                                    <span class="ml-3 font-medium text-gray-900 dark:text-gray-100">Slow Drainage</span>
                                 </label>
-                                <label class="flex items-center p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-[#2c9aa3] transition-all">
+                                <label class="flex items-center p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:border-[#2c9aa3] transition-all bg-white dark:bg-gray-800">
                                     <input type="checkbox" name="issue_odor" value="true" class="w-5 h-5 text-[#2c9aa3] rounded focus:ring-[#2c9aa3]">
-                                    <span class="ml-3 font-medium text-gray-900">Bad Odor</span>
+                                    <span class="ml-3 font-medium text-gray-900 dark:text-gray-100">Bad Odor</span>
                                 </label>
-                                <label class="flex items-center p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-[#2c9aa3] transition-all">
+                                <label class="flex items-center p-4 border-2 border-gray-200 dark:border-gray-700 rounded-xl cursor-pointer hover:border-[#2c9aa3] transition-all bg-white dark:bg-gray-800">
                                     <input type="checkbox" name="issue_structural" value="true" class="w-5 h-5 text-[#2c9aa3] rounded focus:ring-[#2c9aa3]">
-                                    <span class="ml-3 font-medium text-gray-900">Structural Damage</span>
+                                    <span class="ml-3 font-medium text-gray-900 dark:text-gray-100">Structural Damage</span>
                                 </label>
                             </div>
                         </div>
