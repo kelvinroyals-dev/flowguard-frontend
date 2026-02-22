@@ -364,12 +364,8 @@ async function handleFormSubmit(e) {
             body: JSON.stringify(data)
         });
         
-        const result = await response.json();
-        
-        if (result.success) {
-            alert('Property registered successfully! Our team will contact you within 24 hours.');
-            
-            // Close modal if exists
+        if (response.ok) {
+            // 201 Created - close modal and reload
             if (typeof Onboarding !== 'undefined' && Onboarding.closeRegistrationModal) {
                 Onboarding.closeRegistrationModal();
             }
@@ -377,10 +373,34 @@ async function handleFormSubmit(e) {
             // Reload page to show new state
             location.reload();
         } else {
-            alert('Registration failed: ' + (result.error || 'Unknown error'));
+            // Try to get error message from response
+            let errorMessage = 'Unknown error occurred';
+            try {
+                const result = await response.json();
+                errorMessage = result.error || result.message || errorMessage;
+            } catch (e) {
+                // Couldn't parse error response
+            }
+            
+            // Show error in modal
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'mt-4 p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl';
+            errorDiv.innerHTML = `
+                <p class="text-red-800 dark:text-red-200 font-semibold">Registration Failed</p>
+                <p class="text-red-600 dark:text-red-400 text-sm mt-1">${errorMessage}</p>
+            `;
+            document.getElementById('property-form').prepend(errorDiv);
         }
     } catch (error) {
         console.error('Submission error:', error);
-        alert('Failed to submit property. Please try again.');
+        
+        // Show error in modal
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'mt-4 p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl';
+        errorDiv.innerHTML = `
+            <p class="text-red-800 dark:text-red-200 font-semibold">Submission Error</p>
+            <p class="text-red-600 dark:text-red-400 text-sm mt-1">Failed to submit property. Please try again.</p>
+        `;
+        document.getElementById('property-form').prepend(errorDiv);
     }
 }

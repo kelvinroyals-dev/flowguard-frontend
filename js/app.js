@@ -113,7 +113,7 @@ const App = (function() {
                 Onboarding.renderProgressHomepage(container);
                 break;
                 
-            case StateManager.STATES.submitted:
+            case StateManager.STATES.SUBMITTED:
             case StateManager.STATES.INSPECTION_SCHEDULED:
             case StateManager.STATES.INSPECTION_ONGOING:
                 Onboarding.renderInspectionTracker(container, property);
