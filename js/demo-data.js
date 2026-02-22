@@ -317,3 +317,52 @@ async function disableDemoMode() {
 function viewAllSensors() {
     alert('Full sensor map view - Coming soon!');
 }
+
+// ============================================
+// DEMO DATA MODULE
+// Provides demo estate data for preview mode
+// ============================================
+const DemoData = (function() {
+    const demoEstates = [
+        {
+            property_id: 'DEMO-ESTATE-001',
+            property_name: 'Palm Gardens Estate (Demo)',
+            property_type: 'residential_estate',
+            city: 'Lagos',
+            state: 'Lagos',
+            status: 'active',
+            created_at: new Date().toISOString()
+        },
+        {
+            property_id: 'DEMO-ESTATE-002',
+            property_name: 'Lakeside Residences (Demo)',
+            property_type: 'residential_estate',
+            city: 'Lagos',
+            state: 'Lagos',
+            status: 'active',
+            created_at: new Date().toISOString()
+        }
+    ];
+    
+    let currentEstateIndex = 0;
+    
+    function getCurrentEstate() {
+        return demoEstates[currentEstateIndex];
+    }
+    
+    function getEstates() {
+        return demoEstates;
+    }
+    
+    function setCurrentEstate(index) {
+        if (index >= 0 && index < demoEstates.length) {
+            currentEstateIndex = index;
+        }
+    }
+    
+    return {
+        getCurrentEstate,
+        getEstates,
+        setCurrentEstate
+    };
+})();

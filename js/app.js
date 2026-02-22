@@ -103,14 +103,24 @@ const App = (function() {
         
         console.log('🎨 Rendering state:', state);
         
-        // If demo mode, use demo data
-        if (isDemoMode && !property) {
+        // Demo mode handling for pre-ACTIVE states
+        if (isDemoMode && state !== StateManager.STATES.ACTIVE && state !== StateManager.STATES.NO_PROPERTY) {
+            // User has property waiting for deployment + demo ON
+            // Show full dashboard with demo data (preview what portal will look like)
             const demoProperty = DemoData.getCurrentEstate();
-            StateManager.init([demoProperty], { show_demo_data: true });
-            Dashboard.render(container, demoProperty);
+            Dashboard.renderDemo(container, demoProperty);
             return;
         }
         
+        // Demo mode for NO_PROPERTY state
+        if (isDemoMode && state === StateManager.STATES.NO_PROPERTY) {
+            const demoProperty = DemoData.getCurrentEstate();
+            StateManager.init([demoProperty], { show_demo_data: true });
+            Dashboard.renderDemo(container, demoProperty);
+            return;
+        }
+        
+        // Normal rendering based on state
         switch(state) {
             case StateManager.STATES.NO_PROPERTY:
                 Onboarding.renderProgressHomepage(container);

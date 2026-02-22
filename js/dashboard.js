@@ -249,14 +249,80 @@ const Dashboard = (function() {
         `;
     }
     
+    function renderDemo(container, property) {
+        // Mock demo data
+        const metrics = {
+            healthScore: 94,
+            coverageKm: 3.2,
+            totalAssets: 12,
+            activeSensors: 12,
+            sensorStatus: 'All operational',
+            issuesResolvedThisMonth: 8,
+            nextMaintenanceDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+            maintenanceDaysAway: 15,
+            uptime30Days: 98.2,
+            uptimeTarget: 98,
+            avgResponseTimeMinutes: 67,
+            blockagesResolved: { completed: 8, total: 8 }
+        };
+        
+        const assets = [
+            { 
+                name: 'Main Perimeter Drain', 
+                assetId: 'MPD-001', 
+                type: 'Open Drain', 
+                length: '850m', 
+                health: 'Excellent', 
+                healthClass: 'success', 
+                uptime: '99.2', 
+                uptimeColor: 'green',
+                nextMaintenanceDate: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString()
+            },
+            { 
+                name: 'Gate House Culvert', 
+                assetId: 'GHC-002', 
+                type: 'Culvert', 
+                length: '120m', 
+                health: 'Good', 
+                healthClass: 'success', 
+                uptime: '97.8', 
+                uptimeColor: 'green',
+                nextMaintenanceDate: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString()
+            },
+            { 
+                name: 'Service Road Drain', 
+                assetId: 'SRD-003', 
+                type: 'Open Drain', 
+                length: '450m', 
+                health: 'Fair', 
+                healthClass: 'warning', 
+                uptime: '94.3', 
+                uptimeColor: 'yellow',
+                nextMaintenanceDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString()
+            }
+        ];
+        
+        const alerts = [
+            {
+                assetName: 'Service Road Drain',
+                message: 'Water level above normal - monitoring',
+                severity: 'warning',
+                triggeredAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+            }
+        ];
+        
+        // Render with demo data
+        renderDashboard(container, property, metrics, assets, alerts);
+    }
+    
     function renderError(container) {
         container.innerHTML = `
             <div class="modern-card p-8 text-center">
                 <svg class="w-16 h-16 mx-auto text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
-                <h3 class="text-xl font-bold text-gray-900 mb-2">Failed to Load Dashboard</h3>
-                <p class="text-gray-600 mb-4">Unable to fetch property data. Please try again.</p>
+                <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Failed to Load Dashboard</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">Unable to fetch property data. Please try again.</p>
                 <button onclick="location.reload()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                     Retry
                 </button>
@@ -265,6 +331,7 @@ const Dashboard = (function() {
     }
     
     return {
-        render
+        render,
+        renderDemo
     };
 })();
