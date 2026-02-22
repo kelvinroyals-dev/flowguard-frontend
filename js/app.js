@@ -44,20 +44,27 @@ const App = (function() {
             let properties = [];
             let preferences = null;
             
+            // Check localStorage for demo mode preference
+            const savedDemoMode = localStorage.getItem('flowguard_demo_mode');
+            isDemoMode = savedDemoMode === 'true';
+            
             // Always load real data from API (demo mode only affects rendering)
             const [prefRes, propRes] = await Promise.all([
                 fetch(`${API_BASE}/preferences`, { 
                     headers: { 'Authorization': `Bearer ${token}` }
-                }),
+                }).catch(() => null),  // Ignore 404 if endpoint doesn't exist
                 fetch(`${API_BASE}/properties`, { 
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
             ]);
             
-            if (prefRes.ok) {
+            if (prefRes && prefRes.ok) {
                 const prefData = await prefRes.json();
                 preferences = prefData.data;
-                isDemoMode = preferences?.show_demo_data || false;
+                // Use API preference if available, otherwise use localStorage
+                if (preferences?.show_demo_data !== undefined) {
+                    isDemoMode = preferences.show_demo_data;
+                }
             }
             
             if (propRes.ok) {
@@ -389,20 +396,8 @@ const App = (function() {
             demoToggle.addEventListener('change', async (e) => {
                 isDemoMode = e.target.checked;
                 
-                // Save preference to API
-                const token = Auth.getToken();
-                try {
-                    await fetch(`${API_BASE}/preferences`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ show_demo_data: isDemoMode })
-                    });
-                } catch (e) {
-                    console.error('Failed to save demo preference:', e);
-                }
+                // Save to localStorage (API endpoint doesn't exist yet)
+                localStorage.setItem('flowguard_demo_mode', isDemoMode.toString());
                 
                 // Reload to apply changes
                 await loadAndRender();
