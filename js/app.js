@@ -89,6 +89,18 @@ const App = (function() {
             // Render appropriate view based on state
             renderCurrentState(container);
             
+            // Render currently active tab (if not dashboard)
+            const activeTab = document.querySelector('.tab-item.active');
+            if (activeTab) {
+                const tabName = activeTab.id.replace('tab-', '');
+                if (tabName !== 'dashboard') {
+                    const tabContainer = document.getElementById(`content-${tabName}`);
+                    if (tabContainer && !tabContainer.classList.contains('hidden')) {
+                        renderTab(tabName, tabContainer);
+                    }
+                }
+            }
+            
         } catch (error) {
             console.error('Failed to load data:', error);
             showError(container);
@@ -378,10 +390,22 @@ const App = (function() {
             // Update UI
             updateEstateSwitcher();
             
-            // Re-render current view with new property
-            const container = document.getElementById('content-dashboard');
-            if (container) {
-                renderCurrentState(container);
+            // Re-render current view
+            const dashboardContainer = document.getElementById('content-dashboard');
+            if (dashboardContainer && !dashboardContainer.classList.contains('hidden')) {
+                renderCurrentState(dashboardContainer);
+            }
+            
+            // Re-render currently visible tab
+            const activeTab = document.querySelector('.tab-item.active');
+            if (activeTab) {
+                const tabName = activeTab.id.replace('tab-', '');
+                if (tabName !== 'dashboard') {
+                    const tabContainer = document.getElementById(`content-${tabName}`);
+                    if (tabContainer && !tabContainer.classList.contains('hidden')) {
+                        renderTab(tabName, tabContainer);
+                    }
+                }
             }
         }
     }
@@ -416,10 +440,67 @@ const App = (function() {
         });
     }
     
+    // ============================================
+    // TAB RENDERING - Dynamic content for tabs
+    // ============================================
+    function renderTab(tabName, container) {
+        const state = StateManager.getCurrentState();
+        const property = StateManager.getCurrentProperty();
+        
+        // Dashboard tab is handled by renderCurrentState
+        if (tabName === 'dashboard') {
+            return;
+        }
+        
+        // Support tab is static HTML - no rendering needed
+        if (tabName === 'support') {
+            return;
+        }
+        
+        console.log(`🎨 Rendering ${tabName} tab - Demo: ${isDemoMode}, State: ${state}`);
+        
+        // Assets Tab
+        if (tabName === 'assets') {
+            if (isDemoMode) {
+                AssetsTab.renderDemo(container, property || { property_name: 'Demo Property' });
+            } else if (state === StateManager.STATES.ACTIVE && property) {
+                AssetsTab.render(container, property);
+            } else if (property) {
+                AssetsTab.renderEmpty(container, property);
+            }
+            return;
+        }
+        
+        // Alerts & Incidents Tab
+        if (tabName === 'alerts-incidents') {
+            if (isDemoMode) {
+                AlertsTab.renderDemo(container, property || { property_name: 'Demo Property' });
+            } else if (state === StateManager.STATES.ACTIVE && property) {
+                AlertsTab.render(container, property);
+            } else if (property) {
+                AlertsTab.renderEmpty(container, property);
+            }
+            return;
+        }
+        
+        // Billing & SLA Tab
+        if (tabName === 'billing') {
+            if (isDemoMode) {
+                BillingTab.renderDemo(container, property || { property_name: 'Demo Property' });
+            } else if (state === StateManager.STATES.ACTIVE && property) {
+                BillingTab.render(container, property);
+            } else if (property) {
+                BillingTab.renderEmpty(container, property);
+            }
+            return;
+        }
+    }
+    
     return {
         init,
         loadAndRender,
-        switchToProperty
+        switchToProperty,
+        renderTab
     };
 })();
 

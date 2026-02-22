@@ -1220,12 +1220,27 @@
         }
         
         function switchTab(tab) {
+            // Update tab buttons
             ['dashboard', 'assets', 'alerts-incidents', 'billing', 'support'].forEach(t => {
-                document.getElementById(`content-${t}`)?.classList.add('hidden');
                 document.getElementById(`tab-${t}`)?.classList.remove('active');
             });
-            document.getElementById(`content-${tab}`)?.classList.remove('hidden');
             document.getElementById(`tab-${tab}`)?.classList.add('active');
+            
+            // Hide all tab content
+            ['dashboard', 'assets', 'alerts-incidents', 'billing', 'support'].forEach(t => {
+                document.getElementById(`content-${t}`)?.classList.add('hidden');
+            });
+            
+            // Show selected tab and render if needed
+            const container = document.getElementById(`content-${tab}`);
+            if (container) {
+                container.classList.remove('hidden');
+                
+                // Render dynamic tabs (assets, alerts, billing)
+                if (typeof App !== 'undefined' && App.renderTab) {
+                    App.renderTab(tab, container);
+                }
+            }
         }
         
         function toggleEstateSwitcher() {
@@ -1262,6 +1277,11 @@
     <!-- Components (LOAD FIRST so functions are available) -->
     <script src="js/property-registration.js"></script>
     <script src="js/property-dashboard.js"></script>
+    
+    <!-- Tab Modules -->
+    <script src="js/assets-tab.js"></script>
+    <script src="js/alerts-tab.js"></script>
+    <script src="js/billing-tab.js"></script>
     
     <!-- Features -->
     <script src="js/onboarding.js"></script>
