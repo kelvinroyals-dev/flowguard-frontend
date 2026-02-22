@@ -59,12 +59,6 @@ const AccountSettings = (function() {
                                 </div>
                                 
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Role/Position</label>
-                                    <input type="text" name="role" value="${user?.role || 'Estate Manager'}"
-                                        class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-blue-600 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-                                </div>
-                                
-                                <div>
                                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Organization</label>
                                     <input type="text" name="organization" value="${user?.organization || ''}"
                                         class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-blue-600 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
@@ -275,8 +269,147 @@ const AccountSettings = (function() {
     }
     
     function editProperty(propertyId) {
-        // TODO: Open property edit modal
-        console.log('Edit property:', propertyId);
+        const property = StateManager.getAllProperties().find(p => p.property_id === propertyId);
+        if (!property) return;
+        
+        // Create modal
+        const modal = document.createElement('div');
+        modal.id = 'property-edit-modal';
+        modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4';
+        modal.innerHTML = `
+            <div class="modern-card max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100">Edit Property Details</h3>
+                    <button onclick="AccountSettings.closeEditModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <form id="property-edit-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Property Name *</label>
+                        <input type="text" name="property_name" value="${property.property_name}" required
+                            class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-blue-600 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Property Type *</label>
+                        <select name="property_type" required
+                            class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-blue-600 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                            <option value="residential_estate" ${property.property_type === 'residential_estate' ? 'selected' : ''}>Residential Estate</option>
+                            <option value="commercial_complex" ${property.property_type === 'commercial_complex' ? 'selected' : ''}>Commercial Complex</option>
+                            <option value="industrial_facility" ${property.property_type === 'industrial_facility' ? 'selected' : ''}>Industrial Facility</option>
+                            <option value="mixed_use" ${property.property_type === 'mixed_use' ? 'selected' : ''}>Mixed Use</option>
+                            <option value="government_facility" ${property.property_type === 'government_facility' ? 'selected' : ''}>Government Facility</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Address</label>
+                        <input type="text" name="address" value="${property.address || ''}"
+                            class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-blue-600 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">City *</label>
+                            <input type="text" name="city" value="${property.city}" required
+                                class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-blue-600 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">State *</label>
+                            <input type="text" name="state" value="${property.state}" required
+                                class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-blue-600 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <div class="text-sm text-blue-800 dark:text-blue-400">
+                                <p class="font-semibold mb-1">Property ID: ${property.property_id}</p>
+                                <p class="text-xs">Status: ${property.status}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3 pt-4">
+                        <button type="button" onclick="AccountSettings.closeEditModal()" class="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:shadow-lg transition-all">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Handle form submission
+        const form = document.getElementById('property-edit-form');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+            
+            try {
+                const token = Auth.getToken();
+                const response = await fetch(`${API_BASE}/properties/${propertyId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    showSuccess('Property updated successfully!');
+                    closeEditModal();
+                    
+                    // Reload to refresh property list
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    showError('Failed to update property');
+                }
+            } catch (error) {
+                console.error('Property update error:', error);
+                showError('Failed to update property');
+            }
+        });
+        
+        // Close on backdrop click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeEditModal();
+            }
+        });
+        
+        // Close on escape
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                closeEditModal();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    }
+    
+    function closeEditModal() {
+        const modal = document.getElementById('property-edit-modal');
+        if (modal) {
+            modal.remove();
+        }
     }
     
     function close() {
@@ -308,6 +441,7 @@ const AccountSettings = (function() {
     return {
         render,
         editProperty,
+        closeEditModal,
         close
     };
 })();
