@@ -44,37 +44,31 @@ const App = (function() {
             let properties = [];
             let preferences = null;
             
-            // Check if demo mode is enabled
-            if (isDemoMode) {
-                console.log('🎭 Demo mode active');
-                properties = DemoData.getEstates();
-                preferences = { show_demo_data: true };
-            } else {
-                // Load real data from API
-                const [prefRes, propRes] = await Promise.all([
-                    fetch(`${API_BASE}/preferences`, { 
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    }),
-                    fetch(`${API_BASE}/properties`, { 
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    })
-                ]);
-                
-                if (prefRes.ok) {
-                    const prefData = await prefRes.json();
-                    preferences = prefData.data;
-                    isDemoMode = preferences?.show_demo_data || false;
-                }
-                
-                if (propRes.ok) {
-                    const propData = await propRes.json();
-                    properties = propData.data || [];
-                }
+            // Always load real data from API (demo mode only affects rendering)
+            const [prefRes, propRes] = await Promise.all([
+                fetch(`${API_BASE}/preferences`, { 
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }),
+                fetch(`${API_BASE}/properties`, { 
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+            ]);
+            
+            if (prefRes.ok) {
+                const prefData = await prefRes.json();
+                preferences = prefData.data;
+                isDemoMode = preferences?.show_demo_data || false;
             }
             
-            // Initialize state manager
+            if (propRes.ok) {
+                const propData = await propRes.json();
+                properties = propData.data || [];
+            }
+            
+            // Initialize state manager with REAL properties
             const currentState = StateManager.init(properties, preferences);
             console.log('📊 Current state:', currentState);
+            console.log('🎭 Demo mode:', isDemoMode);
             
             // Update navigation visibility
             updateNavigation();
