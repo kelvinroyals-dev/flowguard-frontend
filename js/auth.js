@@ -29,10 +29,8 @@ const Auth = (function() {
     }
     
     function logout() {
-        if (confirm('Are you sure you want to sign out?')) {
-            localStorage.clear();
-            window.location.href = 'login.html';
-        }
+        localStorage.clear();
+        window.location.href = 'login.html';
     }
     
     function updateUserInfo() {

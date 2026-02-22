@@ -7,7 +7,7 @@ const AccountSettings = (function() {
     const API_BASE = 'https://api.flowguard.ng/api/v1';
     
     function render(container) {
-        const user = Auth.getCurrentUser();
+        const user = Auth.getUser();
         const properties = StateManager.getAllProperties();
         
         container.innerHTML = `
@@ -33,7 +33,7 @@ const AccountSettings = (function() {
                             <!-- Avatar -->
                             <div class="flex-shrink-0">
                                 <div class="w-24 h-24 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-3">
-                                    ${getInitials(user?.name || 'User')}
+                                    ${getInitials(user?.fullName || 'User')}
                                 </div>
                                 <button type="button" class="text-xs text-blue-600 hover:text-blue-700 font-medium">Change Photo</button>
                             </div>
@@ -42,7 +42,7 @@ const AccountSettings = (function() {
                             <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div class="md:col-span-2">
                                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Full Name *</label>
-                                    <input type="text" name="name" value="${user?.name || ''}" required
+                                    <input type="text" name="fullName" value="${user?.fullName || ''}" required
                                         class="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl focus:border-blue-600 focus:outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                                 </div>
                                 
