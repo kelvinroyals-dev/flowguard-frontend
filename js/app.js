@@ -389,21 +389,22 @@ const App = (function() {
             demoToggle.addEventListener('change', async (e) => {
                 isDemoMode = e.target.checked;
                 
-                // Save preference if not demo mode
-                if (!isDemoMode) {
-                    const token = Auth.getToken();
-                    try {
-                        await fetch(`${API_BASE}/preferences`, {
-                            method: 'PUT',
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({ showDemoData: isDemoMode })
-                        });
-                    } catch (e) {}
+                // Save preference to API
+                const token = Auth.getToken();
+                try {
+                    await fetch(`${API_BASE}/preferences`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ show_demo_data: isDemoMode })
+                    });
+                } catch (e) {
+                    console.error('Failed to save demo preference:', e);
                 }
                 
+                // Reload to apply changes
                 await loadAndRender();
             });
         }
