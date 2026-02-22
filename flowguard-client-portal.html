@@ -471,15 +471,40 @@
                     </div>
                     
                     <nav class="hidden md:flex items-center -mb-px" id="main-nav">
-                        <button id="tab-dashboard" class="tab-item active">Dashboard</button>
-                        <button id="tab-assets" class="tab-item">My Assets</button>
-                        <button id="tab-alerts-incidents" class="tab-item">Alerts & Incidents</button>
-                        <button id="tab-billing" class="tab-item">Billing & SLA</button>
-                        <button id="tab-support" class="tab-item">Support</button>
+                        <button id="tab-dashboard" class="tab-item active" onclick="switchTab('dashboard')">Home</button>
+                        <button id="tab-assets" class="tab-item" onclick="switchTab('assets')">My Assets</button>
+                        <button id="tab-alerts-incidents" class="tab-item" onclick="switchTab('alerts-incidents')">Alerts & Incidents</button>
+                        <button id="tab-billing" class="tab-item" onclick="switchTab('billing')">Billing & SLA</button>
+                        <button id="tab-support" class="tab-item" onclick="switchTab('support')">Support</button>
                     </nav>
                 </div>
                 
                 <div class="flex items-center space-x-4">
+                    <!-- Estate Switcher -->
+                    <div id="estate-switcher-container" class="hidden relative">
+                        <button id="estate-switcher-btn" onclick="toggleEstateSwitcher()" class="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                            <svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                            </svg>
+                            <span id="current-estate-name" class="text-sm font-medium text-gray-900 dark:text-gray-100">Select Property</span>
+                            <svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="estate-switcher-menu" class="hidden absolute right-0 mt-2 w-64 modern-card shadow-lg py-2 z-50 max-h-80 overflow-y-auto">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <!-- Demo Toggle -->
+                    <div id="demo-toggle-container" class="hidden items-center gap-2 bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Demo Mode</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="demo-toggle" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                    
                     <!-- Dark Mode Toggle -->
                     <button id="theme-toggle-header" onclick="toggleTheme()" class="theme-toggle" title="Toggle dark mode">
                         <svg id="theme-icon-sun" class="w-5 h-5 text-gray-600 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1127,25 +1152,6 @@
             map.appendChild(svg);
         }
         
-        function switchTab(tab) {
-            console.log('Switching to tab:', tab);
-            ['dashboard', 'assets', 'alerts-incidents', 'billing', 'support'].forEach(t => {
-                const content = document.getElementById(`content-${t}`);
-                const tabBtn = document.getElementById(`tab-${t}`);
-                if (content) content.classList.add('hidden');
-                if (tabBtn) tabBtn.classList.remove('active');
-            });
-            const targetContent = document.getElementById(`content-${tab}`);
-            const targetTab = document.getElementById(`tab-${tab}`);
-            if (targetContent) {
-                targetContent.classList.remove('hidden');
-                targetContent.style.display = 'block';
-                targetContent.style.visibility = 'visible';
-            }
-            if (targetTab) {
-                targetTab.classList.add('active');
-            }
-        }
         
         function updateTime() {
             const now = new Date();
@@ -1218,6 +1224,23 @@
             document.getElementById(`tab-${tab}`)?.classList.add('active');
         }
         
+        function toggleEstateSwitcher() {
+            const menu = document.getElementById('estate-switcher-menu');
+            if (menu) {
+                menu.classList.toggle('hidden');
+            }
+        }
+        
+        // Close estate switcher when clicking outside
+        document.addEventListener('click', function(event) {
+            const btn = document.getElementById('estate-switcher-btn');
+            const menu = document.getElementById('estate-switcher-menu');
+            
+            if (btn && menu && !btn.contains(event.target) && !menu.contains(event.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+        
         window.addEventListener('load', () => {
             loadTheme();
         });
@@ -1232,14 +1255,14 @@
     <script src="js/stateManager.js"></script>
     <script src="js/demo-data.js"></script>
     
+    <!-- Components (LOAD FIRST so functions are available) -->
+    <script src="js/property-registration.js"></script>
+    <script src="js/property-dashboard.js"></script>
+    
     <!-- Features -->
     <script src="js/onboarding.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/billing.js"></script>
-    
-    <!-- Components -->
-    <script src="js/property-registration.js"></script>
-    <script src="js/property-dashboard.js"></script>
     
     <!-- Controller (loads last) -->
     <script src="js/app.js"></script>

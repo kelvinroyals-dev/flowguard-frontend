@@ -68,16 +68,9 @@ const StateManager = (function() {
         return userPreferences;
     }
     
-    // Determine which tabs to show based on state
+    // All tabs always visible - show demo or empty state based on demo toggle
     function shouldShowTab(tabName) {
-        // Only show full dashboard tabs when status is 'active'
-        if (currentState === STATES.ACTIVE) {
-            return true;
-        }
-        
-        // Hide these tabs until deployed
-        const restrictedTabs = ['assets', 'billing', 'support'];
-        return !restrictedTabs.includes(tabName);
+        return true;
     }
     
     // Get progress checklist for UI
@@ -124,9 +117,11 @@ const StateManager = (function() {
         return steps;
     }
     
-    // Check if demo toggle should be visible
+    // Show demo toggle for pre-ACTIVE states so users can preview functionality
     function shouldShowDemoToggle() {
-        return currentState === STATES.NO_PROPERTY;
+        // Show when user has property but it's not active yet
+        // OR when user has no property (can preview what portal will look like)
+        return currentState !== STATES.ACTIVE;
     }
     
     return {

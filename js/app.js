@@ -82,6 +82,9 @@ const App = (function() {
             // Update demo toggle visibility
             updateDemoToggle();
             
+            // Update estate switcher
+            updateEstateSwitcher();
+            
             // Render appropriate view based on state
             renderCurrentState(container);
             
@@ -301,6 +304,69 @@ const App = (function() {
         }
     }
     
+    function updateEstateSwitcher() {
+        const properties = StateManager.getAllProperties();
+        const currentProperty = StateManager.getCurrentProperty();
+        const container = document.getElementById('estate-switcher-container');
+        const menu = document.getElementById('estate-switcher-menu');
+        const currentName = document.getElementById('current-estate-name');
+        
+        if (!container || !menu) return;
+        
+        // Show switcher if user has 2 or more properties
+        if (properties && properties.length > 1) {
+            container.classList.remove('hidden');
+            
+            // Update current property name
+            if (currentProperty && currentName) {
+                currentName.textContent = currentProperty.property_name;
+            }
+            
+            // Populate menu with all properties
+            menu.innerHTML = properties.map(prop => `
+                <button onclick="App.switchToProperty('${prop.property_id}')" class="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${prop.property_id === currentProperty?.property_id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                            ${prop.property_name.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">${prop.property_name}</p>
+                            <p class="text-xs text-gray-600 dark:text-gray-400">${prop.property_type.replace(/_/g, ' ')}</p>
+                        </div>
+                        ${prop.property_id === currentProperty?.property_id ? `
+                            <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        ` : ''}
+                    </div>
+                </button>
+            `).join('');
+        } else {
+            container.classList.add('hidden');
+        }
+    }
+    
+    function switchToProperty(propertyId) {
+        const properties = StateManager.getAllProperties();
+        const property = properties.find(p => p.property_id === propertyId);
+        
+        if (property) {
+            StateManager.setCurrentProperty(property);
+            
+            // Close dropdown
+            document.getElementById('estate-switcher-menu')?.classList.add('hidden');
+            
+            // Update UI
+            updateEstateSwitcher();
+            
+            // Re-render current view with new property
+            const container = document.getElementById('content-dashboard');
+            if (container) {
+                renderCurrentState(container);
+            }
+        }
+    }
+    
     // ============================================
     // EVENT LISTENERS
     // ============================================
@@ -344,7 +410,8 @@ const App = (function() {
     
     return {
         init,
-        loadAndRender
+        loadAndRender,
+        switchToProperty
     };
 })();
 
