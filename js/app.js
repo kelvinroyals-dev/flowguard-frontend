@@ -102,25 +102,33 @@ const App = (function() {
         const property = StateManager.getCurrentProperty();
         
         console.log('🎨 Rendering state:', state);
+        console.log('🎭 Demo mode:', isDemoMode);
         
         // Demo mode handling for pre-ACTIVE states
-        if (isDemoMode && state !== StateManager.STATES.ACTIVE && state !== StateManager.STATES.NO_PROPERTY) {
+        // Show full dashboard with demo data (preview what portal will look like)
+        if (isDemoMode && state !== StateManager.STATES.ACTIVE && property) {
             // User has property waiting for deployment + demo ON
-            // Show full dashboard with demo data (preview what portal will look like)
-            const demoProperty = DemoData.getCurrentEstate();
-            Dashboard.renderDemo(container, demoProperty);
+            console.log('📊 Rendering demo dashboard for pre-ACTIVE state');
+            Dashboard.renderDemo(container, property);
             return;
         }
         
         // Demo mode for NO_PROPERTY state
         if (isDemoMode && state === StateManager.STATES.NO_PROPERTY) {
-            const demoProperty = DemoData.getCurrentEstate();
-            StateManager.init([demoProperty], { show_demo_data: true });
+            console.log('📊 Rendering demo dashboard for NO_PROPERTY state');
+            const demoProperty = {
+                property_id: 'DEMO-ESTATE-001',
+                property_name: 'Palm Gardens Estate (Demo)',
+                property_type: 'residential_estate',
+                city: 'Lagos',
+                state: 'Lagos'
+            };
             Dashboard.renderDemo(container, demoProperty);
             return;
         }
         
         // Normal rendering based on state
+        console.log('📊 Rendering normal view for state:', state);
         switch(state) {
             case StateManager.STATES.NO_PROPERTY:
                 Onboarding.renderProgressHomepage(container);
