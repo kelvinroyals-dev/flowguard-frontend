@@ -536,22 +536,18 @@
                                 <p id="menu-user-email" class="text-xs text-gray-500 dark:text-gray-400"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f796939a9e99b7919b98809082968593d99990">[email&#160;protected]</a></p>
                             </div>
                             
-                            <!-- Settings Panel (expandable) -->
+                            <!-- Settings Panel -->
                             <div id="settings-panel-wrapper">
-                                <button onclick="togglePanel('settings')" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2">
+                                <button onclick="openAccountSettings()" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                     </svg>
                                     Account Settings
+                                    <svg class="w-4 h-4 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
                                 </button>
-                                <div id="settings-panel" class="hidden px-4 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                                    <div class="space-y-3">
-                                        <button class="w-full text-left px-3 py-2 text-xs bg-white dark:bg-gray-700 rounded hover:bg-gray-100 dark:hover:bg-gray-600">Update Profile</button>
-                                        <button class="w-full text-left px-3 py-2 text-xs bg-white dark:bg-gray-700 rounded hover:bg-gray-100 dark:hover:bg-gray-600">Change Password</button>
-                                        <button class="w-full text-left px-3 py-2 text-xs bg-white dark:bg-gray-700 rounded hover:bg-gray-100 dark:hover:bg-gray-600">Privacy Settings</button>
-                                    </div>
-                                </div>
                             </div>
                             
                             <!-- Notifications Panel (expandable) -->
@@ -564,7 +560,7 @@
                                     <span class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">3</span>
                                 </button>
                                 <div id="notifications-panel" class="hidden px-4 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                                    <div class="space-y-2">
+                                    <div class="space-y-2 mb-3">
                                         <div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs">
                                             <p class="font-semibold">System health check completed</p>
                                             <p class="text-gray-600 dark:text-gray-400">2 hours ago</p>
@@ -578,11 +574,14 @@
                                             <p class="text-gray-600 dark:text-gray-400">3 days ago</p>
                                         </div>
                                     </div>
+                                    <button onclick="openNotifications()" class="w-full px-3 py-2 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700">
+                                        View All Notifications
+                                    </button>
                                 </div>
                             </div>
                             
                             <hr class="my-2">
-                            <button onclick="Auth.logout()" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                            <button onclick="Modal.showLogoutConfirm()" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                                 </svg>
@@ -1250,6 +1249,31 @@
             }
         }
         
+        function openAccountSettings() {
+            // Close user menu
+            document.getElementById('user-menu')?.classList.add('hidden');
+            
+            // Switch to dashboard tab and render settings
+            switchTab('dashboard');
+            const container = document.getElementById('content-dashboard');
+            if (container && typeof AccountSettings !== 'undefined') {
+                AccountSettings.render(container);
+            }
+        }
+        
+        function openNotifications() {
+            // Close user menu and notification panel
+            document.getElementById('user-menu')?.classList.add('hidden');
+            document.getElementById('notifications-panel')?.classList.add('hidden');
+            
+            // Switch to dashboard tab and render notifications
+            switchTab('dashboard');
+            const container = document.getElementById('content-dashboard');
+            if (container && typeof NotificationsPage !== 'undefined') {
+                NotificationsPage.render(container);
+            }
+        }
+        
         // Close estate switcher when clicking outside
         document.addEventListener('click', function(event) {
             const btn = document.getElementById('estate-switcher-btn');
@@ -1271,6 +1295,7 @@
     
     <!-- Core -->
     <script src="js/auth.js"></script>
+    <script src="js/modal.js"></script>
     <script src="js/stateManager.js"></script>
     <script src="js/demo-data.js"></script>
     
@@ -1282,6 +1307,10 @@
     <script src="js/assets-tab.js"></script>
     <script src="js/alerts-tab.js"></script>
     <script src="js/billing-tab.js"></script>
+    
+    <!-- Page Modules -->
+    <script src="js/account-settings.js"></script>
+    <script src="js/notifications-page.js"></script>
     
     <!-- Features -->
     <script src="js/onboarding.js"></script>
