@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="flowguard-logo.svg">
+    <title>FlowGuard Operations Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #FAFBFC; color: #1A1D1F; }
+        .dark body { background: #0F1117; color: #E8ECEF; }
+        
+        .header-bg { background: #FFFFFF; border-bottom: 1px solid #E5E7EB; }
+        .dark .header-bg { background: #1F2937; border-bottom: 1px solid #374151; }
+        
+        .font-space { font-family: 'Space Grotesk', sans-serif; }
+        
+        .modern-card { 
+            background: white; 
+            border-radius: 12px; 
+            border: 1px solid #E8ECEF;
+        }
+        .dark .modern-card {
+            background: #1A1F2E;
+            border-color: #2A3142;
+        }
+        
+        .tab-item { 
+            padding: 16px 24px; 
+            font-weight: 600; 
+            font-size: 14px;
+            color: #6B7280; 
+            border-bottom: 2px solid transparent; 
+            cursor: pointer;
+            background: transparent;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+            transition: all 0.2s;
+        }
+        .tab-item:hover { color: #3B82F6; }
+        .tab-item.active { color: #0066FF; border-bottom-color: #0066FF; }
+        
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="header-bg sticky top-0 z-50">
+        <div class="max-w-[1600px] mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold font-space text-gray-900 dark:text-gray-100">FlowGuard Operations Center</h1>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">Real-Time Operations Management</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div class="text-xs text-gray-600 dark:text-gray-400">
+                        <span id="current-time">Loading...</span>
+                    </div>
+                    
+                    <button id="theme-toggle" class="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                        <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                        </svg>
+                    </button>
+                    
+                    <div class="text-right">
+                        <p class="text-sm font-medium text-gray-900 dark:text-gray-100" id="user-name">Operations Team</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">Internal Access</p>
+                    </div>
+                    
+                    <button onclick="logout()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors">
+                        Logout
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Tabs Navigation -->
+            <nav class="flex items-center mt-4 -mb-px overflow-x-auto">
+                <button id="tab-dashboard" class="tab-item active" onclick="switchTab('dashboard')">Dashboard</button>
+                <button id="tab-clients" class="tab-item" onclick="switchTab('clients')">Clients</button>
+                <button id="tab-properties" class="tab-item" onclick="switchTab('properties')">Properties</button>
+                <button id="tab-alerts" class="tab-item" onclick="switchTab('alerts')">Alerts</button>
+                <button id="tab-teams" class="tab-item" onclick="switchTab('teams')">Teams</button>
+                <button id="tab-team-members" class="tab-item" onclick="switchTab('team-members')">Team Members</button>
+                <button id="tab-reports" class="tab-item" onclick="switchTab('reports')">Reports</button>
+                <button id="tab-settings" class="tab-item" onclick="switchTab('settings')">Settings</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-[1600px] mx-auto px-6 py-8">
+        <div id="content-dashboard" class="tab-content"></div>
+        <div id="content-clients" class="tab-content hidden"></div>
+        <div id="content-properties" class="tab-content hidden"></div>
+        <div id="content-alerts" class="tab-content hidden"></div>
+        <div id="content-teams" class="tab-content hidden"></div>
+        <div id="content-team-members" class="tab-content hidden"></div>
+        <div id="content-reports" class="tab-content hidden"></div>
+        <div id="content-settings" class="tab-content hidden"></div>
+    </main>
+
+    <!-- Load Scripts -->
+    <script src="js/auth.js"></script>
+    <script src="js/ops-state-manager.js"></script>
+    <script src="js/ops-dashboard.js"></script>
+    <script src="js/ops-user-management.js"></script>
+    <script src="js/ops-clients.js"></script>
+    <script src="js/ops-properties.js"></script>
+    <script src="js/ops-teams.js"></script>
+    <script src="js/ops-alerts-reports.js"></script>
+    <script src="js/ops-settings.js"></script>
+    
+    <script>
+        // Auth check
+        if (typeof Auth !== 'undefined' && !Auth.isAuthenticated()) {
+            window.location.href = 'login.html';
+        }
+        
+        // Dark mode
+        const darkMode = localStorage.getItem('darkMode') === 'true';
+        if (darkMode) document.documentElement.classList.add('dark');
+        
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('darkMode', isDark);
+        });
+        
+        // Tab switching
+        function switchTab(tabName) {
+            ['dashboard', 'clients', 'properties', 'alerts', 'teams', 'team-members', 'reports', 'settings'].forEach(tab => {
+                const content = document.getElementById(`content-${tab}`);
+                const button = document.getElementById(`tab-${tab}`);
+                if (content) content.classList.add('hidden');
+                if (button) button.classList.remove('active');
+            });
+            
+            const selectedContent = document.getElementById(`content-${tabName}`);
+            const selectedButton = document.getElementById(`tab-${tabName}`);
+            if (selectedContent) selectedContent.classList.remove('hidden');
+            if (selectedButton) selectedButton.classList.add('active');
+            
+            renderTab(tabName);
+        }
+        
+        function renderTab(tabName) {
+            const container = document.getElementById(`content-${tabName}`);
+            if (!container || container.hasAttribute('data-rendered')) return;
+            
+            switch(tabName) {
+                case 'dashboard': OpsDashboard.render(container); break;
+                case 'clients': OpsClients.render(container); break;
+                case 'properties': OpsProperties.render(container); break;
+                case 'alerts': OpsAlerts.render(container); break;
+                case 'teams': OpsTeams.render(container); break;
+                case 'team-members': OpsUserManagement.render(container); break;
+                case 'reports': OpsReports.render(container); break;
+                case 'settings': OpsSettings.render(container); break;
+            }
+            container.setAttribute('data-rendered', 'true');
+        }
+        
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                if (typeof Auth !== 'undefined') Auth.logout();
+            }
+        }
+        
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('en-US', { 
+                hour: '2-digit', minute: '2-digit', hour12: true 
+            }) + ', ' + now.toLocaleDateString('en-US', { 
+                weekday: 'short', month: 'short', day: 'numeric' 
+            });
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateClock();
+            setInterval(updateClock, 1000);
+            renderTab('dashboard');
+            
+            if (typeof OpsStateManager !== 'undefined' && OpsStateManager.getDemoMode()) {
+                const indicator = document.createElement('div');
+                indicator.className = 'fixed bottom-4 right-4 bg-orange-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-bold z-50';
+                indicator.innerHTML = '🎮 DEMO MODE <button onclick="this.parentElement.remove()" class="ml-2">×</button>';
+                document.body.appendChild(indicator);
+            }
+        });
+        
+        window.switchTab = switchTab;
+    </script>
+
+</body>
+</html>
