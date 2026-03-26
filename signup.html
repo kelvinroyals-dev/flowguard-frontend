@@ -1,427 +1,1004 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="flowguard-logo.svg">
-    <title>Sign Up - Flow Guard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            font-family: 'Inter', sans-serif;
-        }
-        
-        /* Flow Guard Brand Colors */
-        :root {
-            --primary: #2a7096;
-            --primary-dark: #1b5e8c;
-            --primary-light: #4c84a5;
-            --accent: #2c9aa3;
-            --accent-light: #74bcc2;
-            --teal: #9acfd3;
-            --blue-gray: #78a0bb;
-            --light-blue: #a7c1d3;
-            --bg-light: #e6f3f4;
-        }
-        
-        body {
-            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--accent) 100%);
-            min-height: 100vh;
-        }
-        
-        .font-space {
-            font-family: 'Space Grotesk', sans-serif;
-        }
-        
-        .glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-        
-        .input-field {
-            transition: all 0.3s ease;
-        }
-        
-        .input-field:focus {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(42, 112, 150, 0.3);
-            border-color: var(--accent) !important;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(42, 112, 150, 0.4);
-            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
-        }
-        
-        .floating {
-            animation: floating 3s ease-in-out infinite;
-        }
-        
-        @keyframes floating {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-        
-        .plan-card {
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .plan-card:hover {
-            transform: translateY(-4px);
-        }
-        
-        .plan-card.selected {
-            border-color: var(--primary);
-            background: linear-gradient(135deg, rgba(42, 112, 150, 0.1) 0%, rgba(44, 154, 163, 0.1) 100%);
-        }
-        
-        .text-brand {
-            color: var(--primary);
-        }
-        
-        .text-brand-light {
-            color: var(--accent-light);
-        }
-        
-        .bg-brand {
-            background-color: var(--primary);
-        }
-    </style>
-</head>
-<body class="flex items-center justify-center p-4 py-12">
-    
-    <div class="w-full max-w-2xl">
-        
-        <!-- Logo & Header -->
-        <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl shadow-2xl mb-6 floating">
-                <svg class="w-10 h-10 text-[#2a7096]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                </svg>
-            </div>
-            <h1 class="text-4xl font-bold font-space text-white mb-2">Join Flow Guard</h1>
-            <p class="text-[#9acfd3]">Start protecting your property from flooding today</p>
-        </div>
-        
-        <!-- Signup Card -->
-        <div class="glass-card rounded-3xl shadow-2xl p-8">
-            
-            <!-- Progress Steps -->
-            <div class="mb-8">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center">
-                        <div class="flex items-center justify-center w-8 h-8 rounded-full bg-[#2a7096] text-white text-sm font-bold">1</div>
-                        <span class="ml-2 text-sm font-semibold text-gray-700">Account</span>
-                    </div>
-                    <div class="flex-1 h-1 mx-4 bg-gray-200"></div>
-                    <div class="flex items-center">
-                        <div class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-500 text-sm font-bold">2</div>
-                        <span class="ml-2 text-sm font-semibold text-gray-500">Plan</span>
-                    </div>
-                    <div class="flex-1 h-1 mx-4 bg-gray-200"></div>
-                    <div class="flex items-center">
-                        <div class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-200 text-gray-500 text-sm font-bold">3</div>
-                        <span class="ml-2 text-sm font-semibold text-gray-500">Details</span>
-                    </div>
-                </div>
-            </div>
-            
-            <h2 class="text-2xl font-bold text-gray-800 mb-2">Create Your Account</h2>
-            <p class="text-gray-600 mb-8">Fill in your details to get started</p>
-            
-            <!-- Signup Form -->
-            <form id="signup-form" class="space-y-6">
-                
-                <!-- Name Fields -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">First Name</label>
-                        <input 
-                            type="text" 
-                            id="first-name"
-                            required
-                            placeholder="John"
-                            class="input-field w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#2c9aa3] focus:outline-none"
-                        />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Last Name</label>
-                        <input 
-                            type="text" 
-                            id="last-name"
-                            required
-                            placeholder="Doe"
-                            class="input-field w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#2c9aa3] focus:outline-none"
-                        />
-                    </div>
-                </div>
-                
-                <!-- Email Field -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
-                    <input 
-                        type="email" 
-                        id="email"
-                        required
-                        placeholder="you@company.com"
-                        class="input-field w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#2c9aa3] focus:outline-none"
-                    />
-                </div>
-                
-                <!-- Phone Field -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
-                    <input 
-                        type="tel" 
-                        id="phone"
-                        required
-                        placeholder="+234-803-555-0100"
-                        class="input-field w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#2c9aa3] focus:outline-none"
-                    />
-                </div>
-                
-                <!-- Company/Estate Field -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Estate/Company Name</label>
-                    <input 
-                        type="text" 
-                        id="company"
-                        required
-                        placeholder="Your Estate Management Company"
-                        class="input-field w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#2c9aa3] focus:outline-none"
-                    />
-                </div>
-                
-                <!-- Password Fields -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Password</label>
-                        <input 
-                            type="password" 
-                            id="password"
-                            required
-                            placeholder="Min. 8 characters"
-                            class="input-field w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#2c9aa3] focus:outline-none"
-                        />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Confirm Password</label>
-                        <input 
-                            type="password" 
-                            id="confirm-password"
-                            required
-                            placeholder="Re-enter password"
-                            class="input-field w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#2c9aa3] focus:outline-none"
-                        />
-                    </div>
-                </div>
-                
-                <!-- Terms & Conditions -->
-                <div class="flex items-start">
-                    <input type="checkbox" id="terms" required class="w-4 h-4 mt-1 text-[#2a7096] border-gray-300 rounded focus:ring-[#2c9aa3]">
-                    <label for="terms" class="ml-2 text-sm text-gray-600">
-                        I agree to the <a href="#" class="text-[#2a7096] hover:text-[#1b5e8c] font-semibold">Terms of Service</a> and 
-                        <a href="#" class="text-[#2a7096] hover:text-[#1b5e8c] font-semibold">Privacy Policy</a>
-                    </label>
-                </div>
-                
-                <!-- Marketing Consent -->
-                <div class="flex items-start">
-                    <input type="checkbox" id="marketing" class="w-4 h-4 mt-1 text-[#2a7096] border-gray-300 rounded focus:ring-[#2c9aa3]">
-                    <label for="marketing" class="ml-2 text-sm text-gray-600">
-                        Send me updates about Flow Guard products and services
-                    </label>
-                </div>
-                
-                <!-- Signup Button -->
-                <button 
-                    type="submit"
-                    class="btn-primary w-full py-3 px-6 text-white font-bold rounded-xl"
-                >
-                    Create Account
-                </button>
-                
-                <!-- Divider -->
-                <div class="relative my-6">
-                    <div class="absolute inset-0 flex items-center">
-                        <div class="w-full border-t border-gray-300"></div>
-                    </div>
-                    <div class="relative flex justify-center text-sm">
-                        <span class="px-4 bg-white text-gray-500">Or sign up with</span>
-                    </div>
-                </div>
-                
-                <!-- Social Signup -->
-                <div class="grid grid-cols-2 gap-4">
-                    <button type="button" class="flex items-center justify-center px-4 py-3 border-2 border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-                        <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                        </svg>
-                        Google
-                    </button>
-                    <button type="button" class="flex items-center justify-center px-4 py-3 border-2 border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.613 0 2.886.06 4.374 2.19-.13.09-2.383 1.37-2.383 4.19 0 3.26 2.854 4.42 2.955 4.45z"/>
-                        </svg>
-                        Apple
-                    </button>
-                </div>
-                
-            </form>
-            
-            <!-- Login Link -->
-            <p class="text-center text-sm text-gray-600 mt-8">
-                Already have an account? 
-                <a href="login.html" class="text-[#2a7096] hover:text-[#1b5e8c] font-bold">Sign in</a>
-            </p>
-        </div>
-        
-        <!-- Footer Links -->
-        <div class="text-center mt-8">
-            <div class="flex items-center justify-center space-x-6 text-sm text-[#9acfd3]">
-                <a href="#" class="hover:text-white transition-colors">Privacy Policy</a>
-                <span>•</span>
-                <a href="#" class="hover:text-white transition-colors">Terms of Service</a>
-                <span>•</span>
-                <a href="#" class="hover:text-white transition-colors">Support</a>
-            </div>
-        </div>
-        
-    </div>
-    
-    <script>
-        // Handle signup form submission
-        document.getElementById('signup-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const firstName = document.getElementById('first-name').value;
-            const lastName = document.getElementById('last-name').value;
-            const email = document.getElementById('email').value;
-            const phone = document.getElementById('phone').value;
-            const company = document.getElementById('company').value;
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirm-password').value;
-            
-            // Validate passwords match
-            if (password !== confirmPassword) {
-                alert('Passwords do not match!');
-                return;
-            }
-            
-            // Validate password strength
-            if (password.length < 8) {
-                alert('Password must be at least 8 characters long');
-                return;
-            }
-            
-            // For demo purposes - you'll integrate with your backend API later
-            console.log('Signup attempt:', { firstName, lastName, email, phone, company });
-            
-            // Show loading state
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<span class="flex items-center justify-center"><svg class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Creating account...</span>';
-            submitBtn.disabled = true;
-            
-            // Simulate API call
-try {
-    const response = await fetch('https://api.flowguard.ng/api/v1/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            firstName, 
-            lastName, 
-            email, 
-            phone, 
-            company, 
-            password 
-        })
-    });
-    
-    const data = await response.json();
-    
-    if (data.success) {
-        // DON'T redirect - show success message to verify email
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-        showSuccess('Account created! Please check your email to verify your account before logging in.');
-    } else {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-        showError(data.error || 'Registration failed. Please try again.');
-    }
-} catch (error) {
-    console.error('Registration error:', error);
-    submitBtn.innerHTML = originalText;
-    submitBtn.disabled = false;
-    showError('Connection failed. Please try again.');
-}
-        });
-		
-function showError(message) {
-    // Remove existing error if any
-    const existing = document.getElementById('error-msg');
-    if (existing) existing.remove();
-    
-    const errorDiv = document.createElement('div');
-    errorDiv.id = 'error-msg';
-    errorDiv.style.cssText = `
-        background: #FEE2E2;
-        border: 1px solid #DC2626;
-        color: #991B1B;
-        padding: 12px 16px;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
-        margin-top: 16px;
-        text-align: center;
-    `;
-    errorDiv.textContent = message;
-    
-    // Insert after the submit button
-    const form = document.getElementById('login-form') || document.getElementById('signup-form');
-    form.appendChild(errorDiv);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => errorDiv.remove(), 5000);
-}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Request Site Audit — FlowGuard</title>
 
-function showSuccess(message) {
-    const existing = document.getElementById('success-msg');
-    if (existing) existing.remove();
-    
-    const successDiv = document.createElement('div');
-    successDiv.id = 'success-msg';
-    successDiv.style.cssText = `
-        background: #D1FAE5;
-        border: 1px solid #059669;
-        color: #065F46;
-        padding: 12px 16px;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
-        margin-top: 16px;
-        text-align: center;
-    `;
-    successDiv.textContent = message;
-    
-    const form = document.getElementById('login-form') || document.getElementById('signup-form');
-    form.appendChild(successDiv);
-}
-    </script>
-    
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg width='64' height='64' viewBox='232 74 216 216' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='340' cy='182' r='108' fill='%230a2a3d'/%3E%3Ccircle cx='340' cy='182' r='108' fill='none' stroke='%231cb8e8' stroke-width='3' opacity='0.5'/%3E%3Crect x='232' y='214' width='216' height='90' fill='%230d7fa0' clip-path='url(%23c)'/%3E%3CclipPath id='c'%3E%3Ccircle cx='340' cy='182' r='108'/%3E%3C/clipPath%3E%3Cpath d='M340 110 C358 132 374 148 374 166 C374 186 358 202 340 202 C322 202 306 186 306 166 C306 148 322 132 340 110Z' fill='%2316a8d3'/%3E%3Cpath d='M340 128 C352 144 361 156 361 166 C361 180 352 191 340 191 C328 191 319 180 319 166 C319 156 328 144 340 128Z' fill='%230d7fa0'/%3E%3Ccircle cx='340' cy='110' r='6' fill='%23f5a623'/%3E%3C/svg%3E">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --navy:        #0a2a3d;
+      --navy-mid:    #0d3550;
+      --navy-light:  #103d5e;
+      --cyan:        #16a8d3;
+      --cyan-bright: #1cb8e8;
+      --teal:        #0d7fa0;
+      --amber:       #f5a623;
+      --amber-dim:   #d4901e;
+      --pale:        #cceeff;
+      --text-main:   #e8f4f8;
+      --text-muted:  #6fa8c0;
+      --border:      rgba(22, 168, 211, 0.18);
+      --border-focus: rgba(22, 168, 211, 0.7);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background-color: var(--navy);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 16px 80px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* ── BACKGROUND ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 10% 15%, rgba(22,168,211,0.09) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 90% 80%, rgba(13,127,160,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 30% 20% at 60% 0%, rgba(245,166,35,0.04) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(22,168,211,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(22,168,211,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── WAVE BOTTOM ── */
+    .wave-strip {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 80px;
+      overflow: hidden;
+      z-index: 0;
+      opacity: 0.3;
+    }
+    .wave-strip svg {
+      width: 200%; height: 100%;
+      animation: wave-scroll 14s linear infinite;
+    }
+    @keyframes wave-scroll {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    /* ── SIGNAL RINGS ── */
+    .signal-rings {
+      position: fixed;
+      top: -120px; right: -120px;
+      width: 460px; height: 460px;
+      opacity: 0.06;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── LAYOUT ── */
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    /* ── BRAND HEADER ── */
+    .brand-header {
+      text-align: center;
+      margin-bottom: 32px;
+      animation: fade-down 0.6s ease both;
+    }
+    .logo-mark {
+      width: 68px;
+      height: 68px;
+      margin: 0 auto 14px;
+      display: block;
+      filter: drop-shadow(0 0 18px rgba(22,168,211,0.35));
+      animation: pulse-glow 4s ease-in-out infinite;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { filter: drop-shadow(0 0 14px rgba(22,168,211,0.28)); }
+      50%       { filter: drop-shadow(0 0 26px rgba(22,168,211,0.52)); }
+    }
+    .brand-name {
+      font-family: 'Outfit', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+    .brand-tagline {
+      font-size: 13px;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: rgba(13, 53, 80, 0.55);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px 36px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      animation: fade-up 0.7s ease 0.1s both;
+    }
+
+    /* ── STEP INDICATOR ── */
+    .steps {
+      display: flex;
+      align-items: center;
+      margin-bottom: 36px;
+    }
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .step-circle {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      border: 2px solid var(--border);
+      color: var(--text-muted);
+      background: rgba(10,42,61,0.6);
+      transition: all 0.35s ease;
+      flex-shrink: 0;
+    }
+    .step-circle.active {
+      border-color: var(--amber);
+      background: var(--amber);
+      color: var(--navy);
+    }
+    .step-circle.done {
+      border-color: var(--cyan);
+      background: var(--cyan);
+      color: var(--navy);
+    }
+    .step-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      transition: color 0.35s ease;
+      white-space: nowrap;
+    }
+    .step-label.active { color: var(--amber); }
+    .step-label.done   { color: var(--cyan); }
+    .step-connector {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+      margin: 0 10px;
+      position: relative;
+      overflow: hidden;
+    }
+    .step-connector::after {
+      content: '';
+      position: absolute;
+      left: 0; top: 0;
+      height: 100%;
+      width: 0%;
+      background: var(--cyan);
+      transition: width 0.5s ease;
+    }
+    .step-connector.filled::after { width: 100%; }
+
+    /* ── STEP PANELS ── */
+    .step-panel { display: none; }
+    .step-panel.active { display: block; animation: fade-up 0.4s ease; }
+
+    .step-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 21px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .step-sub {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+    }
+
+    /* ── FORM ELEMENTS ── */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .form-group { margin-bottom: 18px; }
+    .form-group:last-child { margin-bottom: 0; }
+
+    label {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 7px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="password"],
+    select {
+      width: 100%;
+      background: rgba(10, 42, 61, 0.7);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14.5px;
+      color: var(--text-main);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -webkit-appearance: none;
+    }
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236fa8c0' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+      cursor: pointer;
+    }
+    select option {
+      background: #0d3550;
+      color: var(--text-main);
+    }
+    input::placeholder { color: rgba(111,168,192,0.4); }
+    input:focus, select:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(22,168,211,0.12);
+      background: rgba(10,42,61,0.9);
+    }
+
+    /* password wrapper */
+    .pw-wrap { position: relative; }
+    .pw-wrap input { padding-right: 44px; }
+    .pw-toggle {
+      position: absolute;
+      right: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 0;
+      display: flex;
+      align-items: center;
+      transition: color 0.2s;
+    }
+    .pw-toggle:hover { color: var(--cyan); }
+    .pw-toggle svg { width: 17px; height: 17px; }
+
+    /* strength bar */
+    .strength-wrap {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .strength-track {
+      flex: 1;
+      height: 3px;
+      background: rgba(22,168,211,0.12);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .strength-bar {
+      height: 100%;
+      width: 0%;
+      border-radius: 2px;
+      transition: width 0.3s ease, background-color 0.3s ease;
+    }
+    .strength-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      min-width: 64px;
+      text-align: right;
+    }
+
+    /* ── CHECKBOXES ── */
+    .check-group {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .check-group input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--cyan);
+      cursor: pointer;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .check-group span {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .check-group span a {
+      color: var(--cyan);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .check-group span a:hover { color: var(--pale); }
+
+    /* ── BUTTONS ── */
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--amber) 0%, var(--amber-dim) 100%);
+      color: var(--navy);
+      border: none;
+      border-radius: 10px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(rgba(255,255,255,0.12), transparent);
+      pointer-events: none;
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(245,166,35,0.3);
+    }
+    .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    .btn-ghost {
+      width: 100%;
+      padding: 13px;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+    }
+    .btn-ghost:hover {
+      border-color: rgba(22,168,211,0.4);
+      color: var(--text-main);
+      background: rgba(22,168,211,0.06);
+    }
+
+    .btn-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .spinner {
+      width: 17px; height: 17px;
+      border: 2px solid rgba(10,42,61,0.3);
+      border-top-color: var(--navy);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 28px;
+    }
+    .btn-row.single { grid-template-columns: 1fr; }
+
+    /* ── DIVIDER ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 24px 0;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── SOCIAL BUTTONS ── */
+    .social-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .btn-social {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 14px;
+      background: rgba(10,42,61,0.6);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .btn-social:hover {
+      border-color: rgba(22,168,211,0.4);
+      background: rgba(22,168,211,0.07);
+    }
+    .btn-social svg { width: 17px; height: 17px; flex-shrink: 0; }
+
+    /* ── ALERTS ── */
+    .alert {
+      border-radius: 8px;
+      padding: 11px 14px;
+      font-size: 13.5px;
+      font-weight: 500;
+      margin-top: 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      line-height: 1.4;
+      animation: fade-up 0.3s ease;
+    }
+    .alert-error {
+      background: rgba(220,38,38,0.1);
+      border: 1px solid rgba(220,38,38,0.3);
+      color: #fca5a5;
+    }
+    .alert-success {
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.3);
+      color: #6ee7b7;
+    }
+    .alert svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; }
+
+    /* ── SUCCESS STATE ── */
+    .success-panel {
+      display: none;
+      text-align: center;
+      padding: 16px 0 8px;
+      animation: fade-up 0.5s ease;
+    }
+    .success-icon {
+      width: 64px; height: 64px;
+      background: rgba(16,185,129,0.12);
+      border: 1px solid rgba(16,185,129,0.3);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .success-icon svg { width: 28px; height: 28px; color: #6ee7b7; }
+    .success-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .success-body {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    /* ── FOOTER ── */
+    .login-prompt {
+      text-align: center;
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin-top: 28px;
+    }
+    .login-prompt a {
+      color: var(--cyan);
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .login-prompt a:hover { color: var(--pale); }
+
+    .page-footer {
+      text-align: center;
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      animation: fade-up 0.8s ease 0.25s both;
+    }
+    .page-footer a {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .page-footer a:hover { color: var(--cyan); }
+    .page-footer span { color: var(--border); font-size: 12px; }
+
+    /* ── KEYFRAMES ── */
+    @keyframes fade-down {
+      from { opacity: 0; transform: translateY(-14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 28px 20px; }
+      .form-row { grid-template-columns: 1fr; gap: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Decorative signal rings -->
+  <svg class="signal-rings" viewBox="0 0 460 460" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="230" cy="230" r="220" stroke="#16a8d3" stroke-width="1"/>
+    <circle cx="230" cy="230" r="180" stroke="#16a8d3" stroke-width="1"/>
+    <circle cx="230" cy="230" r="140" stroke="#1cb8e8" stroke-width="1.5"/>
+    <circle cx="230" cy="230" r="100" stroke="#1cb8e8" stroke-width="2"/>
+    <line x1="230" y1="10"  x2="230" y2="0"   stroke="#f5a623" stroke-width="3" stroke-linecap="round"/>
+    <line x1="450" y1="230" x2="460" y2="230"  stroke="#f5a623" stroke-width="3" stroke-linecap="round"/>
+    <line x1="230" y1="450" x2="230" y2="460"  stroke="#f5a623" stroke-width="3" stroke-linecap="round"/>
+    <line x1="10"  y1="230" x2="0"   y2="230"  stroke="#f5a623" stroke-width="3" stroke-linecap="round"/>
+  </svg>
+
+  <!-- Wave bottom -->
+  <div class="wave-strip" aria-hidden="true">
+    <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,40 C120,20 240,60 360,40 C480,20 600,60 720,40 C840,20 960,60 1080,40 C1200,20 1320,60 1440,40 L1440,80 L0,80 Z" fill="#16a8d3"/>
+      <path d="M0,55 C120,35 240,70 360,55 C480,35 600,70 720,55 C840,35 960,70 1080,55 C1200,35 1320,70 1440,55 L1440,80 L0,80 Z" fill="#0d7fa0" opacity="0.6"/>
+    </svg>
+  </div>
+
+  <main class="page-wrap">
+
+    <!-- Brand header -->
+    <div class="brand-header">
+      <svg class="logo-mark" viewBox="200 60 280 270" xmlns="http://www.w3.org/2000/svg">
+        <defs><clipPath id="mb-clip"><circle cx="340" cy="182" r="108"/></clipPath></defs>
+        <circle cx="340" cy="182" r="148" fill="none" stroke="#16a8d3" stroke-width="1.2" opacity="0.15"/>
+        <circle cx="340" cy="182" r="132" fill="none" stroke="#16a8d3" stroke-width="1.4" opacity="0.25"/>
+        <circle cx="340" cy="182" r="118" fill="none" stroke="#1cb8e8" stroke-width="1.8" opacity="0.35"/>
+        <circle cx="340" cy="182" r="108" fill="#0a2a3d"/>
+        <g clip-path="url(#mb-clip)">
+          <rect x="232" y="214" width="216" height="90" fill="#0d7fa0"/>
+          <path d="M232 214 Q254 200 276 214 Q298 228 320 214 Q342 200 364 214 Q386 228 408 214 Q430 200 448 210 L448 216 Q430 202 408 216 Q386 230 364 216 Q342 202 320 216 Q298 230 276 216 Q254 202 232 216 Z" fill="#16a8d3"/>
+          <ellipse cx="284" cy="250" rx="12" ry="3" fill="#cceeff" opacity="0.35"/>
+        </g>
+        <circle cx="340" cy="182" r="108" fill="none" stroke="#1cb8e8" stroke-width="2.5" opacity="0.4"/>
+        <path d="M340 110 C358 132 374 148 374 166 C374 186 358 202 340 202 C322 202 306 186 306 166 C306 148 322 132 340 110 Z" fill="#16a8d3"/>
+        <path d="M340 120 C355 139 367 153 367 166 C367 183 355 196 340 196 C325 196 313 183 313 166 C313 153 325 139 340 120 Z" fill="#0a2a3d"/>
+        <path d="M340 128 C352 144 361 156 361 166 C361 180 352 191 340 191 C328 191 319 180 319 166 C319 156 328 144 340 128 Z" fill="#0d7fa0"/>
+        <ellipse cx="331" cy="146" rx="5" ry="8" fill="#cceeff" opacity="0.55" transform="rotate(-18 331 146)"/>
+        <circle cx="340" cy="110" r="6" fill="#f5a623"/>
+        <circle cx="340" cy="110" r="10" fill="none" stroke="#f5a623" stroke-width="1.5" opacity="0.5"/>
+        <path d="M318 105 Q340 93 362 105" fill="none" stroke="#1cb8e8" stroke-width="2" stroke-linecap="round" opacity="0.75"/>
+        <path d="M307 93 Q340 77 373 93" fill="none" stroke="#1cb8e8" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+        <line x1="340" y1="72" x2="340" y2="62" stroke="#f5a623" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="448" y1="182" x2="458" y2="182" stroke="#f5a623" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="232" y1="182" x2="222" y2="182" stroke="#f5a623" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="340" y1="292" x2="340" y2="302" stroke="#f5a623" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <div class="brand-name">FlowGuard</div>
+      <div class="brand-tagline">Drainage-as-a-Service Platform</div>
+    </div>
+
+    <!-- Card -->
+    <div class="card">
+
+      <!-- Step indicator -->
+      <div class="steps" id="steps-bar">
+        <div class="step-item">
+          <div class="step-circle active" id="sc-1">1</div>
+          <span class="step-label active" id="sl-1">Account</span>
+        </div>
+        <div class="step-connector" id="conn-1"></div>
+        <div class="step-item">
+          <div class="step-circle" id="sc-2">2</div>
+          <span class="step-label" id="sl-2">Property</span>
+        </div>
+        <div class="step-connector" id="conn-2"></div>
+        <div class="step-item">
+          <div class="step-circle" id="sc-3">3</div>
+          <span class="step-label" id="sl-3">Security</span>
+        </div>
+      </div>
+
+      <form id="signup-form" novalidate>
+
+        <!-- ── STEP 1: Account ── -->
+        <div class="step-panel active" id="panel-1">
+          <div class="step-title">Create your account</div>
+          <div class="step-sub">Start with your basic contact information</div>
+
+          <div class="form-row">
+            <div class="form-group" style="margin-bottom:0">
+              <label for="first-name">First Name</label>
+              <input type="text" id="first-name" placeholder="John" autocomplete="given-name" required/>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label for="last-name">Last Name</label>
+              <input type="text" id="last-name" placeholder="Doe" autocomplete="family-name" required/>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:18px">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" placeholder="you@company.com" autocomplete="email" required/>
+          </div>
+
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" placeholder="+234 803 555 0100" autocomplete="tel" required/>
+          </div>
+
+          <div id="alert-1"></div>
+
+          <div class="btn-row single" style="margin-top:24px">
+            <button type="button" class="btn-primary" onclick="goToStep(2)">
+              <span class="btn-inner">Continue →</span>
+            </button>
+          </div>
+
+          <div class="divider">or sign up with</div>
+          <div class="social-row">
+            <button type="button" class="btn-social">
+              <svg viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Google
+            </button>
+            <button type="button" class="btn-social">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.613 0 2.886.06 4.374 2.19-.13.09-2.383 1.37-2.383 4.19 0 3.26 2.854 4.42 2.955 4.45z"/>
+              </svg>
+              Apple
+            </button>
+          </div>
+        </div>
+
+        <!-- ── STEP 2: Property ── -->
+        <div class="step-panel" id="panel-2">
+          <div class="step-title">Your property details</div>
+          <div class="step-sub">Help us understand your drainage management needs</div>
+
+          <div class="form-group">
+            <label for="company">Estate / Company Name</label>
+            <input type="text" id="company" placeholder="e.g. Lekki Gardens Estate" required/>
+          </div>
+
+          <div class="form-group">
+            <label for="location">Location / Corridor</label>
+            <select id="location" required>
+              <option value="" disabled selected>Select your area</option>
+              <option value="lekki-ajah">Lekki / Ajah Corridor</option>
+              <option value="ikoyi-vi">Ikoyi / Victoria Island</option>
+              <option value="ikeja-maryland">Ikeja GRA / Maryland</option>
+              <option value="other-lagos">Other Lagos</option>
+              <option value="outside-lagos">Outside Lagos</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="plan">Service Tier of Interest</label>
+            <select id="plan">
+              <option value="" disabled selected>Select a tier (optional)</option>
+              <option value="sentinel">Sentinel — Monitoring & Alerting</option>
+              <option value="flowguard">FlowGuard — Full Managed Service</option>
+              <option value="flood-zero">Flood-Zero — Total Risk Transfer</option>
+              <option value="unsure">Not sure yet</option>
+            </select>
+          </div>
+
+          <div id="alert-2"></div>
+
+          <div class="btn-row">
+            <button type="button" class="btn-ghost" onclick="goToStep(1)">← Back</button>
+            <button type="button" class="btn-primary" onclick="goToStep(3)">
+              <span class="btn-inner">Continue →</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ── STEP 3: Security ── -->
+        <div class="step-panel" id="panel-3">
+          <div class="step-title">Secure your account</div>
+          <div class="step-sub">Choose a strong password to protect your portal</div>
+
+          <div class="form-group">
+            <label for="password">Password</label>
+            <div class="pw-wrap">
+              <input type="password" id="password" placeholder="Min. 8 characters" autocomplete="new-password" required/>
+              <button type="button" class="pw-toggle" id="pw-toggle-1">
+                <svg id="eye1-show" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                <svg id="eye1-hide" style="display:none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+              </button>
+            </div>
+            <div class="strength-wrap" id="strength-wrap" style="display:none">
+              <div class="strength-track"><div class="strength-bar" id="strength-bar"></div></div>
+              <span class="strength-label" id="strength-text"></span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="confirm-password">Confirm Password</label>
+            <div class="pw-wrap">
+              <input type="password" id="confirm-password" placeholder="Re-enter password" autocomplete="new-password" required/>
+              <button type="button" class="pw-toggle" id="pw-toggle-2">
+                <svg id="eye2-show" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                <svg id="eye2-hide" style="display:none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div style="margin-bottom:24px">
+            <div class="check-group">
+              <input type="checkbox" id="terms" required/>
+              <span>I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></span>
+            </div>
+            <div class="check-group">
+              <input type="checkbox" id="marketing"/>
+              <span>Send me service updates and FlowGuard announcements</span>
+            </div>
+          </div>
+
+          <div id="alert-3"></div>
+
+          <div class="btn-row">
+            <button type="button" class="btn-ghost" onclick="goToStep(2)">← Back</button>
+            <button type="submit" class="btn-primary" id="submit-btn">
+              <span class="btn-inner" id="btn-content">Create Account</span>
+            </button>
+          </div>
+        </div>
+
+      </form>
+
+      <!-- ── SUCCESS PANEL ── -->
+      <div class="success-panel" id="success-panel">
+        <div class="success-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <div class="success-title">Account Created!</div>
+        <p class="success-body">
+          We've sent a verification email to <strong id="confirm-email" style="color:var(--cyan)"></strong>.<br>
+          Verify your email before signing in to access your portal.
+        </p>
+        <a href="login.html" class="btn-primary" style="display:inline-block;width:auto;padding:13px 36px;text-decoration:none;">
+          Go to Login →
+        </a>
+      </div>
+
+      <p class="login-prompt">
+        Already have an account? <a href="login.html">Sign in →</a>
+      </p>
+    </div>
+
+    <nav class="page-footer">
+      <a href="#">Privacy Policy</a>
+      <span>·</span>
+      <a href="#">Terms of Service</a>
+      <span>·</span>
+      <a href="mailto:support@flowguard.ng">Support</a>
+    </nav>
+
+  </main>
+
+  <script>
+    let currentStep = 1;
+
+    // ── Step navigation ──
+    function goToStep(target) {
+      if (target > currentStep && !validateStep(currentStep)) return;
+      setStep(target);
+    }
+
+    function setStep(n) {
+      currentStep = n;
+      [1,2,3].forEach(i => {
+        const panel  = document.getElementById(`panel-${i}`);
+        const circle = document.getElementById(`sc-${i}`);
+        const label  = document.getElementById(`sl-${i}`);
+        panel.classList.toggle('active', i === n);
+        circle.classList.toggle('active', i === n);
+        circle.classList.toggle('done',   i < n);
+        label.classList.toggle('active',  i === n);
+        label.classList.toggle('done',    i < n);
+        if (i < 3) {
+          document.getElementById(`conn-${i}`).classList.toggle('filled', i < n);
+        }
+        // swap circle content to checkmark when done
+        if (i < n) {
+          circle.innerHTML = `<svg style="width:13px;height:13px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>`;
+        } else if (i === n) {
+          circle.textContent = i;
+        } else {
+          circle.textContent = i;
+        }
+      });
+    }
+
+    function validateStep(step) {
+      const alertEl = document.getElementById(`alert-${step}`);
+      alertEl.innerHTML = '';
+
+      if (step === 1) {
+        const fn = document.getElementById('first-name').value.trim();
+        const ln = document.getElementById('last-name').value.trim();
+        const em = document.getElementById('email').value.trim();
+        const ph = document.getElementById('phone').value.trim();
+        if (!fn || !ln) return showStepAlert(1, 'Please enter your first and last name.');
+        if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return showStepAlert(1, 'Please enter a valid email address.');
+        if (!ph) return showStepAlert(1, 'Please enter your phone number.');
+      }
+      if (step === 2) {
+        const co = document.getElementById('company').value.trim();
+        const lo = document.getElementById('location').value;
+        if (!co) return showStepAlert(2, 'Please enter your estate or company name.');
+        if (!lo) return showStepAlert(2, 'Please select your location corridor.');
+      }
+      return true;
+    }
+
+    function showStepAlert(step, msg) {
+      const el = document.getElementById(`alert-${step}`);
+      el.innerHTML = `
+        <div class="alert alert-error">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+          <span>${msg}</span>
+        </div>`;
+      setTimeout(() => el.innerHTML = '', 5000);
+      return false;
+    }
+
+    // ── Password toggles ──
+    function bindToggle(toggleId, inputId, showId, hideId) {
+      document.getElementById(toggleId).addEventListener('click', () => {
+        const inp = document.getElementById(inputId);
+        const isHidden = inp.type === 'password';
+        inp.type = isHidden ? 'text' : 'password';
+        document.getElementById(showId).style.display = isHidden ? 'none' : 'block';
+        document.getElementById(hideId).style.display = isHidden ? 'block' : 'none';
+      });
+    }
+    bindToggle('pw-toggle-1', 'password',         'eye1-show', 'eye1-hide');
+    bindToggle('pw-toggle-2', 'confirm-password',  'eye2-show', 'eye2-hide');
+
+    // ── Password strength ──
+    document.getElementById('password').addEventListener('input', function() {
+      const pw = this.value;
+      const wrap = document.getElementById('strength-wrap');
+      if (!pw) { wrap.style.display = 'none'; return; }
+      wrap.style.display = 'flex';
+      let s = 0;
+      if (pw.length >= 8) s++;
+      if (/[a-z]/.test(pw)) s++;
+      if (/[A-Z]/.test(pw)) s++;
+      if (/[0-9]/.test(pw)) s++;
+      if (/[$@#&!]/.test(pw)) s++;
+      const colors = ['#ef4444','#f59e0b','#eab308','#84cc16','#22c55e'];
+      const labels = ['Weak','Fair','Good','Strong','Very Strong'];
+      const bar  = document.getElementById('strength-bar');
+      const text = document.getElementById('strength-text');
+      bar.style.width           = `${s * 20}%`;
+      bar.style.backgroundColor = colors[s-1] || '#ef4444';
+      text.textContent          = labels[s-1] || '';
+      text.style.color          = colors[s-1] || '#ef4444';
+    });
+
+    // ── Form submission ──
+    document.getElementById('signup-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const password        = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+      const terms           = document.getElementById('terms').checked;
+
+      if (!terms)                       return showStepAlert(3, 'Please accept the Terms of Service to continue.');
+      if (password.length < 8)          return showStepAlert(3, 'Password must be at least 8 characters.');
+      if (password !== confirmPassword) return showStepAlert(3, 'Passwords do not match.');
+
+      const btn     = document.getElementById('submit-btn');
+      const content = document.getElementById('btn-content');
+      btn.disabled  = true;
+      content.innerHTML = `<div class="spinner"></div><span>Creating account…</span>`;
+
+      const payload = {
+        firstName : document.getElementById('first-name').value.trim(),
+        lastName  : document.getElementById('last-name').value.trim(),
+        email     : document.getElementById('email').value.trim(),
+        phone     : document.getElementById('phone').value.trim(),
+        company   : document.getElementById('company').value.trim(),
+        location  : document.getElementById('location').value,
+        plan      : document.getElementById('plan').value,
+        password,
+        marketing : document.getElementById('marketing').checked
+      };
+
+      try {
+        const response = await fetch('https://api.flowguard.ng/api/v1/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          // Show success state
+          document.getElementById('signup-form').style.display = 'none';
+          document.getElementById('steps-bar').style.display = 'none';
+          document.getElementById('confirm-email').textContent = payload.email;
+          document.getElementById('success-panel').style.display = 'block';
+        } else {
+          btn.disabled = false;
+          content.textContent = 'Create Account';
+          showStepAlert(3, data.error || 'Registration failed. Please try again.');
+        }
+      } catch (err) {
+        console.error('Registration error:', err);
+        btn.disabled = false;
+        content.textContent = 'Create Account';
+        showStepAlert(3, 'Connection failed. Please check your internet and try again.');
+      }
+    });
+  </script>
+
 </body>
 </html>

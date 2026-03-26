@@ -1,1324 +1,1525 @@
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-	<!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="flowguard-logo.svg">
-    <title>Flow Guard Client Portal</title>
-    <script src="https://cdn.tailwindcss.com">
-	// Check authentication on page load
-(function checkAuth() {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    
-    if (!token || !user) {
-        // Not logged in - redirect to login
-        window.location.href = 'login.html';
-        return;
-    }
-    
-    // Optional: Check token expiry
-    try {
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <!-- Auth guard — runs before anything renders -->
+  <script>
+    (function checkAuth() {
+      const token = localStorage.getItem('token');
+      const user  = localStorage.getItem('user');
+      if (!token || !user) { window.location.href = 'login.html'; return; }
+      try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         if (payload.exp * 1000 < Date.now()) {
-            // Token expired
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = 'login.html';
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = 'login.html';
         }
-    } catch(e) {
-        window.location.href = 'login.html';
+      } catch(e) { window.location.href = 'login.html'; }
+    })();
+  </script>
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg width='64' height='64' viewBox='232 74 216 216' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='340' cy='182' r='108' fill='%230a2a3d'/%3E%3Ccircle cx='340' cy='182' r='108' fill='none' stroke='%231cb8e8' stroke-width='3' opacity='0.5'/%3E%3Crect x='232' y='214' width='216' height='90' fill='%230d7fa0' clip-path='url(%23c)'/%3E%3CclipPath id='c'%3E%3Ccircle cx='340' cy='182' r='108'/%3E%3C/clipPath%3E%3Cpath d='M340 110 C358 132 374 148 374 166 C374 186 358 202 340 202 C322 202 306 186 306 166 C306 148 322 132 340 110Z' fill='%2316a8d3'/%3E%3Ccircle cx='340' cy='110' r='6' fill='%23f5a623'/%3E%3C/svg%3E">
+  <title>Client Portal — FlowGuard</title>
+
+  <!-- Tailwind (kept for JS-rendered tab content) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── BRAND TOKENS ── */
+    :root {
+      --navy:         #0a2a3d;
+      --navy-mid:     #0d3550;
+      --navy-light:   #103d5e;
+      --navy-card:    rgba(13,53,80,0.6);
+      --cyan:         #16a8d3;
+      --cyan-bright:  #1cb8e8;
+      --teal:         #0d7fa0;
+      --amber:        #f5a623;
+      --amber-dim:    #d4901e;
+      --pale:         #cceeff;
+      --success:      #22c55e;
+      --warning:      #f59e0b;
+      --danger:       #ef4444;
+      --text-main:    #e8f4f8;
+      --text-muted:   #6fa8c0;
+      --border:       rgba(22,168,211,0.18);
+      --border-hover: rgba(22,168,211,0.4);
+      --header-h:     60px;
     }
-})();
-</script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * { 
-            font-family: 'Inter', sans-serif; 
-        }
-        
-        /* Light mode (default) */
-        body { 
-            background: #FAFBFC;
-            color: #1F2937;
-        }
-        
-        /* Dark mode */
-        .dark body {
-            background: #0F1117;
-            color: #E8ECEF;
-        }
-        
-        /* Ensure all text is visible in light mode */
-        .text-sm, .text-xs, span, p, label {
-            color: inherit;
-        }
-        
-        /* Content sections - explicit display rules */
-        [id^="content-"] {
-            display: block;
-        }
-        
-        [id^="content-"].hidden {
-            display: none !important;
-        }
-        
-        .font-space { 
-            font-family: 'Space Grotesk', sans-serif; 
-        }
-        
-        /* Cards */
-        .modern-card { 
-            background: white; 
-            border-radius: 12px; 
-            border: 1px solid #E8ECEF;
-            transition: all 0.2s ease;
-        }
-        
-        .dark .modern-card {
-            background: #1A1F2E;
-            border-color: #2A3142;
-        }
-        
-        .modern-card:hover { 
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08); 
-            transform: translateY(-2px); 
-        }
-        
-        .dark .modern-card:hover {
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-        }
-        
-        /* Navigation */
-        .tab-item { 
-            padding: 16px 24px; 
-            font-weight: 600; 
-            font-size: 14px;
-            color: #6B7280; 
-            border-bottom: 2px solid transparent; 
-            cursor: pointer;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-        }
-        
-        .dark .tab-item {
-            color: #9CA3AF;
-        }
-        
-        .tab-item:hover {
-            color: #1A1D1F;
-        }
-        
-        .dark .tab-item:hover {
-            color: #E8ECEF;
-        }
-        
-        .tab-item.active { 
-            color: #0066FF; 
-            border-bottom-color: #0066FF; 
-        }
-        
-        /* Badges */
-        .badge { 
-            display: inline-flex;
-            align-items: center;
-            padding: 4px 10px; 
-            border-radius: 6px; 
-            font-size: 11px; 
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        
-        .badge-success { 
-            background: #E6F9F0; 
-            color: #00A86B; 
-        }
-        
-        .dark .badge-success {
-            background: rgba(0, 195, 137, 0.15);
-            color: #00C389;
-        }
-        
-        .badge-warning { 
-            background: #FFF4E6; 
-            color: #F7931E; 
-        }
-        
-        .dark .badge-warning {
-            background: rgba(247, 147, 30, 0.15);
-            color: #FFA940;
-        }
-        
-        .badge-danger {
-            background: #FFE6E6;
-            color: #E63946;
-        }
-        
-        .dark .badge-danger {
-            background: rgba(230, 57, 70, 0.15);
-            color: #FF6B7A;
-        }
-        
-        .badge-info {
-            background: #E6F0FF;
-            color: #0066FF;
-        }
-        
-        .dark .badge-info {
-            background: rgba(0, 102, 255, 0.15);
-            color: #4D94FF;
-        }
-        
-        /* Map */
-        #map { 
-            height: 460px; 
-            background: #FAFBFC; 
-        }
-        
-        .dark #map {
-            background: #0F1117;
-        }
-        
-        /* Buttons */
-        .btn-primary {
-            background: #0066FF;
-            color: white;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 13px;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .btn-primary:hover {
-            background: #0052CC;
-            box-shadow: 0 4px 12px rgba(0, 102, 255, 0.24);
-        }
-        
-        .btn-secondary {
-            background: #F3F4F6;
-            color: #6B7280;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 13px;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .dark .btn-secondary {
-            background: #2A3142;
-            color: #9CA3AF;
-        }
-        
-        .btn-secondary:hover {
-            background: #E5E7EB;
-            color: #1A1D1F;
-        }
-        
-        .dark .btn-secondary:hover {
-            background: #374151;
-            color: #E8ECEF;
-        }
-        
-        /* Tables */
-        .modern-table th {
-            background: #F9FAFB;
-            color: #6B7280;
-            font-weight: 600;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 12px 16px;
-            text-align: left;
-        }
-        
-        .dark .modern-table th {
-            background: #1A1F2E;
-            color: #9CA3AF;
-        }
-        
-        .modern-table td {
-            padding: 14px 16px;
-            border-bottom: 1px solid #F3F4F6;
-            font-size: 13px;
-        }
-        
-        .dark .modern-table td {
-            border-bottom-color: #2A3142;
-        }
-        
-        .modern-table tr:hover {
-            background: #FAFBFC;
-        }
-        
-        .dark .modern-table tr:hover {
-            background: #242938;
-        }
-        
-        /* Status dots */
-        .status-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 6px;
-        }
-        
-        .status-dot.green { background: #00C389; }
-        .status-dot.orange { background: #F7931E; }
-        .status-dot.gray { background: #9CA3AF; }
-        
-        /* Header */
-        .header-bg {
-            background: white;
-            border-bottom: 1px solid #E8ECEF;
-        }
-        
-        .dark .header-bg {
-            background: #1A1F2E;
-            border-bottom-color: #2A3142;
-        }
-        
-        /* Text colors */
-        .text-primary {
-            color: #1A1D1F;
-        }
-        
-        .dark .text-primary {
-            color: #E8ECEF;
-        }
-        
-        .text-secondary {
-            color: #6B7280;
-        }
-        
-        .dark .text-secondary {
-            color: #9CA3AF;
-        }
-        
-        .text-muted {
-            color: #9CA3AF;
-        }
-        
-        .dark .text-muted {
-            color: #6B7280;
-        }
-        
-        /* Form inputs */
-        input[type="text"],
-        input[type="file"],
-        select,
-        textarea {
-            color: #1A1D1F !important;
-        }
-        
-        .dark input[type="text"],
-        .dark input[type="file"],
-        .dark select,
-        .dark textarea {
-            color: #E8ECEF !important;
-        }
-        
-        input::placeholder,
-        textarea::placeholder {
-            color: #9CA3AF !important;
-        }
-        
-        .dark input::placeholder,
-        .dark textarea::placeholder {
-            color: #6B7280 !important;
-        }
-        
-        /* Border colors */
-        .border-light {
-            border-color: #E8ECEF;
-        }
-        
-        .dark .border-light {
-            border-color: #2A3142;
-        }
-        
-        /* Input fields */
-        select, input {
-            background: white;
-            border: 1px solid #E8ECEF;
-            color: #1A1D1F;
-        }
-        
-        .dark select, .dark input {
-            background: #1A1F2E;
-            border-color: #2A3142;
-            color: #E8ECEF;
-        }
-        
-        /* Theme toggle button */
-        .theme-toggle {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            background: #F3F4F6;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
-        
-        .dark .theme-toggle {
-            background: #2A3142;
-        }
-        
-        .theme-toggle:hover {
-            background: #E5E7EB;
-        }
-        
-        .dark .theme-toggle:hover {
-            background: #374151;
-        }
-        
-        /* CRITICAL: Force light mode text visibility */
-        html:not(.dark) .text-slate-900,
-        html:not(.dark) .text-blue-950,
-        html:not(.dark) .text-orange-950 {
-            color: #0F172A !important;
-        }
-        
-        html:not(.dark) .text-slate-800 {
-            color: #1E293B !important;
-        }
-        
-        html:not(.dark) .text-slate-600 {
-            color: #475569 !important;
-        }
-        
-        html:not(.dark) .text-slate-700 {
-            color: #334155 !important;
-        }
-        
-        html:not(.dark) .bg-blue-100 {
-            background-color: #DBEAFE !important;
-        }
-        
-        html:not(.dark) .bg-orange-100 {
-            background-color: #FFEDD5 !important;
-        }
-        
-        html:not(.dark) .bg-blue-200 {
-            background-color: #BFDBFE !important;
-        }
-        
-        html:not(.dark) .bg-orange-200 {
-            background-color: #FED7AA !important;
-        }
-        
-        html:not(.dark) .border-blue-300 {
-            border-color: #93C5FD !important;
-        }
-        
-        html:not(.dark) .border-orange-300 {
-            border-color: #FDBA74 !important;
-        }
-        
-        html:not(.dark) .border-slate-300 {
-            border-color: #CBD5E1 !important;
-        }
-        
-        html:not(.dark) .text-blue-700 {
-            color: #1D4ED8 !important;
-        }
-        
-        html:not(.dark) .text-orange-700 {
-            color: #C2410C !important;
-        }
-        
-        html:not(.dark) .text-emerald-600 {
-            color: #059669 !important;
-        }
-    </style>
-    <!-- Socket.io Client Library -->
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <!-- API Client -->
-    <script src="js/api.js"></script>
+
+    /* Light mode overrides */
+    html.light {
+      --navy:       #f0f7fa;
+      --navy-mid:   #ffffff;
+      --navy-light: #e6f3f8;
+      --navy-card:  rgba(255,255,255,0.95);
+      --text-main:  #0a2a3d;
+      --text-muted: #4a7a94;
+      --border:     rgba(22,168,211,0.2);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--navy);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── BACKGROUND TEXTURE ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 5% 0%, rgba(22,168,211,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 30% at 95% 90%, rgba(13,127,160,0.06) 0%, transparent 60%);
+      pointer-events: none; z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(22,168,211,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(22,168,211,0.025) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── TYPOGRAPHY ── */
+    .font-display { font-family: 'Outfit', sans-serif; }
+
+    /* ── HEADER ── */
+    .portal-header {
+      position: sticky; top: 0; z-index: 50;
+      height: var(--header-h);
+      background: rgba(10,42,61,0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center;
+    }
+    html.light .portal-header {
+      background: rgba(255,255,255,0.94);
+      border-bottom-color: rgba(22,168,211,0.15);
+    }
+
+    .header-inner {
+      width: 100%; max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex; align-items: center; gap: 24px;
+    }
+
+    /* Logo */
+    .logo-area {
+      display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0; text-decoration: none;
+    }
+    .logo-mark-sm {
+      width: 36px; height: 36px;
+      filter: drop-shadow(0 0 8px rgba(22,168,211,0.3));
+    }
+    .logo-text {
+      display: none;
+    }
+    @media (min-width: 768px) { .logo-text { display: block; } }
+    .logo-name {
+      font-family: 'Outfit', sans-serif;
+      font-size: 17px; font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text-main);
+      line-height: 1.1;
+    }
+    .logo-sub {
+      font-size: 10px; font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* Nav tabs */
+    .portal-nav {
+      display: none; align-items: flex-end;
+      gap: 2px; flex: 1; overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .portal-nav::-webkit-scrollbar { display: none; }
+    @media (min-width: 768px) { .portal-nav { display: flex; } }
+
+    .tab-item {
+      padding: 0 16px;
+      height: var(--header-h);
+      display: flex; align-items: center;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px; font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 0.2s, border-color 0.2s;
+      background: none; border-top: none; border-left: none; border-right: none;
+    }
+    .tab-item:hover { color: var(--text-main); }
+    .tab-item.active {
+      color: var(--cyan);
+      border-bottom-color: var(--amber);
+    }
+
+    /* Header right */
+    .header-right {
+      display: flex; align-items: center; gap: 8px;
+      flex-shrink: 0; margin-left: auto;
+    }
+
+    /* Estate switcher */
+    #estate-switcher-container {
+      position: relative;
+    }
+    .estate-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 10px;
+      background: rgba(22,168,211,0.08);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px; font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .estate-btn:hover {
+      border-color: var(--border-hover);
+      color: var(--text-main);
+      background: rgba(22,168,211,0.12);
+    }
+    .estate-btn svg { width: 14px; height: 14px; }
+
+    /* Demo toggle */
+    #demo-toggle-container {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 10px;
+      background: rgba(245,166,35,0.08);
+      border: 1px solid rgba(245,166,35,0.25);
+      border-radius: 8px;
+      font-size: 12px; font-weight: 600;
+      color: var(--amber);
+      letter-spacing: 0.02em;
+    }
+    .toggle-switch {
+      position: relative;
+      width: 36px; height: 20px; flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track {
+      position: absolute; inset: 0;
+      background: rgba(245,166,35,0.2);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-track { background: var(--amber); }
+    .toggle-thumb {
+      position: absolute;
+      left: 2px; top: 2px;
+      width: 16px; height: 16px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      pointer-events: none;
+    }
+    .toggle-switch input:checked ~ .toggle-thumb { transform: translateX(16px); }
+
+    /* Theme toggle */
+    .icon-btn {
+      width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(22,168,211,0.06);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--text-muted);
+    }
+    .icon-btn:hover {
+      border-color: var(--border-hover);
+      color: var(--text-main);
+      background: rgba(22,168,211,0.12);
+    }
+    .icon-btn svg { width: 16px; height: 16px; }
+
+    /* User area */
+    .user-label { display: none; text-align: right; }
+    @media (min-width: 1024px) { .user-label { display: block; } }
+    .user-name-text {
+      font-size: 13px; font-weight: 600;
+      color: var(--text-main); line-height: 1.2;
+    }
+    .user-role-text {
+      font-size: 11px; color: var(--text-muted);
+    }
+
+    .avatar-wrap { position: relative; }
+    .user-avatar {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--teal), var(--cyan));
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px; font-weight: 700;
+      color: var(--navy);
+      cursor: pointer;
+      border: 1px solid var(--border);
+      transition: border-color 0.2s;
+    }
+    .user-avatar:hover { border-color: var(--cyan); }
+    .online-dot {
+      position: absolute;
+      bottom: -2px; right: -2px;
+      width: 10px; height: 10px;
+      background: var(--success);
+      border-radius: 50%;
+      border: 2px solid var(--navy);
+    }
+    html.light .online-dot { border-color: white; }
+
+    /* User dropdown menu */
+    .user-menu {
+      position: absolute; right: 0; top: calc(100% + 8px);
+      width: 220px;
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 6px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.35);
+      z-index: 100;
+    }
+    html.light .user-menu {
+      background: white;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    .user-menu-header {
+      padding: 10px 12px 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 4px;
+    }
+    .menu-name {
+      font-size: 13px; font-weight: 600;
+      color: var(--text-main); line-height: 1.3;
+    }
+    .menu-email {
+      font-size: 11px; color: var(--text-muted);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .menu-item {
+      display: flex; align-items: center; gap: 10px;
+      width: 100%; padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px; font-weight: 500;
+      color: var(--text-muted);
+      background: none; border: none;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: left;
+    }
+    .menu-item:hover {
+      background: rgba(22,168,211,0.08);
+      color: var(--text-main);
+    }
+    .menu-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+    .menu-item.danger { color: #fca5a5; }
+    .menu-item.danger:hover { background: rgba(239,68,68,0.1); color: #fca5a5; }
+    .menu-separator { height: 1px; background: var(--border); margin: 4px 0; }
+
+    /* Notification badge */
+    .notif-badge {
+      min-width: 16px; height: 16px;
+      padding: 0 4px;
+      background: var(--danger);
+      color: white;
+      border-radius: 8px;
+      font-size: 10px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      margin-left: auto;
+    }
+
+    /* Notifications dropdown */
+    .notif-panel {
+      padding: 8px;
+      border-top: 1px solid var(--border);
+      margin-top: 4px;
+    }
+    .notif-item {
+      padding: 8px 10px;
+      border-radius: 6px;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+    .notif-item-title { font-weight: 600; color: var(--text-main); }
+    .notif-item-time { color: var(--text-muted); margin-top: 1px; }
+
+    /* Estate switcher dropdown */
+    .estate-menu {
+      position: absolute; right: 0; top: calc(100% + 6px);
+      width: 260px;
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 6px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.35);
+      z-index: 100;
+      max-height: 320px; overflow-y: auto;
+    }
+    html.light .estate-menu { background: white; }
+
+    /* ── MAIN CONTENT ── */
+    .portal-main {
+      position: relative; z-index: 1;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 28px 20px 60px;
+    }
+
+    /* ── CARDS ── */
+    .modern-card {
+      background: var(--navy-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    html.light .modern-card {
+      background: white;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .modern-card:hover { border-color: var(--border-hover); }
+
+    /* ── BADGES ── */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 8px;
+      border-radius: 5px;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .badge-success { background: rgba(34,197,94,0.15); color: #6ee7b7; }
+    .badge-warning { background: rgba(245,158,11,0.15); color: #fcd34d; }
+    .badge-danger  { background: rgba(239,68,68,0.15);  color: #fca5a5; }
+    .badge-info    { background: rgba(22,168,211,0.15);  color: var(--pale); }
+    .badge-good    { background: rgba(34,197,94,0.12);   color: #86efac; }
+
+    html.light .badge-success { background: #dcfce7; color: #16a34a; }
+    html.light .badge-warning { background: #fef9c3; color: #a16207; }
+    html.light .badge-danger  { background: #fee2e2; color: #dc2626; }
+    html.light .badge-info    { background: #dbeafe; color: #1d4ed8; }
+
+    /* ── STATUS DOTS ── */
+    .status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+    .status-dot.green  { background: var(--success); }
+    .status-dot.orange { background: var(--warning); }
+    .status-dot.red    { background: var(--danger); }
+    .status-dot.gray   { background: var(--text-muted); }
+
+    /* ── BUTTONS ── */
+    .btn-primary {
+      background: linear-gradient(135deg, var(--amber), var(--amber-dim));
+      color: var(--navy);
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px; font-weight: 700;
+      border: none; cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(245,166,35,0.3);
+    }
+
+    .btn-secondary {
+      background: rgba(22,168,211,0.08);
+      color: var(--text-muted);
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-size: 13px; font-weight: 600;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-secondary:hover {
+      border-color: var(--border-hover);
+      color: var(--text-main);
+      background: rgba(22,168,211,0.12);
+    }
+
+    html.light .btn-secondary {
+      background: #f3f4f6; color: #374151; border-color: #d1d5db;
+    }
+    html.light .btn-secondary:hover { background: #e5e7eb; color: #111827; }
+
+    /* ── TABLES ── */
+    .modern-table th {
+      background: rgba(10,42,61,0.5);
+      color: var(--text-muted);
+      font-weight: 600; font-size: 10.5px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 11px 16px; text-align: left;
+    }
+    html.light .modern-table th {
+      background: #f9fafb; color: #6b7280;
+    }
+    .modern-table td {
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text-main);
+    }
+    html.light .modern-table td { border-color: #f3f4f6; }
+    .modern-table tr:hover td { background: rgba(22,168,211,0.04); }
+    html.light .modern-table tr:hover td { background: #fafafa; }
+
+    /* ── TEXT UTILITIES ── */
+    .text-primary   { color: var(--text-main); }
+    .text-secondary { color: var(--text-muted); }
+    .text-muted     { color: var(--text-muted); opacity: 0.7; }
+    .font-space     { font-family: 'Outfit', sans-serif; }
+
+    /* ── FORM INPUTS ── */
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="number"],
+    input[type="date"],
+    input[type="file"],
+    input[type="password"],
+    select, textarea {
+      background: rgba(10,42,61,0.6);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(22,168,211,0.12);
+    }
+    input::placeholder, textarea::placeholder { color: rgba(111,168,192,0.4); }
+    select option { background: #0d3550; color: var(--text-main); }
+
+    html.light input, html.light select, html.light textarea {
+      background: white;
+      border-color: #d1d5db;
+      color: #0a2a3d;
+    }
+    html.light input::placeholder, html.light textarea::placeholder { color: #9ca3af; }
+    html.light select option { background: white; color: #0a2a3d; }
+
+    /* ── MAP ── */
+    #map {
+      height: 460px;
+      background: rgba(10,42,61,0.4);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    /* ── HIDDEN UTILITY ── */
+    .hidden { display: none !important; }
+
+    [id^="content-"] { display: block; }
+    [id^="content-"].hidden { display: none !important; }
+
+    /* ── LOADING SPINNER ── */
+    .fg-spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── TOAST ── */
+    .fg-toast {
+      position: fixed; top: 16px; right: 16px; z-index: 9999;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 14px; font-weight: 500;
+      animation: toast-in 0.3s ease;
+      max-width: 360px;
+    }
+    .fg-toast.success {
+      background: rgba(34,197,94,0.15);
+      border: 1px solid rgba(34,197,94,0.3);
+      color: #6ee7b7;
+    }
+    .fg-toast.error {
+      background: rgba(239,68,68,0.15);
+      border: 1px solid rgba(239,68,68,0.3);
+      color: #fca5a5;
+    }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(22,168,211,0.2);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(22,168,211,0.35); }
+
+    /* ── SUPPORT TAB specific ── */
+    .support-contact-card {
+      display: flex; flex-direction: column; align-items: center;
+      text-align: center; gap: 6px;
+    }
+    .support-icon-wrap {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: rgba(22,168,211,0.1);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 4px;
+    }
+    .support-icon-wrap svg { width: 20px; height: 20px; color: var(--cyan); }
+
+    /* ── ANIMATION ── */
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-up { animation: fade-up 0.4s ease; }
+  </style>
+
+  <!-- Socket.io Client Library -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <!-- API Client -->
+  <script src="js/api.js"></script>
+  <!-- Auth Module (loaded here so auth guard works before body renders) -->
+  <script src="js/auth.js"></script>
 </head>
 <body>
-    <!-- Main Application -->
-    <div id="main-app" style="display: block !important; visibility: visible !important; opacity: 1 !important;">
-    <!-- Header -->
-    <header class="header-bg sticky top-0 z-50">
-        <div class="max-w-full mx-auto px-4 lg:px-6 py-3">
-            <div class="flex justify-between items-center gap-4">
-                <!-- Left: Logo + Nav -->
-                <div class="flex items-center gap-6 lg:gap-12 flex-1 min-w-0">
-                    <!-- Logo -->
-                    <div class="flex items-center space-x-2 lg:space-x-3 flex-shrink-0">
-                        <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                            </svg>
-                        </div>
-                        <div class="hidden lg:block">
-                            <h1 class="text-xl font-bold font-space text-primary">Flow Guard</h1>
-                            <p class="text-xs text-gray-600 dark:text-gray-400">Client Portal</p>
-                        </div>
-                    </div>
-                    
-                    <!-- Navigation -->
-                    <nav class="hidden md:flex items-center -mb-px gap-1 overflow-x-auto" id="main-nav">
-                        <button id="tab-dashboard" class="tab-item active" onclick="switchTab('dashboard')">Home</button>
-                        <button id="tab-assets" class="tab-item" onclick="switchTab('assets')">My Assets</button>
-                        <button id="tab-alerts-incidents" class="tab-item" onclick="switchTab('alerts-incidents')">Alerts & Incidents</button>
-                        <button id="tab-billing" class="tab-item" onclick="switchTab('billing')">Billing & SLA</button>
-                        <button id="tab-support" class="tab-item" onclick="switchTab('support')">Support</button>
-                    </nav>
-                </div>
-                
-                <!-- Right: Estate Switcher + Demo Toggle + Theme + User -->
-                <div class="flex items-center gap-2 lg:gap-3 flex-shrink-0">
-                    <!-- Estate Switcher -->
-                    <div id="estate-switcher-container" class="hidden relative">
-                        <button id="estate-switcher-btn" onclick="toggleEstateSwitcher()" class="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                            <svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                            </svg>
-                            <span id="current-estate-name" class="text-sm font-medium text-gray-900 dark:text-gray-100">Select Property</span>
-                            <svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </button>
-                        <div id="estate-switcher-menu" class="hidden absolute right-0 mt-2 w-64 modern-card shadow-lg py-2 z-50 max-h-80 overflow-y-auto">
-                            <!-- Populated by JavaScript -->
-                        </div>
-                    </div>
-                    
-                    <!-- Demo Toggle -->
-                    <div id="demo-toggle-container" class="hidden items-center gap-2 bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg">
-                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Demo Mode</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="demo-toggle" class="sr-only peer">
-                            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                        </label>
-                    </div>
-                    
-                    <!-- Dark Mode Toggle -->
-                    <button id="theme-toggle-header" onclick="toggleTheme()" class="theme-toggle" title="Toggle dark mode">
-                        <svg id="theme-icon-sun" class="w-5 h-5 text-gray-600 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-                        </svg>
-                        <svg id="theme-icon-moon" class="w-5 h-5 text-gray-400 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-                        </svg>
-                    </button>
-                    
-                    <div class="hidden md:block text-right">
-                        <p id="user-name" class="text-sm font-medium text-primary">Estate Manager</p>
-                        <p id="user-role" class="text-xs text-gray-600 dark:text-gray-400">Client Access</p>
-                    </div>
-                    <div class="relative">
-                        <div id="user-avatar" onclick="toggleUserMenu()" class="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center text-white font-semibold text-sm cursor-pointer">
-                            SA
-                        </div>
-                        <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
-                        
-                        <!-- User Dropdown Menu -->
-                        <div id="user-menu" class="hidden absolute right-0 mt-2 w-48 modern-card shadow-lg py-2 z-50">
-                            <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                                <p id="menu-user-name" class="text-sm font-semibold text-gray-900 dark:text-gray-100">System Admin</p>
-                                <p id="menu-user-email" class="text-xs text-gray-500 dark:text-gray-400"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f796939a9e99b7919b98809082968593d99990">[email&#160;protected]</a></p>
-                            </div>
-                            
-                            <!-- Settings Panel -->
-                            <div id="settings-panel-wrapper">
-                                <button onclick="openAccountSettings()" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                    </svg>
-                                    Account Settings
-                                    <svg class="w-4 h-4 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                                    </svg>
-                                </button>
-                            </div>
-                            
-                            <!-- Notifications Panel (expandable) -->
-                            <div id="notifications-panel-wrapper">
-                                <button onclick="togglePanel('notifications')" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                                    </svg>
-                                    Notifications
-                                    <span class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">3</span>
-                                </button>
-                                <div id="notifications-panel" class="hidden px-4 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                                    <div class="space-y-2 mb-3">
-                                        <div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs">
-                                            <p class="font-semibold">System health check completed</p>
-                                            <p class="text-gray-600 dark:text-gray-400">2 hours ago</p>
-                                        </div>
-                                        <div class="p-2 bg-green-50 dark:bg-green-900/20 rounded text-xs">
-                                            <p class="font-semibold">Inspection scheduled</p>
-                                            <p class="text-gray-600 dark:text-gray-400">1 day ago</p>
-                                        </div>
-                                        <div class="p-2 bg-purple-50 dark:bg-purple-900/20 rounded text-xs">
-                                            <p class="font-semibold">Monthly report available</p>
-                                            <p class="text-gray-600 dark:text-gray-400">3 days ago</p>
-                                        </div>
-                                    </div>
-                                    <button onclick="openNotifications()" class="w-full px-3 py-2 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700">
-                                        View All Notifications
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <hr class="my-2">
-                            <button onclick="Modal.showLogoutConfirm()" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                                </svg>
-                                Sign Out
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<div id="main-app">
+
+  <!-- ══════════════════════════════════════════
+       HEADER
+  ══════════════════════════════════════════ -->
+  <header class="portal-header">
+    <div class="header-inner">
+
+      <!-- Logo -->
+      <a href="#" class="logo-area" onclick="switchTab('dashboard'); return false;">
+        <svg class="logo-mark-sm" viewBox="200 60 280 270" xmlns="http://www.w3.org/2000/svg">
+          <defs><clipPath id="lc"><circle cx="340" cy="182" r="108"/></clipPath></defs>
+          <circle cx="340" cy="182" r="148" fill="none" stroke="#16a8d3" stroke-width="1.2" opacity="0.15"/>
+          <circle cx="340" cy="182" r="118" fill="none" stroke="#1cb8e8" stroke-width="1.8" opacity="0.3"/>
+          <circle cx="340" cy="182" r="108" fill="#0a2a3d"/>
+          <g clip-path="url(#lc)">
+            <rect x="232" y="214" width="216" height="90" fill="#0d7fa0"/>
+            <path d="M232 214 Q276 200 320 214 Q364 228 408 214 Q430 200 448 210 L448 216 Q408 216 364 216 Q320 216 276 216 Q254 202 232 216Z" fill="#16a8d3"/>
+          </g>
+          <circle cx="340" cy="182" r="108" fill="none" stroke="#1cb8e8" stroke-width="2" opacity="0.35"/>
+          <path d="M340 110 C358 132 374 148 374 166 C374 186 358 202 340 202 C322 202 306 186 306 166 C306 148 322 132 340 110Z" fill="#16a8d3"/>
+          <path d="M340 128 C352 144 361 156 361 166 C361 180 352 191 340 191 C328 191 319 180 319 166 C319 156 328 144 340 128Z" fill="#0d7fa0"/>
+          <ellipse cx="331" cy="146" rx="4" ry="7" fill="#cceeff" opacity="0.5" transform="rotate(-18 331 146)"/>
+          <circle cx="340" cy="110" r="5" fill="#f5a623"/>
+          <path d="M318 105 Q340 93 362 105" fill="none" stroke="#1cb8e8" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+        </svg>
+        <div class="logo-text">
+          <div class="logo-name">FlowGuard</div>
+          <div class="logo-sub">Client Portal</div>
         </div>
-    </header>
+      </a>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-6 py-8">
-        
-        <!-- WAR ROOM -->
-        <!-- ===================================== -->
-        <!-- DASHBOARD CONTENT (Populated by JS) -->
-        <!-- ===================================== -->
-        <div id="content-dashboard"></div>
-        
-        <div id="content-assets" class="space-y-6 hidden">
-            <div class="flex items-center justify-between mb-6">
-                <div>
-                    <h2 class="text-2xl font-bold font-space text-primary">My Assets</h2>
-                    <p class="text-sm text-secondary mt-1">Drainage infrastructure for <span id="assets-estate-name" class="font-semibold text-primary"></span></p>
-                </div>
-                <button class="btn-primary">
-                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    Report Issue
-                </button>
-            </div>
+      <!-- Navigation tabs -->
+      <nav class="portal-nav" id="main-nav">
+        <button id="tab-dashboard"         class="tab-item active"   onclick="switchTab('dashboard')">Home</button>
+        <button id="tab-assets"            class="tab-item"          onclick="switchTab('assets')">My Assets</button>
+        <button id="tab-alerts-incidents"  class="tab-item"          onclick="switchTab('alerts-incidents')">Alerts & Incidents</button>
+        <button id="tab-billing"           class="tab-item"          onclick="switchTab('billing')">Billing & SLA</button>
+        <button id="tab-support"           class="tab-item"          onclick="switchTab('support')">Support</button>
+      </nav>
 
-            <!-- Asset Overview Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="modern-card p-5">
-                    <p class="text-xs font-medium text-secondary mb-2">Total Assets</p>
-                    <p class="text-3xl font-bold font-space text-primary" id="assets-total">0</p>
-                    <p class="text-xs text-secondary mt-1">Monitored infrastructure</p>
-                </div>
-                <div class="modern-card p-5">
-                    <p class="text-xs font-medium text-secondary mb-2">Health Status</p>
-                    <p class="text-3xl font-bold font-space text-green-600" id="assets-health">0%</p>
-                    <p class="text-xs text-secondary mt-1">Average condition</p>
-                </div>
-                <div class="modern-card p-5">
-                    <p class="text-xs font-medium text-secondary mb-2">Next Maintenance</p>
-                    <p class="text-3xl font-bold font-space text-primary" id="assets-next-maintenance">--</p>
-                    <p class="text-xs text-secondary mt-1">Scheduled service</p>
-                </div>
-            </div>
+      <!-- Right controls -->
+      <div class="header-right">
 
-            <!-- Assets Table -->
-            <div class="modern-card p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-sm font-bold text-primary">Infrastructure Assets</h3>
-                    <div class="flex gap-2">
-                        <button class="btn-secondary text-xs py-2">Filter</button>
-                        <button class="btn-secondary text-xs py-2">Export CSV</button>
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="border-b border-gray-200 dark:border-gray-700">
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Asset Name</th>
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Type</th>
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Length/Size</th>
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Health</th>
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Last Maintenance</th>
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Uptime</th>
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="assets-table-body">
-                            <!-- Populated by JavaScript -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        <!-- Estate switcher (hidden until multi-property) -->
+        <div id="estate-switcher-container" class="hidden" style="position:relative">
+          <button id="estate-switcher-btn" onclick="toggleEstateSwitcher()" class="estate-btn">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            <span id="current-estate-name" style="font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Select Property</span>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:12px;height:12px;flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div id="estate-switcher-menu" class="estate-menu hidden">
+            <!-- Populated by app.js -->
+          </div>
         </div>
 
-        <!-- ALERTS & INCIDENTS TAB -->
-        <div id="content-alerts-incidents" class="space-y-6 hidden">
-            <div class="flex items-center justify-between mb-6">
-                <div>
-                    <h2 class="text-2xl font-bold font-space text-primary">Alerts & Incidents</h2>
-                    <p class="text-sm text-secondary mt-1">Active alerts and incident reporting for your estate</p>
-                </div>
-            </div>
-
-            <!-- Active Alerts Section -->
-            <div class="modern-card p-6">
-                <h3 class="text-sm font-bold text-primary mb-4">Active Alerts</h3>
-                <div id="active-alerts-list" class="space-y-3">
-                    <div class="p-4 rounded-lg border-l-4 border-orange-500 bg-orange-50 dark:bg-orange-900/20">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span class="badge badge-warning">Moderate</span>
-                                    <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Zone B</span>
-                                </div>
-                                <p class="text-sm font-semibold text-gray-900 dark:text-orange-200">Water Level Rising</p>
-                                <p class="text-xs font-medium text-gray-700 dark:text-orange-300 mt-1">Sensor detected 65% capacity • 2 hours ago</p>
-                            </div>
-                        </div>
-                    </div>
-                    <p class="text-sm text-secondary text-center py-4">No other active alerts</p>
-                </div>
-            </div>
-
-            <!-- Report Incident Section -->
-            <div class="modern-card p-6">
-                <h3 class="text-sm font-bold text-primary mb-4">Report New Incident</h3>
-                <form id="incident-form" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Location / Zone</label>
-                            <select class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary">
-                                <option>Zone A - Main Entrance</option>
-                                <option>Zone B - Residential Area</option>
-                                <option>Zone C - Commercial Area</option>
-                                <option>Zone D - Perimeter</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Issue Type</label>
-                            <select class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary">
-                                <option>Blockage</option>
-                                <option>Overflow</option>
-                                <option>Sensor Malfunction</option>
-                                <option>Structural Damage</option>
-                                <option>Other</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Severity Level</label>
-                        <div class="flex gap-3">
-                            <label class="flex items-center">
-                                <input type="radio" name="severity" value="critical" class="mr-2">
-                                <span class="text-sm text-gray-800 dark:text-gray-200">Critical</span>
-                            </label>
-                            <label class="flex items-center">
-                                <input type="radio" name="severity" value="moderate" checked class="mr-2">
-                                <span class="text-sm text-gray-800 dark:text-gray-200">Moderate</span>
-                            </label>
-                            <label class="flex items-center">
-                                <input type="radio" name="severity" value="minor" class="mr-2">
-                                <span class="text-sm text-gray-800 dark:text-gray-200">Minor</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Description</label>
-                        <textarea rows="4" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary" placeholder="Describe the issue in detail..."></textarea>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Photo Evidence (Optional)</label>
-                        <input type="file" accept="image/*" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary">
-                    </div>
-
-                    <div class="flex gap-3">
-                        <button type="submit" class="btn-primary">Submit Report</button>
-                        <button type="reset" class="btn-secondary">Clear Form</button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Recent Incidents -->
-            <div class="modern-card p-6">
-                <h3 class="text-sm font-bold text-primary mb-4">Recent Incident Reports</h3>
-                <div class="space-y-3">
-                    <div class="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-800">
-                        <div class="flex-1">
-                            <p class="text-sm font-semibold text-primary">Blockage - Zone A</p>
-                            <p class="text-xs text-secondary mt-1">Reported 3 days ago • Status: Resolved</p>
-                        </div>
-                        <span class="badge badge-success">Resolved</span>
-                    </div>
-                    <div class="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-800">
-                        <div class="flex-1">
-                            <p class="text-sm font-semibold text-primary">Sensor Malfunction - Zone C</p>
-                            <p class="text-xs text-secondary mt-1">Reported 5 days ago • Status: In Progress</p>
-                        </div>
-                        <span class="badge badge-warning">In Progress</span>
-                    </div>
-                </div>
-            </div>
+        <!-- Demo mode toggle (shown for pre-active states) -->
+        <div id="demo-toggle-container" class="hidden" style="display:none">
+          <span style="font-size:11px;font-weight:600;color:var(--amber);letter-spacing:0.04em">DEMO</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="demo-toggle">
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
         </div>
 
-        <!-- BILLING & SLA TAB -->
-        <div id="content-billing" class="space-y-6 hidden">
-            <div class="flex items-center justify-between mb-6">
-                <div>
-                    <h2 class="text-2xl font-bold font-space text-primary">Billing & SLA</h2>
-                    <p class="text-sm text-secondary mt-1">Contract details and service level agreement performance</p>
-                </div>
-            </div>
+        <!-- Theme toggle -->
+        <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme" id="theme-toggle-header">
+          <!-- Sun (shown in dark mode) -->
+          <svg id="theme-icon-sun" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+          </svg>
+          <!-- Moon (shown in light mode) -->
+          <svg id="theme-icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="hidden">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+          </svg>
+        </button>
 
-            <!-- Contract Overview -->
-            <div class="modern-card p-6">
-                <h3 class="text-sm font-bold text-primary mb-4">Contract Overview</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <div class="space-y-3">
-                            <div class="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">Monthly Fee</span>
-                                <span class="text-sm font-bold text-primary" id="billing-monthly-fee">₦850,000</span>
-                            </div>
-                            <div class="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">Service Tier</span>
-                                <span class="badge badge-success" id="billing-tier">Premium</span>
-                            </div>
-                            <div class="flex justify-between py-2 border-b border-gray-100 dark:border-gray-800">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">Contract Start</span>
-                                <span class="text-sm font-semibold text-primary">Jan 15, 2024</span>
-                            </div>
-                            <div class="flex justify-between py-2">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">Next Renewal</span>
-                                <span class="text-sm font-semibold text-primary">Jan 15, 2027</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modern-card bg-blue-50 dark:bg-blue-900/20 p-4 border-blue-200 dark:border-blue-800">
-                        <p class="text-xs font-semibold text-gray-900 dark:text-blue-200 mb-2">AUTO-RENEWAL ACTIVE</p>
-                        <p class="text-xs text-gray-700 dark:text-blue-300">Your contract will automatically renew on Jan 15, 2027. You'll receive a reminder 60 days before renewal.</p>
-                        <button class="btn-secondary text-xs mt-3">Manage Auto-Renewal</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Payment History -->
-            <div class="modern-card p-6">
-                <h3 class="text-sm font-bold text-primary mb-4">Payment History</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="border-b border-gray-200 dark:border-gray-700">
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Invoice Date</th>
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Amount</th>
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Status</th>
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Due Date</th>
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr class="border-b border-gray-100 dark:border-gray-800">
-                                <td class="py-4 px-4 text-sm text-primary">Feb 1, 2026</td>
-                                <td class="py-4 px-4 text-sm font-bold text-primary">₦850,000</td>
-                                <td class="py-4 px-4"><span class="badge badge-success">Paid</span></td>
-                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">Feb 5, 2026</td>
-                                <td class="py-4 px-4"><button class="text-xs text-blue-600 hover:underline">Download Receipt</button></td>
-                            </tr>
-                            <tr class="border-b border-gray-100 dark:border-gray-800">
-                                <td class="py-4 px-4 text-sm text-primary">Jan 1, 2026</td>
-                                <td class="py-4 px-4 text-sm font-bold text-primary">₦850,000</td>
-                                <td class="py-4 px-4"><span class="badge badge-success">Paid</span></td>
-                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">Jan 5, 2026</td>
-                                <td class="py-4 px-4"><button class="text-xs text-blue-600 hover:underline">Download Receipt</button></td>
-                            </tr>
-                            <tr class="border-b border-gray-100 dark:border-gray-800">
-                                <td class="py-4 px-4 text-sm text-primary">Dec 1, 2025</td>
-                                <td class="py-4 px-4 text-sm font-bold text-primary">₦850,000</td>
-                                <td class="py-4 px-4"><span class="badge badge-success">Paid</span></td>
-                                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">Dec 5, 2025</td>
-                                <td class="py-4 px-4"><button class="text-xs text-blue-600 hover:underline">Download Receipt</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- SLA Performance -->
-            <div class="modern-card p-6">
-                <h3 class="text-sm font-bold text-primary mb-4">SLA Performance (This Month)</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-semibold text-secondary">Uptime</span>
-                            <span class="text-lg font-bold text-green-600" id="sla-uptime">99.1%</span>
-                        </div>
-                        <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div class="h-full bg-green-500" style="width: 99.1%"></div>
-                        </div>
-                        <p class="text-xs text-secondary mt-2">Target: 99.0% • <span class="text-green-600 font-semibold">✓ Meeting SLA</span></p>
-                    </div>
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-semibold text-secondary">Response Time</span>
-                            <span class="text-lg font-bold text-green-600">45 min</span>
-                        </div>
-                        <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div class="h-full bg-green-500" style="width: 62.5%"></div>
-                        </div>
-                        <p class="text-xs text-secondary mt-2">SLA: <2 hrs • <span class="text-green-600 font-semibold">✓ Under SLA</span></p>
-                    </div>
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-semibold text-secondary">Incidents Resolved</span>
-                            <span class="text-lg font-bold text-green-600">14/14</span>
-                        </div>
-                        <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div class="h-full bg-green-500" style="width: 100%"></div>
-                        </div>
-                        <p class="text-xs text-secondary mt-2">Target: 95% • <span class="text-green-600 font-semibold">✓ 100% Resolution</span></p>
-                    </div>
-                </div>
-            </div>
+        <!-- User name (desktop) -->
+        <div class="user-label">
+          <div class="user-name-text" id="user-name">Loading…</div>
+          <div class="user-role-text" id="user-role">Client Portal</div>
         </div>
 
-        <!-- SUPPORT TAB -->
-        <div id="content-support" class="space-y-6 hidden">
-            <div class="flex items-center justify-between mb-6">
-                <div>
-                    <h2 class="text-2xl font-bold font-space text-primary">Support</h2>
-                    <p class="text-sm text-secondary mt-1">Submit maintenance requests and track support tickets</p>
-                </div>
+        <!-- Avatar + dropdown -->
+        <div class="avatar-wrap" style="position:relative">
+          <div class="user-avatar" id="user-avatar" onclick="toggleUserMenu()">
+            <span id="user-initials">—</span>
+          </div>
+          <div class="online-dot"></div>
+
+          <!-- Dropdown -->
+          <div id="user-menu" class="user-menu hidden">
+            <div class="user-menu-header">
+              <div class="menu-name" id="menu-user-name">Loading…</div>
+              <div class="menu-email" id="menu-user-email"></div>
             </div>
 
-            <!-- Submit Request Form -->
-            <div class="modern-card p-6">
-                <h3 class="text-sm font-bold text-primary mb-4">Submit New Request</h3>
-                <form id="support-form" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Request Type</label>
-                            <select class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary">
-                                <option>Scheduled Maintenance</option>
-                                <option>Emergency Response</option>
-                                <option>Technical Support</option>
-                                <option>Billing Inquiry</option>
-                                <option>General Inquiry</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Priority Level</label>
-                            <select class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary">
-                                <option>Normal</option>
-                                <option>High</option>
-                                <option>Urgent</option>
-                            </select>
-                        </div>
-                    </div>
+            <button onclick="openAccountSettings()" class="menu-item">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              Account Settings
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:13px;height:13px;margin-left:auto;opacity:0.5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
 
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Subject</label>
-                        <input type="text" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary" placeholder="Brief description of your request">
-                    </div>
+            <button onclick="openNotifications()" class="menu-item">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+              Notifications
+              <span class="notif-badge hidden" id="notif-count">0</span>
+            </button>
 
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Detailed Description</label>
-                        <textarea rows="5" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary" placeholder="Provide full details of your request..."></textarea>
-                    </div>
+            <div class="menu-separator"></div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Attachments (Optional)</label>
-                        <input type="file" multiple class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary">
-                        <p class="text-xs text-secondary mt-1">You can attach photos, documents, or reports (Max 5 files, 10MB each)</p>
-                    </div>
-
-                    <div class="flex gap-3">
-                        <button type="submit" class="btn-primary">Submit Request</button>
-                        <button type="reset" class="btn-secondary">Clear Form</button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Ticket History -->
-            <div class="modern-card p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-sm font-bold text-primary">Support Ticket History</h3>
-                    <div class="flex gap-2">
-                        <select class="text-xs px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-primary">
-                            <option>All Tickets</option>
-                            <option>Open</option>
-                            <option>In Progress</option>
-                            <option>Resolved</option>
-                            <option>Closed</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="border-b border-gray-200 dark:border-gray-700">
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Ticket ID</th>
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Subject</th>
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Type</th>
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Priority</th>
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Status</th>
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Created</th>
-                                <th class="text-left py-3 px-4 text-xs font-semibold text-secondary">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                <td class="py-4 px-4 text-sm font-mono text-primary">#TKT-2947</td>
-                                <td class="py-4 px-4 text-sm text-primary">Scheduled quarterly maintenance</td>
-                                <td class="py-4 px-4 text-xs text-gray-600 dark:text-gray-400">Maintenance</td>
-                                <td class="py-4 px-4"><span class="badge badge-good">Normal</span></td>
-                                <td class="py-4 px-4"><span class="badge badge-warning">In Progress</span></td>
-                                <td class="py-4 px-4 text-xs text-gray-600 dark:text-gray-400">Feb 8, 2026</td>
-                                <td class="py-4 px-4"><button class="text-xs text-blue-600 hover:underline">View Details</button></td>
-                            </tr>
-                            <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                <td class="py-4 px-4 text-sm font-mono text-primary">#TKT-2891</td>
-                                <td class="py-4 px-4 text-sm text-primary">Billing inquiry - January invoice</td>
-                                <td class="py-4 px-4 text-xs text-gray-600 dark:text-gray-400">Billing</td>
-                                <td class="py-4 px-4"><span class="badge badge-good">Normal</span></td>
-                                <td class="py-4 px-4"><span class="badge badge-success">Resolved</span></td>
-                                <td class="py-4 px-4 text-xs text-gray-600 dark:text-gray-400">Jan 28, 2026</td>
-                                <td class="py-4 px-4"><button class="text-xs text-blue-600 hover:underline">View Details</button></td>
-                            </tr>
-                            <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                <td class="py-4 px-4 text-sm font-mono text-primary">#TKT-2834</td>
-                                <td class="py-4 px-4 text-sm text-primary">Emergency: Drainage overflow Zone C</td>
-                                <td class="py-4 px-4 text-xs text-gray-600 dark:text-gray-400">Emergency</td>
-                                <td class="py-4 px-4"><span class="badge badge-danger">Urgent</span></td>
-                                <td class="py-4 px-4"><span class="badge badge-success">Resolved</span></td>
-                                <td class="py-4 px-4 text-xs text-gray-600 dark:text-gray-400">Jan 15, 2026</td>
-                                <td class="py-4 px-4"><button class="text-xs text-blue-600 hover:underline">View Details</button></td>
-                            </tr>
-                            <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                <td class="py-4 px-4 text-sm font-mono text-primary">#TKT-2790</td>
-                                <td class="py-4 px-4 text-sm text-primary">Technical support - Sensor calibration</td>
-                                <td class="py-4 px-4 text-xs text-gray-600 dark:text-gray-400">Technical</td>
-                                <td class="py-4 px-4"><span class="badge badge-good">Normal</span></td>
-                                <td class="py-4 px-4"><span class="badge badge-success">Resolved</span></td>
-                                <td class="py-4 px-4 text-xs text-gray-600 dark:text-gray-400">Jan 10, 2026</td>
-                                <td class="py-4 px-4"><button class="text-xs text-blue-600 hover:underline">View Details</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Quick Contact -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="modern-card p-5 text-center">
-                    <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                        </svg>
-                    </div>
-                    <p class="text-xs font-semibold text-secondary mb-1">24/7 Support</p>
-                    <p class="text-sm font-bold text-primary">0800-FLOWGUARD</p>
-                </div>
-                <div class="modern-card p-5 text-center">
-                    <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                        </svg>
-                    </div>
-                    <p class="text-xs font-semibold text-secondary mb-1">Email Support</p>
-                    <p class="text-sm font-bold text-primary"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="43303633332c313703252f2c3424362231276d2d24">[email&#160;protected]</a></p>
-                </div>
-                <div class="modern-card p-5 text-center">
-                    <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
-                    <p class="text-xs font-semibold text-secondary mb-1">Response Time</p>
-                    <p class="text-sm font-bold text-primary">< 2 hours</p>
-                </div>
-            </div>
+            <button onclick="Modal.showLogoutConfirm()" class="menu-item danger">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+              Sign Out
+            </button>
+          </div>
         </div>
 
-    </main>
-    </div><!-- end main-app -->
+      </div>
+    </div>
+  </header>
 
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-        function initMap() {
-            const map = document.getElementById('map');
-            if (!map) {
-                console.log('Map element not found, skipping map initialization');
-                return;
-            }
-            const isDark = document.documentElement.classList.contains('dark');
-            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            svg.setAttribute("viewBox", "0 0 800 460");
-            svg.setAttribute("width", "100%");
-            svg.setAttribute("height", "460");
-            svg.style.background = isDark ? "#0F1117" : "#FAFBFC";
-            
-            // Grid
-            const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-            const pattern = document.createElementNS("http://www.w3.org/2000/svg", "pattern");
-            pattern.setAttribute("id", "grid");
-            pattern.setAttribute("width", "40");
-            pattern.setAttribute("height", "40");
-            pattern.setAttribute("patternUnits", "userSpaceOnUse");
-            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-            path.setAttribute("d", "M 40 0 L 0 0 0 40");
-            path.setAttribute("fill", "none");
-            path.setAttribute("stroke", isDark ? "#2A3142" : "#E8ECEF");
-            path.setAttribute("stroke-width", "1");
-            pattern.appendChild(path);
-            defs.appendChild(pattern);
-            svg.appendChild(defs);
-            
-            const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            bg.setAttribute("width", "800");
-            bg.setAttribute("height", "460");
-            bg.setAttribute("fill", "url(#grid)");
-            svg.appendChild(bg);
-            
-            // Labels
-            const addText = (x, y, text) => {
-                const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                t.setAttribute("x", x);
-                t.setAttribute("y", y);
-                t.setAttribute("fill", isDark ? "#6B7280" : "#9CA3AF");
-                t.setAttribute("font-size", "11");
-                t.setAttribute("font-weight", "600");
-                t.textContent = text;
-                svg.appendChild(t);
-            };
-            addText(150, 70, "Lekki Phase 1");
-            addText(550, 110, "Victoria Island");
-            
-            // Drainage lines
-            const lines = [
-                {points: "100,150 200,200 300,250", color: "#00C389", width: "4"},
-                {points: "550,180 600,220 650,260", color: "#00C389", width: "4"},
-                {points: "250,300 350,350 450,380", color: "#F7931E", width: "4"},
-                {points: "150,250 200,290 250,330", color: "#F7931E", width: "4"}
-            ];
-            
-            lines.forEach(l => {
-                const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-                line.setAttribute("points", l.points);
-                line.setAttribute("fill", "none");
-                line.setAttribute("stroke", l.color);
-                line.setAttribute("stroke-width", l.width);
-                line.setAttribute("stroke-linecap", "round");
-                line.setAttribute("opacity", "0.9");
-                svg.appendChild(line);
-            });
-            
-            // Sensors
-            const sensors = [{x:150,y:150}, {x:250,y:200}, {x:300,y:350}, {x:550,y:200}];
-            sensors.forEach(s => {
-                const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                c.setAttribute("cx", s.x);
-                c.setAttribute("cy", s.y);
-                c.setAttribute("r", "5");
-                c.setAttribute("fill", "#0066FF");
-                svg.appendChild(c);
-            });
-            
-            // Alerts
-            const alerts = [{x:350,y:350}, {x:200,y:290}];
-            alerts.forEach(a => {
-                const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                c.setAttribute("cx", a.x);
-                c.setAttribute("cy", a.y);
-                c.setAttribute("r", "8");
-                c.setAttribute("fill", "#F7931E");
-                c.setAttribute("opacity", "0.8");
-                svg.appendChild(c);
-            });
-            
-            map.innerHTML = '';
-            map.appendChild(svg);
+
+  <!-- ══════════════════════════════════════════
+       MAIN CONTENT
+  ══════════════════════════════════════════ -->
+  <main class="portal-main">
+
+    <!-- Dashboard tab (populated entirely by dashboard.js / app.js) -->
+    <div id="content-dashboard" class="animate-fade-up"></div>
+
+    <!-- Assets tab (populated by assets-tab.js) -->
+    <div id="content-assets" class="hidden">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h2 class="text-2xl font-bold font-space text-primary">My Assets</h2>
+          <p class="text-sm text-secondary mt-1">Drainage infrastructure for <span id="assets-estate-name" class="font-semibold text-primary"></span></p>
+        </div>
+        <button class="btn-primary flex items-center gap-2" onclick="AssetsTab && AssetsTab.reportIssue && AssetsTab.reportIssue()">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Report Issue
+        </button>
+      </div>
+
+      <!-- Asset overview stats (populated by AssetsTab) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="modern-card p-5">
+          <p class="text-xs font-medium text-secondary mb-2">Total Assets</p>
+          <p class="text-3xl font-bold font-space text-primary" id="assets-total">—</p>
+          <p class="text-xs text-secondary mt-1">Monitored infrastructure</p>
+        </div>
+        <div class="modern-card p-5">
+          <p class="text-xs font-medium text-secondary mb-2">Health Status</p>
+          <p class="text-3xl font-bold font-space text-green-400" id="assets-health">—</p>
+          <p class="text-xs text-secondary mt-1">Average condition</p>
+        </div>
+        <div class="modern-card p-5">
+          <p class="text-xs font-medium text-secondary mb-2">Next Maintenance</p>
+          <p class="text-3xl font-bold font-space text-primary" id="assets-next-maintenance">—</p>
+          <p class="text-xs text-secondary mt-1">Scheduled service</p>
+        </div>
+      </div>
+
+      <!-- Assets table -->
+      <div class="modern-card p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-bold text-primary">Infrastructure Assets</h3>
+          <div class="flex gap-2">
+            <button class="btn-secondary text-xs py-2">Filter</button>
+            <button class="btn-secondary text-xs py-2">Export CSV</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full modern-table">
+            <thead>
+              <tr>
+                <th>Asset Name</th>
+                <th>Type</th>
+                <th>Length / Size</th>
+                <th>Health</th>
+                <th>Last Maintenance</th>
+                <th>Uptime</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="assets-table-body">
+              <!-- Populated by AssetsTab JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alerts & Incidents tab (populated by alerts-tab.js) -->
+    <div id="content-alerts-incidents" class="hidden">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h2 class="text-2xl font-bold font-space text-primary">Alerts & Incidents</h2>
+          <p class="text-sm text-secondary mt-1">Active alerts and incident reporting for your estate</p>
+        </div>
+      </div>
+
+      <!-- Active alerts (populated by AlertsTab JS) -->
+      <div class="modern-card p-6 mb-6">
+        <h3 class="text-sm font-bold text-primary mb-4">Active Alerts</h3>
+        <div id="active-alerts-list" class="space-y-3">
+          <!-- Loading state until AlertsTab populates -->
+          <div class="flex items-center justify-center py-8 text-secondary text-sm">
+            <div class="fg-spinner mr-3"></div>
+            Loading alerts…
+          </div>
+        </div>
+      </div>
+
+      <!-- Report new incident -->
+      <div class="modern-card p-6 mb-6">
+        <h3 class="text-sm font-bold text-primary mb-4">Report New Incident</h3>
+        <form id="incident-form" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-secondary mb-2">Location / Zone</label>
+              <select id="incident-zone" class="w-full px-4 py-2 rounded-lg">
+                <!-- Zones populated dynamically by AlertsTab or empty state -->
+                <option value="">Select zone…</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-secondary mb-2">Issue Type</label>
+              <select id="incident-type" class="w-full px-4 py-2 rounded-lg">
+                <option value="blockage">Blockage</option>
+                <option value="overflow">Overflow</option>
+                <option value="sensor_malfunction">Sensor Malfunction</option>
+                <option value="structural_damage">Structural Damage</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-secondary mb-2">Severity Level</label>
+            <div class="flex gap-4">
+              <label class="flex items-center gap-2 text-sm text-primary cursor-pointer">
+                <input type="radio" name="severity" value="critical" class="accent-red-500"> Critical
+              </label>
+              <label class="flex items-center gap-2 text-sm text-primary cursor-pointer">
+                <input type="radio" name="severity" value="moderate" checked class="accent-yellow-500"> Moderate
+              </label>
+              <label class="flex items-center gap-2 text-sm text-primary cursor-pointer">
+                <input type="radio" name="severity" value="minor" class="accent-cyan-500"> Minor
+              </label>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-secondary mb-2">Description</label>
+            <textarea id="incident-description" rows="4" class="w-full px-4 py-2 rounded-lg" placeholder="Describe the issue in detail…"></textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-secondary mb-2">Photo Evidence <span class="font-normal opacity-60">(optional)</span></label>
+            <input type="file" accept="image/*" id="incident-photo" class="w-full px-4 py-2 rounded-lg">
+          </div>
+          <div class="flex gap-3">
+            <button type="submit" class="btn-primary">Submit Report</button>
+            <button type="reset" class="btn-secondary">Clear</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Recent incidents (populated by AlertsTab JS) -->
+      <div class="modern-card p-6">
+        <h3 class="text-sm font-bold text-primary mb-4">Recent Incident Reports</h3>
+        <div id="recent-incidents-list" class="space-y-2">
+          <!-- Populated by AlertsTab JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Billing & SLA tab (populated by billing-tab.js) -->
+    <div id="content-billing" class="hidden">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h2 class="text-2xl font-bold font-space text-primary">Billing & SLA</h2>
+          <p class="text-sm text-secondary mt-1">Contract details and service level agreement performance</p>
+        </div>
+      </div>
+
+      <!-- Contract overview (populated by BillingTab JS) -->
+      <div class="modern-card p-6 mb-6">
+        <h3 class="text-sm font-bold text-primary mb-4">Contract Overview</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <div class="space-y-3">
+              <div class="flex justify-between py-2 border-b" style="border-color:var(--border)">
+                <span class="text-sm text-secondary">Monthly Fee</span>
+                <span class="text-sm font-bold text-primary" id="billing-monthly-fee">—</span>
+              </div>
+              <div class="flex justify-between py-2 border-b" style="border-color:var(--border)">
+                <span class="text-sm text-secondary">Service Tier</span>
+                <span class="badge badge-info" id="billing-tier">—</span>
+              </div>
+              <div class="flex justify-between py-2 border-b" style="border-color:var(--border)">
+                <span class="text-sm text-secondary">Contract Start</span>
+                <span class="text-sm font-semibold text-primary" id="billing-start-date">—</span>
+              </div>
+              <div class="flex justify-between py-2">
+                <span class="text-sm text-secondary">Next Renewal</span>
+                <span class="text-sm font-semibold text-primary" id="billing-renewal-date">—</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-secondary uppercase tracking-wider mb-4">SLA Performance</h4>
+            <div class="space-y-4">
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span class="text-secondary">Response Time</span>
+                  <span class="font-bold text-primary" id="sla-response">—</span>
+                </div>
+                <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--border)">
+                  <div id="sla-response-bar" class="h-full rounded-full bg-green-500" style="width:0%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span class="text-secondary">Uptime (30 days)</span>
+                  <span class="font-bold text-primary" id="sla-uptime">—</span>
+                </div>
+                <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--border)">
+                  <div id="sla-uptime-bar" class="h-full rounded-full bg-green-500" style="width:0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment history (populated by BillingTab JS) -->
+      <div class="modern-card p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-bold text-primary">Payment History</h3>
+          <button class="btn-secondary text-xs py-2">Download All</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full modern-table">
+            <thead>
+              <tr>
+                <th>Invoice</th>
+                <th>Period</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="billing-history-body">
+              <!-- Populated by BillingTab JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Support tab (populated by SupportTab JS defined below) -->
+    <div id="content-support" class="hidden">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h2 class="text-2xl font-bold font-space text-primary">Support</h2>
+          <p class="text-sm text-secondary mt-1">Submit tickets and track your service requests</p>
+        </div>
+        <button class="btn-primary" onclick="SupportTab.openNewTicket()">
+          <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          New Ticket
+        </button>
+      </div>
+
+      <!-- Quick contact -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="modern-card p-5 support-contact-card">
+          <div class="support-icon-wrap">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+          </div>
+          <p class="text-xs font-semibold text-secondary">24/7 Phone Support</p>
+          <a href="tel:02017003062" class="text-sm font-bold text-primary hover:text-cyan-400 transition-colors">020 1700 3062</a>
+        </div>
+        <div class="modern-card p-5 support-contact-card">
+          <div class="support-icon-wrap">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          </div>
+          <p class="text-xs font-semibold text-secondary">Email Support</p>
+          <a href="mailto:support@flowguard.ng" class="text-sm font-bold text-primary hover:text-cyan-400 transition-colors">support@flowguard.ng</a>
+        </div>
+        <div class="modern-card p-5 support-contact-card">
+          <div class="support-icon-wrap">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <p class="text-xs font-semibold text-secondary">SLA Response</p>
+          <p class="text-sm font-bold text-primary" id="support-response-time">—</p>
+        </div>
+      </div>
+
+      <!-- Ticket list -->
+      <div class="modern-card p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-bold text-primary">Your Tickets</h3>
+          <div class="flex gap-2">
+            <button class="btn-secondary text-xs py-2" onclick="SupportTab.filterTickets('all')" id="filter-all">All</button>
+            <button class="btn-secondary text-xs py-2" onclick="SupportTab.filterTickets('open')" id="filter-open">Open</button>
+            <button class="btn-secondary text-xs py-2" onclick="SupportTab.filterTickets('resolved')" id="filter-resolved">Resolved</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full modern-table">
+            <thead>
+              <tr>
+                <th>Ticket ID</th>
+                <th>Subject</th>
+                <th>Type</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="support-tickets-body">
+              <!-- Populated by SupportTab JS -->
+            </tbody>
+          </table>
+        </div>
+        <div id="support-empty-state" class="hidden text-center py-12">
+          <svg class="w-12 h-12 mx-auto text-secondary mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <p class="text-sm text-secondary">No tickets found</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div><!-- end #main-app -->
+
+
+<!-- ══════════════════════════════════════════
+     INLINE SCRIPTS — UI UTILITIES
+══════════════════════════════════════════ -->
+<script>
+  // ── Theme ──
+  function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.classList.contains('dark');
+    html.classList.toggle('dark', !isDark);
+    html.classList.toggle('light', isDark);
+    localStorage.setItem('theme', isDark ? 'light' : 'dark');
+    updateThemeIcons();
+    if (typeof initMap === 'function') initMap();
+  }
+
+  function updateThemeIcons() {
+    const isDark = document.documentElement.classList.contains('dark');
+    document.getElementById('theme-icon-sun')?.classList.toggle('hidden', !isDark);
+    document.getElementById('theme-icon-moon')?.classList.toggle('hidden', isDark);
+  }
+
+  function loadTheme() {
+    const saved = localStorage.getItem('theme') || 'dark';
+    document.documentElement.classList.remove('dark', 'light');
+    document.documentElement.classList.add(saved);
+    updateThemeIcons();
+  }
+
+  // ── Dropdown toggles ──
+  function toggleUserMenu() {
+    document.getElementById('user-menu')?.classList.toggle('hidden');
+    document.getElementById('estate-switcher-menu')?.classList.add('hidden');
+  }
+
+  function toggleEstateSwitcher() {
+    document.getElementById('estate-switcher-menu')?.classList.toggle('hidden');
+    document.getElementById('user-menu')?.classList.add('hidden');
+  }
+
+  // Close dropdowns on outside click
+  document.addEventListener('click', function(e) {
+    const userMenu  = document.getElementById('user-menu');
+    const userAvtar = document.getElementById('user-avatar');
+    const estMenu   = document.getElementById('estate-switcher-menu');
+    const estBtn    = document.getElementById('estate-switcher-btn');
+    if (userMenu  && !userAvtar?.contains(e.target) && !userMenu.contains(e.target))  userMenu.classList.add('hidden');
+    if (estMenu   && !estBtn?.contains(e.target)    && !estMenu.contains(e.target))   estMenu.classList.add('hidden');
+  });
+
+  // ── Tab switching ──
+  function switchTab(tab) {
+    const tabs = ['dashboard', 'assets', 'alerts-incidents', 'billing', 'support'];
+
+    // Update tab buttons
+    tabs.forEach(t => document.getElementById(`tab-${t}`)?.classList.remove('active'));
+    document.getElementById(`tab-${tab}`)?.classList.add('active');
+
+    // Hide all content
+    tabs.forEach(t => document.getElementById(`content-${t}`)?.classList.add('hidden'));
+
+    // Show selected
+    const container = document.getElementById(`content-${tab}`);
+    if (container) {
+      container.classList.remove('hidden');
+      if (typeof App !== 'undefined' && App.renderTab) {
+        App.renderTab(tab, container);
+      }
+    }
+
+    // Close dropdowns
+    document.getElementById('user-menu')?.classList.add('hidden');
+  }
+
+  // ── Panel helpers ──
+  function togglePanel(name) {
+    const panel = document.getElementById(`${name}-panel`);
+    const other = name === 'settings' ? 'notifications' : 'settings';
+    document.getElementById(`${other}-panel`)?.classList.add('hidden');
+    panel?.classList.toggle('hidden');
+  }
+
+  function toggleEstateSwitcher() {
+    const menu = document.getElementById('estate-switcher-menu');
+    if (menu) menu.classList.toggle('hidden');
+  }
+
+  function openAccountSettings() {
+    document.getElementById('user-menu')?.classList.add('hidden');
+    switchTab('dashboard');
+    const container = document.getElementById('content-dashboard');
+    if (container && typeof AccountSettings !== 'undefined') {
+      AccountSettings.render(container);
+    }
+  }
+
+  function openNotifications() {
+    document.getElementById('user-menu')?.classList.add('hidden');
+    switchTab('dashboard');
+    const container = document.getElementById('content-dashboard');
+    if (container && typeof NotificationsPage !== 'undefined') {
+      NotificationsPage.render(container);
+    }
+  }
+
+  // ── Toast helper ──
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `fg-toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
+  }
+
+  // ── Map (placeholder for future Leaflet integration) ──
+  function initMap() {
+    const map = document.getElementById('map');
+    if (!map) return;
+    const isDark = document.documentElement.classList.contains('dark');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 800 460');
+    svg.setAttribute('width', '100%');
+    svg.setAttribute('height', '460');
+    svg.style.background = isDark ? '#0a2a3d' : '#f0f7fa';
+
+    // Grid
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    const pat  = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
+    pat.setAttribute('id', 'fg-grid');
+    pat.setAttribute('width', '40'); pat.setAttribute('height', '40');
+    pat.setAttribute('patternUnits', 'userSpaceOnUse');
+    const gp = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    gp.setAttribute('d', 'M 40 0 L 0 0 0 40');
+    gp.setAttribute('fill', 'none');
+    gp.setAttribute('stroke', isDark ? 'rgba(22,168,211,0.08)' : 'rgba(22,168,211,0.12)');
+    gp.setAttribute('stroke-width', '1');
+    pat.appendChild(gp); defs.appendChild(pat); svg.appendChild(defs);
+
+    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bg.setAttribute('width', '800'); bg.setAttribute('height', '460');
+    bg.setAttribute('fill', 'url(#fg-grid)'); svg.appendChild(bg);
+
+    const addLabel = (x, y, text) => {
+      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', x); t.setAttribute('y', y);
+      t.setAttribute('fill', isDark ? '#6fa8c0' : '#4a7a94');
+      t.setAttribute('font-size', '11'); t.setAttribute('font-weight', '600');
+      t.textContent = text; svg.appendChild(t);
+    };
+    addLabel(140, 70, 'Lekki Phase 1');
+    addLabel(540, 110, 'Victoria Island');
+
+    const lines = [
+      { points: '100,150 200,200 300,250', color: '#22c55e' },
+      { points: '550,180 600,220 650,260', color: '#22c55e' },
+      { points: '250,300 350,350 450,380', color: '#f59e0b' },
+      { points: '150,250 200,290 250,330', color: '#f59e0b' }
+    ];
+    lines.forEach(l => {
+      const pl = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      pl.setAttribute('points', l.points); pl.setAttribute('fill', 'none');
+      pl.setAttribute('stroke', l.color); pl.setAttribute('stroke-width', '4');
+      pl.setAttribute('stroke-linecap', 'round'); pl.setAttribute('opacity', '0.8');
+      svg.appendChild(pl);
+    });
+
+    map.innerHTML = '';
+    map.appendChild(svg);
+  }
+
+  // ── Time ──
+  function updateTime() {
+    const el = document.getElementById('current-time');
+    if (el) {
+      el.textContent = new Date().toLocaleString('en-NG', {
+        timeZone: 'Africa/Lagos', hour: '2-digit', minute: '2-digit',
+        month: 'short', day: 'numeric'
+      });
+    }
+  }
+
+  window.addEventListener('load', () => {
+    loadTheme();
+    setInterval(updateTime, 30000);
+  });
+
+
+  // ══════════════════════════════════════════
+  // SUPPORT TAB MODULE
+  // Fetches tickets from API; no hardcoded data
+  // ══════════════════════════════════════════
+  const SupportTab = (function() {
+    const API_BASE = 'https://api.flowguard.ng/api/v1';
+    let allTickets = [];
+    let currentFilter = 'all';
+
+    async function render(container) {
+      await loadTickets();
+      renderResponseTime();
+    }
+
+    async function loadTickets() {
+      const tbody = document.getElementById('support-tickets-body');
+      const empty = document.getElementById('support-empty-state');
+      if (!tbody) return;
+
+      tbody.innerHTML = `
+        <tr><td colspan="7" class="text-center py-8">
+          <div class="flex items-center justify-center gap-2 text-secondary text-sm">
+            <div class="fg-spinner" style="width:20px;height:20px;border-width:2px"></div>
+            Loading tickets…
+          </div>
+        </td></tr>`;
+
+      try {
+        const token = localStorage.getItem('token');
+        const property = typeof StateManager !== 'undefined' ? StateManager.getCurrentProperty() : null;
+        const url = property
+          ? `${API_BASE}/properties/${property.property_id}/tickets`
+          : `${API_BASE}/tickets`;
+
+        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+
+        if (res.ok) {
+          const data = await res.json();
+          allTickets = data.data || [];
+        } else {
+          allTickets = [];
         }
-        
-        
-        function updateTime() {
-            const now = new Date();
-            const timeEl = document.getElementById('current-time');
-            if (timeEl) {
-                timeEl.textContent = now.toLocaleString('en-NG', {
-                    timeZone: 'Africa/Lagos',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    month: 'short',
-                    day: 'numeric'
-                });
-            }
+      } catch (e) {
+        console.error('Support tickets load error:', e);
+        allTickets = [];
+      }
+
+      renderTickets();
+    }
+
+    function renderResponseTime() {
+      const property = typeof StateManager !== 'undefined' ? StateManager.getCurrentProperty() : null;
+      const el = document.getElementById('support-response-time');
+      if (!el) return;
+      // Will be overridden by real SLA data from BillingTab; show placeholder
+      el.textContent = '≤ 4 hours (per SLA)';
+    }
+
+    function renderTickets() {
+      const tbody = document.getElementById('support-tickets-body');
+      const empty = document.getElementById('support-empty-state');
+      if (!tbody) return;
+
+      const filtered = currentFilter === 'all'
+        ? allTickets
+        : currentFilter === 'open'
+          ? allTickets.filter(t => t.status !== 'resolved' && t.status !== 'closed')
+          : allTickets.filter(t => t.status === 'resolved' || t.status === 'closed');
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        empty?.classList.remove('hidden');
+        return;
+      }
+      empty?.classList.add('hidden');
+
+      tbody.innerHTML = filtered.map(t => {
+        const statusClass = t.status === 'resolved' || t.status === 'closed'
+          ? 'badge-success'
+          : t.status === 'in_progress' ? 'badge-warning' : 'badge-info';
+        const priorityClass = t.priority === 'urgent' || t.priority === 'critical'
+          ? 'badge-danger'
+          : t.priority === 'high' ? 'badge-warning' : 'badge-good';
+        const created = t.created_at
+          ? new Date(t.created_at).toLocaleDateString('en-NG', { month: 'short', day: 'numeric', year: 'numeric' })
+          : '—';
+        return `
+          <tr>
+            <td class="font-mono text-xs">${t.ticket_id || t.id || '—'}</td>
+            <td class="text-sm">${t.subject || t.title || '—'}</td>
+            <td class="text-xs text-secondary">${t.type || '—'}</td>
+            <td><span class="badge ${priorityClass}">${t.priority || 'Normal'}</span></td>
+            <td><span class="badge ${statusClass}">${(t.status || '').replace(/_/g, ' ')}</span></td>
+            <td class="text-xs text-secondary">${created}</td>
+            <td>
+              <button onclick="SupportTab.viewTicket('${t.ticket_id || t.id}')"
+                class="text-xs font-medium hover:text-cyan-400 transition-colors" style="color:var(--cyan)">
+                View
+              </button>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    function filterTickets(filter) {
+      currentFilter = filter;
+      ['all', 'open', 'resolved'].forEach(f => {
+        const btn = document.getElementById(`filter-${f}`);
+        if (btn) btn.style.borderColor = f === filter ? 'var(--cyan)' : '';
+      });
+      renderTickets();
+    }
+
+    function openNewTicket() {
+      // Creates a lightweight modal for ticket submission
+      const existing = document.getElementById('new-ticket-modal');
+      if (existing) existing.remove();
+
+      const modal = document.createElement('div');
+      modal.id = 'new-ticket-modal';
+      modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4';
+      modal.style.background = 'rgba(0,0,0,0.6)';
+      modal.style.backdropFilter = 'blur(6px)';
+      modal.innerHTML = `
+        <div class="modern-card w-full max-w-lg p-6 animate-fade-up">
+          <div class="flex items-center justify-between mb-5">
+            <h3 class="font-display text-lg font-bold text-primary">New Support Ticket</h3>
+            <button onclick="document.getElementById('new-ticket-modal').remove()" class="icon-btn">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <form id="new-ticket-form" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-secondary mb-2">Subject *</label>
+              <input type="text" name="subject" required placeholder="Describe your issue briefly"
+                class="w-full px-4 py-3 rounded-lg text-sm">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-secondary mb-2">Type</label>
+                <select name="type" class="w-full px-4 py-3 rounded-lg text-sm">
+                  <option value="technical">Technical</option>
+                  <option value="billing">Billing</option>
+                  <option value="maintenance">Maintenance</option>
+                  <option value="emergency">Emergency</option>
+                  <option value="general">General</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-secondary mb-2">Priority</label>
+                <select name="priority" class="w-full px-4 py-3 rounded-lg text-sm">
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-secondary mb-2">Description *</label>
+              <textarea name="description" rows="4" required placeholder="Provide full details of the issue…"
+                class="w-full px-4 py-3 rounded-lg text-sm"></textarea>
+            </div>
+            <div id="ticket-error" class="hidden text-xs text-red-400 p-3 rounded-lg" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2)"></div>
+            <div class="flex gap-3 pt-1">
+              <button type="button" onclick="document.getElementById('new-ticket-modal').remove()" class="btn-secondary flex-1">
+                Cancel
+              </button>
+              <button type="submit" class="btn-primary flex-1" id="ticket-submit-btn">
+                Submit Ticket
+              </button>
+            </div>
+          </form>
+        </div>`;
+      document.body.appendChild(modal);
+
+      modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+      document.getElementById('new-ticket-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const fd = new FormData(this);
+        const payload = Object.fromEntries(fd);
+        const btn = document.getElementById('ticket-submit-btn');
+        const errEl = document.getElementById('ticket-error');
+        btn.textContent = 'Submitting…'; btn.disabled = true;
+
+        try {
+          const token = localStorage.getItem('token');
+          const property = typeof StateManager !== 'undefined' ? StateManager.getCurrentProperty() : null;
+          if (property) payload.property_id = property.property_id;
+
+          const res = await fetch(`${API_BASE}/tickets`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+
+          if (data.success) {
+            modal.remove();
+            showToast('Ticket submitted successfully!', 'success');
+            await loadTickets();
+          } else {
+            errEl.textContent = data.error || 'Failed to submit ticket.';
+            errEl.classList.remove('hidden');
+            btn.textContent = 'Submit Ticket'; btn.disabled = false;
+          }
+        } catch (err) {
+          errEl.textContent = 'Connection failed. Please try again.';
+          errEl.classList.remove('hidden');
+          btn.textContent = 'Submit Ticket'; btn.disabled = false;
         }
-        function toggleTheme() {
-            const html = document.documentElement;
-            const currentTheme = html.classList.contains('dark') ? 'dark' : 'light';
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            
-            html.classList.remove(currentTheme);
-            html.classList.add(newTheme);
-            
-            // Save preference to localStorage
-            localStorage.setItem('theme', newTheme);
-            
-            // Reinitialize map with new theme
-            initMap();
+      });
+    }
+
+    function viewTicket(ticketId) {
+      const ticket = allTickets.find(t => (t.ticket_id || t.id) === ticketId);
+      if (!ticket) return;
+      Modal.showAlert({
+        type: 'info',
+        title: ticket.subject || ticket.title,
+        message: `Status: ${ticket.status} · Priority: ${ticket.priority || 'Normal'} · Created: ${ticket.created_at ? new Date(ticket.created_at).toLocaleDateString('en-NG') : '—'}`
+      });
+    }
+
+    return { render, loadTickets, filterTickets, openNewTicket, viewTicket };
+  })();
+
+
+  // ══════════════════════════════════════════
+  // PATCH: Hook support tab into App.renderTab
+  // ══════════════════════════════════════════
+  // We wait for App to load, then wrap its renderTab
+  window.addEventListener('load', function() {
+    if (typeof App !== 'undefined') {
+      const origRenderTab = App.renderTab;
+      App.renderTab = function(tabName, container) {
+        if (tabName === 'support') {
+          SupportTab.render(container);
+          return;
         }
-        
-        // Load saved theme on page load
-        function loadTheme() {
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            document.documentElement.classList.add(savedTheme);
-        }
-        
-        // Estate data configuration
-        
-        // ============================================
-        // MINIMAL UTILITIES
-        // Main logic in external JS modules
-        // ============================================
-        
-        function toggleTheme() {
-            document.documentElement.classList.toggle('dark');
-            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-        }
-        
-        function loadTheme() {
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            document.documentElement.classList.add(savedTheme);
-        }
-        
-        function toggleUserMenu() {
-            document.getElementById('user-menu')?.classList.toggle('hidden');
-        }
-        
-        function togglePanel(panelName) {
-            const panel = document.getElementById(`${panelName}-panel`);
-            const otherPanel = panelName === 'settings' ? 'notifications' : 'settings';
-            document.getElementById(`${otherPanel}-panel`)?.classList.add('hidden');
-            panel?.classList.toggle('hidden');
-        }
-        
-        function switchTab(tab) {
-            // Update tab buttons
-            ['dashboard', 'assets', 'alerts-incidents', 'billing', 'support'].forEach(t => {
-                document.getElementById(`tab-${t}`)?.classList.remove('active');
-            });
-            document.getElementById(`tab-${tab}`)?.classList.add('active');
-            
-            // Hide all tab content
-            ['dashboard', 'assets', 'alerts-incidents', 'billing', 'support'].forEach(t => {
-                document.getElementById(`content-${t}`)?.classList.add('hidden');
-            });
-            
-            // Show selected tab and render if needed
-            const container = document.getElementById(`content-${tab}`);
-            if (container) {
-                container.classList.remove('hidden');
-                
-                // Render dynamic tabs (assets, alerts, billing)
-                if (typeof App !== 'undefined' && App.renderTab) {
-                    App.renderTab(tab, container);
-                }
-            }
-        }
-        
-        function toggleEstateSwitcher() {
-            const menu = document.getElementById('estate-switcher-menu');
-            if (menu) {
-                menu.classList.toggle('hidden');
-            }
-        }
-        
-        function openAccountSettings() {
-            // Close user menu
-            document.getElementById('user-menu')?.classList.add('hidden');
-            
-            // Switch to dashboard tab and render settings
-            switchTab('dashboard');
-            const container = document.getElementById('content-dashboard');
-            if (container && typeof AccountSettings !== 'undefined') {
-                AccountSettings.render(container);
-            }
-        }
-        
-        function openNotifications() {
-            // Close user menu and notification panel
-            document.getElementById('user-menu')?.classList.add('hidden');
-            document.getElementById('notifications-panel')?.classList.add('hidden');
-            
-            // Switch to dashboard tab and render notifications
-            switchTab('dashboard');
-            const container = document.getElementById('content-dashboard');
-            if (container && typeof NotificationsPage !== 'undefined') {
-                NotificationsPage.render(container);
-            }
-        }
-        
-        // Close estate switcher when clicking outside
-        document.addEventListener('click', function(event) {
-            const btn = document.getElementById('estate-switcher-btn');
-            const menu = document.getElementById('estate-switcher-menu');
-            
-            if (btn && menu && !btn.contains(event.target) && !menu.contains(event.target)) {
-                menu.classList.add('hidden');
-            }
-        });
-        
-        window.addEventListener('load', () => {
-            loadTheme();
-        });
-    </script>
-    
-    <!-- ===================================== -->
-    <!-- PRODUCTION JAVASCRIPT MODULES -->
-    <!-- ===================================== -->
-    
-    <!-- Core -->
-    <script src="js/auth.js"></script>
-    <script src="js/modal.js"></script>
-    <script src="js/stateManager.js"></script>
-    <script src="js/demo-data.js"></script>
-    
-    <!-- Components (LOAD FIRST so functions are available) -->
-    <script src="js/property-registration.js"></script>
-    <script src="js/property-dashboard.js"></script>
-    
-    <!-- Tab Modules -->
-    <script src="js/assets-tab.js"></script>
-    <script src="js/alerts-tab.js"></script>
-    <script src="js/billing-tab.js"></script>
-    
-    <!-- Page Modules -->
-    <script src="js/account-settings.js"></script>
-    <script src="js/notifications-page.js"></script>
-    
-    <!-- Features -->
-    <script src="js/onboarding.js"></script>
-    <script src="js/dashboard.js"></script>
-    <script src="js/billing.js"></script>
-    
-    <!-- Controller (loads last) -->
-    <script src="js/app.js"></script>
-    
+        return origRenderTab.call(App, tabName, container);
+      };
+    }
+  });
+</script>
+
+
+<!-- ═══════════════════════════════════════════
+     JAVASCRIPT MODULES — load order preserved
+═══════════════════════════════════════════ -->
+
+<!-- Core -->
+<script src="js/modal.js"></script>
+<script src="js/stateManager.js"></script>
+<script src="js/demo-data.js"></script>
+
+<!-- Components (load before tab modules) -->
+<script src="js/property-registration.js"></script>
+<script src="js/property-dashboard.js"></script>
+
+<!-- Tab Modules -->
+<script src="js/assets-tab.js"></script>
+<script src="js/alerts-tab.js"></script>
+<script src="js/billing-tab.js"></script>
+
+<!-- Page Modules -->
+<script src="js/account-settings.js"></script>
+<script src="js/notifications-page.js"></script>
+
+<!-- Features -->
+<script src="js/onboarding.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/billing.js"></script>
+
+<!-- Controller (loads last) -->
+<script src="js/app.js"></script>
+
 </body>
 </html>
