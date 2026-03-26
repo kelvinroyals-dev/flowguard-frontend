@@ -51,9 +51,9 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg width='64' height='64' viewBox='232 74 216 216' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='340' cy='182' r='108' fill='%230a2a3d'/%3E%3Ccircle cx='340' cy='182' r='108' fill='none' stroke='%231cb8e8' stroke-width='3' opacity='0.5'/%3E%3Crect x='232' y='214' width='216' height='90' fill='%230d7fa0' clip-path='url(%23c)'/%3E%3CclipPath id='c'%3E%3Ccircle cx='340' cy='182' r='108'/%3E%3C/clipPath%3E%3Cpath d='M340 110 C358 132 374 148 374 166 C374 186 358 202 340 202 C322 202 306 186 306 166 C306 148 322 132 340 110Z' fill='%2316a8d3'/%3E%3Ccircle cx='340' cy='110' r='6' fill='%23f5a623'/%3E%3C/svg%3E">
   <title>Client Portal — FlowGuard</title>
 
-  <!-- Tailwind dark mode class strategy BEFORE CDN loads -->
-  <script>tailwind.config = { darkMode: 'class' }</script>
+  <!-- Tailwind CDN — config MUST be set AFTER load so the API object exists -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' }</script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -235,6 +235,8 @@
     .btn-primary:disabled { opacity:.65; cursor:not-allowed; transform:none; }
     .btn-danger-solid { background:var(--danger); color:white; padding:9px 16px; border-radius:8px; font-family:'Outfit',sans-serif; font-size:13px; font-weight:700; border:none; cursor:pointer; transition:all .15s; }
     .btn-danger-solid:hover { background:#dc2626; box-shadow:0 4px 14px rgba(239,68,68,0.3); }
+    html.light .btn-danger-solid { background:#dc2626; }
+    html.light .btn-danger-solid:hover { background:#b91c1c; }
     .btn-secondary { background:rgba(22,168,211,0.08); color:var(--text-muted); padding:9px 16px; border-radius:8px; font-size:13px; font-weight:600; border:1px solid var(--border); cursor:pointer; transition:all .15s; }
     .btn-secondary:hover { border-color:var(--bh); color:var(--text-main); background:rgba(22,168,211,0.12); }
     html.light .btn-secondary { background:#f3f4f6; color:#374151; border-color:#d1d5db; }
@@ -642,7 +644,7 @@
           </div>
           <div>
             <p class="text-secondary" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Support Email</p>
-            <a href="mailto:support@flowguard.ng" class="font-space text-primary" style="font-size:13px;font-weight:700;text-decoration:none;transition:color .2s" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color=''">support@flowguard.ng</a>
+            <a href="/cdn-cgi/l/email-protection#05767075756a77714563696a7262706477612b6b62" class="font-space text-primary" style="font-size:13px;font-weight:700;text-decoration:none;transition:color .2s" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color=''"><span class="__cf_email__" data-cfemail="1b686e6b6b74696f5b7d77746c7c6e7a697f35757c">[email&#160;protected]</span></a>
           </div>
         </div>
         <div class="modern-card p-5" style="display:flex;align-items:center;gap:14px">
@@ -651,7 +653,7 @@
           </div>
           <div>
             <p class="text-secondary" style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Management Escalation</p>
-            <a href="mailto:info@flowguard.ng" class="font-space text-primary" style="font-size:13px;font-weight:700;text-decoration:none;transition:color .2s" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color=''">info@flowguard.ng</a>
+            <a href="/cdn-cgi/l/email-protection#bbd2d5ddd4fbddd7d4ccdccedac9df95d5dc" class="font-space text-primary" style="font-size:13px;font-weight:700;text-decoration:none;transition:color .2s" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color=''"><span class="__cf_email__" data-cfemail="bed7d0d8d1fed8d2d1c9d9cbdfccda90d0d9">[email&#160;protected]</span></a>
           </div>
         </div>
       </div>
@@ -696,11 +698,13 @@
 <!-- ══════════════════════════════════════════
      INLINE JS — UI LAYER
 ══════════════════════════════════════════ -->
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
   var PORTAL_API = 'https://api.flowguard.ng/api/v1';
 
-  // FIX #1: Track sub-view state so Home always restores the real dashboard
-  var _subView = false;  // true when AccountSettings or Notifications is showing
+  // Sub-view flag: true when AccountSettings or Notifications is overlaying the dashboard.
+  // openAccountSettings / openNotifications use _activateDashboardView() — NOT switchTab() —
+  // so no async App.loadAndRender() race can overwrite the sub-view content.
+  var _subView = false;
 
   // ── Mobile nav ──
   function openMobileNav()  { document.getElementById('mob-overlay').classList.add('open'); }
@@ -737,11 +741,13 @@
     if(em && !eb?.contains(e.target) && !em.contains(e.target)) em.classList.add('hidden');
   });
 
-  // FIX #1: Tab switching — if returning to Home from a sub-view, re-render the dashboard
+  // ── Tab switching ──
+  // When returning to dashboard from a sub-view, reloads real dashboard data.
+  // Does NOT call App.loadAndRender when opening sub-views — that is handled
+  // by openAccountSettings / openNotifications via _activateDashboardView().
   function switchTab(tab) {
     var TABS = ['dashboard','assets','alerts-incidents','billing','support'];
 
-    // Desktop + drawer tab active state
     TABS.forEach(function(t) {
       var b  = document.getElementById('tab-'+t), db = document.getElementById('drw-'+t);
       if(b)  b.classList.toggle('active', t===tab);
@@ -750,7 +756,6 @@
       if(c)  c.classList.add('hidden');
     });
 
-    // Incident form shown alongside alerts tab
     var ir = document.getElementById('content-incident-report');
     if(ir) ir.classList.toggle('hidden', tab !== 'alerts-incidents');
 
@@ -758,13 +763,16 @@
     if(container) {
       container.classList.remove('hidden');
 
-      if (tab === 'dashboard' && _subView) {
-        // FIX #1: Returning to dashboard from a sub-view — re-render properly
-        _subView = false;
-        if (typeof App !== 'undefined' && App.loadAndRender) {
-          App.loadAndRender();
+      if (tab === 'dashboard') {
+        // If we were in a sub-view, reload the real dashboard now.
+        if (_subView) {
+          _subView = false;
+          if (typeof App !== 'undefined' && App.loadAndRender) App.loadAndRender();
         }
-      } else if (tab !== 'dashboard') {
+        // If _subView is false the dashboard content is already correct — no reload needed.
+      } else {
+        // Navigating away from dashboard clears sub-view state.
+        _subView = false;
         if (typeof App !== 'undefined' && App.renderTab) App.renderTab(tab, container);
       }
     }
@@ -773,23 +781,38 @@
     document.getElementById('estate-switcher-menu')?.classList.add('hidden');
   }
 
-  // FIX #1: Sub-view openers set the flag so Home click knows to reload
-  function openAccountSettings() {
+  // ── _activateDashboardView ──
+  // Activates the dashboard tab UI and reveals its container WITHOUT triggering
+  // any render or data-fetch. Used by sub-view openers to avoid race conditions.
+  function _activateDashboardView() {
+    var TABS = ['dashboard','assets','alerts-incidents','billing','support'];
+    TABS.forEach(function(t) {
+      var b  = document.getElementById('tab-'+t), db = document.getElementById('drw-'+t);
+      if(b)  b.classList.toggle('active', t==='dashboard');
+      if(db) db.classList.toggle('active', t==='dashboard');
+      var c = document.getElementById('content-'+t);
+      if(c)  c.classList.add('hidden');
+    });
+    var ir = document.getElementById('content-incident-report');
+    if(ir) ir.classList.add('hidden');
+    var c = document.getElementById('content-dashboard');
+    if(c) c.classList.remove('hidden');
     document.getElementById('user-menu')?.classList.add('hidden');
+  }
+
+  // ── Sub-view openers ──
+  // Use _activateDashboardView() so no async loadAndRender() can race with the render.
+  function openAccountSettings() {
+    _activateDashboardView();
     _subView = true;
-    switchTab('dashboard');
     var c = document.getElementById('content-dashboard');
     if(c && typeof AccountSettings !== 'undefined') AccountSettings.render(c);
-    // FIX: Reset _subView AFTER render so future Home clicks still work
-    _subView = true; // keep true until user explicitly clicks Home
   }
   function openNotifications() {
-    document.getElementById('user-menu')?.classList.add('hidden');
+    _activateDashboardView();
     _subView = true;
-    switchTab('dashboard');
     var c = document.getElementById('content-dashboard');
     if(c && typeof NotificationsPage !== 'undefined') NotificationsPage.render(c);
-    _subView = true;
   }
 
   // FIX #9: Notification count from API
@@ -974,15 +997,17 @@
     });
   }
 
-  // FIX #2: Strip emojis from any dynamically-rendered content by JS modules
-  // Runs on a MutationObserver watching the main app container
+  // Strip emojis from dynamically-rendered module content.
+  // Uses replace-only (no test+replace) to avoid the g-flag lastIndex state bug
+  // where repeated .test() calls advance lastIndex and miss subsequent emoji nodes.
   (function setupEmojiStrip() {
     var EMOJI_RE = /[\u{1F300}-\u{1FAF6}\u{1F004}\u{1F0CF}\u{2702}-\u{27B0}\u{24C2}\u{1F170}\u{1F171}\u{1F17E}\u{1F17F}\u{1F18E}\u{1F191}-\u{1F19A}\u{1F201}\u{1F202}\u{1F21A}\u{1F22F}\u{1F232}-\u{1F23A}\u{1F250}\u{1F251}]/gu;
 
     function clean(node) {
-      if(node.nodeType === 3 && EMOJI_RE.test(node.textContent)) {
-        node.textContent = node.textContent.replace(EMOJI_RE,'').replace(/\s+/g,' ').trim();
-      }
+      if(node.nodeType !== 3) return;
+      // Always call replace — avoids g-flag lastIndex state bug from test+replace pattern
+      var cleaned = node.textContent.replace(EMOJI_RE, '').replace(/  +/g, ' ');
+      if(cleaned !== node.textContent) node.textContent = cleaned;
     }
 
     function walkAndClean(root) {
@@ -991,10 +1016,8 @@
       while((node = walker.nextNode())) clean(node);
     }
 
-    // Run once on initial content
     walkAndClean(document.body);
 
-    // Watch for new content added by JS modules
     var observer = new MutationObserver(function(mutations) {
       mutations.forEach(function(mut) {
         mut.addedNodes.forEach(function(n) {
@@ -1198,15 +1221,4 @@
 <script src="js/demo-data.js"></script>
 <script src="js/property-registration.js"></script>
 <script src="js/property-dashboard.js"></script>
-<script src="js/assets-tab.js"></script>
-<script src="js/alerts-tab.js"></script>
-<script src="js/billing-tab.js"></script>
-<script src="js/account-settings.js"></script>
-<script src="js/notifications-page.js"></script>
-<script src="js/onboarding.js"></script>
-<script src="js/dashboard.js"></script>
-<script src="js/billing.js"></script>
-<script src="js/app.js"></script>
-
-</body>
-</html>
+<script src="j
