@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,14 +7,22 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
 
-  <!-- Auth guard — runs before anything renders -->
+  <!-- FIX #10: Apply saved theme class synchronously before any render (prevents FOUC) -->
+  <script>
+    (function() {
+      var t = localStorage.getItem('theme') || 'dark';
+      document.documentElement.className = t;
+    })();
+  </script>
+
+  <!-- Auth guard -->
   <script>
     (function checkAuth() {
-      const token = localStorage.getItem('token');
-      const user  = localStorage.getItem('user');
+      var token = localStorage.getItem('token');
+      var user  = localStorage.getItem('user');
       if (!token || !user) { window.location.href = 'login.html'; return; }
       try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
+        var payload = JSON.parse(atob(token.split('.')[1]));
         if (payload.exp * 1000 < Date.now()) {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
@@ -27,18 +35,18 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg width='64' height='64' viewBox='232 74 216 216' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='340' cy='182' r='108' fill='%230a2a3d'/%3E%3Ccircle cx='340' cy='182' r='108' fill='none' stroke='%231cb8e8' stroke-width='3' opacity='0.5'/%3E%3Crect x='232' y='214' width='216' height='90' fill='%230d7fa0' clip-path='url(%23c)'/%3E%3CclipPath id='c'%3E%3Ccircle cx='340' cy='182' r='108'/%3E%3C/clipPath%3E%3Cpath d='M340 110 C358 132 374 148 374 166 C374 186 358 202 340 202 C322 202 306 186 306 166 C306 148 322 132 340 110Z' fill='%2316a8d3'/%3E%3Ccircle cx='340' cy='110' r='6' fill='%23f5a623'/%3E%3C/svg%3E">
   <title>Client Portal — FlowGuard</title>
 
-  <!-- Tailwind (kept for JS-rendered tab content) -->
+  <!-- FIX #2: Tailwind dark mode MUST use class strategy, defined BEFORE CDN loads -->
+  <script>tailwind.config = { darkMode: 'class' }</script>
   <script src="https://cdn.tailwindcss.com"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <style>
-    /* ── BRAND TOKENS ── */
+    /* ══ BRAND TOKENS ══ */
     :root {
       --navy:         #0a2a3d;
       --navy-mid:     #0d3550;
-      --navy-light:   #103d5e;
       --navy-card:    rgba(13,53,80,0.6);
       --cyan:         #16a8d3;
       --cyan-bright:  #1cb8e8;
@@ -56,33 +64,34 @@
       --header-h:     60px;
     }
 
-    /* Light mode overrides */
+    /* FIX #13: Light mode — complete token set, previously missing vars now included */
     html.light {
-      --navy:       #f0f7fa;
-      --navy-mid:   #ffffff;
-      --navy-light: #e6f3f8;
-      --navy-card:  rgba(255,255,255,0.95);
-      --text-main:  #0a2a3d;
-      --text-muted: #4a7a94;
-      --border:     rgba(22,168,211,0.2);
+      --navy:         #f0f7fa;
+      --navy-mid:     #ffffff;
+      --navy-card:    rgba(255,255,255,0.97);
+      --text-main:    #0a2a3d;
+      --text-muted:   #4a7a94;
+      --border:       rgba(22,168,211,0.2);
+      --border-hover: rgba(22,168,211,0.45);
+      --amber:        #e8930f;
+      --amber-dim:    #c47c0c;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    html, body {
-      height: 100%;
+    body {
       font-family: 'DM Sans', sans-serif;
       background: var(--navy);
       color: var(--text-main);
       -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
     }
 
-    /* ── BACKGROUND TEXTURE ── */
     body::before {
       content: '';
       position: fixed; inset: 0;
       background:
-        radial-gradient(ellipse 60% 40% at 5% 0%, rgba(22,168,211,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 5% 0%,  rgba(22,168,211,0.07) 0%, transparent 60%),
         radial-gradient(ellipse 40% 30% at 95% 90%, rgba(13,127,160,0.06) 0%, transparent 60%);
       pointer-events: none; z-index: 0;
     }
@@ -95,541 +104,309 @@
       background-size: 48px 48px;
       pointer-events: none; z-index: 0;
     }
+    html.light body::before, html.light body::after { display: none; }
 
-    /* ── TYPOGRAPHY ── */
-    .font-display { font-family: 'Outfit', sans-serif; }
-
-    /* ── HEADER ── */
+    /* ══ HEADER ══ */
     .portal-header {
       position: sticky; top: 0; z-index: 50;
       height: var(--header-h);
-      background: rgba(10,42,61,0.92);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      background: rgba(10,42,61,0.93);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--border);
       display: flex; align-items: center;
     }
-    html.light .portal-header {
-      background: rgba(255,255,255,0.94);
-      border-bottom-color: rgba(22,168,211,0.15);
-    }
+    html.light .portal-header { background: rgba(255,255,255,0.96); border-bottom-color: rgba(22,168,211,0.15); }
+    .header-inner { width: 100%; max-width: 1400px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; gap: 16px; }
 
-    .header-inner {
-      width: 100%; max-width: 1400px;
-      margin: 0 auto;
-      padding: 0 20px;
-      display: flex; align-items: center; gap: 24px;
-    }
-
-    /* Logo */
-    .logo-area {
-      display: flex; align-items: center; gap: 10px;
-      flex-shrink: 0; text-decoration: none;
-    }
-    .logo-mark-sm {
-      width: 36px; height: 36px;
-      filter: drop-shadow(0 0 8px rgba(22,168,211,0.3));
-    }
-    .logo-text {
-      display: none;
-    }
+    .logo-area { display: flex; align-items: center; gap: 10px; flex-shrink: 0; text-decoration: none; }
+    .logo-mark-sm { width: 34px; height: 34px; filter: drop-shadow(0 0 8px rgba(22,168,211,0.3)); }
+    .logo-text { display: none; }
     @media (min-width: 768px) { .logo-text { display: block; } }
-    .logo-name {
-      font-family: 'Outfit', sans-serif;
-      font-size: 17px; font-weight: 700;
-      letter-spacing: -0.3px;
-      color: var(--text-main);
-      line-height: 1.1;
-    }
-    .logo-sub {
-      font-size: 10px; font-weight: 500;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
+    .logo-name { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: var(--text-main); line-height: 1.1; }
+    .logo-sub { font-size: 9.5px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
 
-    /* Nav tabs */
-    .portal-nav {
-      display: none; align-items: flex-end;
-      gap: 2px; flex: 1; overflow-x: auto;
-      scrollbar-width: none;
-    }
+    /* Desktop nav */
+    .portal-nav { display: none; align-items: flex-end; gap: 2px; flex: 1; overflow-x: auto; scrollbar-width: none; }
     .portal-nav::-webkit-scrollbar { display: none; }
     @media (min-width: 768px) { .portal-nav { display: flex; } }
-
     .tab-item {
-      padding: 0 16px;
-      height: var(--header-h);
+      padding: 0 14px; height: var(--header-h);
       display: flex; align-items: center;
-      font-family: 'Outfit', sans-serif;
-      font-size: 13px; font-weight: 600;
+      font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600;
       color: var(--text-muted);
-      border-bottom: 2px solid transparent;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: color 0.2s, border-color 0.2s;
-      background: none; border-top: none; border-left: none; border-right: none;
+      border-bottom: 2px solid transparent; border-top: none; border-left: none; border-right: none;
+      background: none; cursor: pointer; white-space: nowrap; transition: color 0.2s, border-color 0.2s;
     }
     .tab-item:hover { color: var(--text-main); }
-    .tab-item.active {
-      color: var(--cyan);
-      border-bottom-color: var(--amber);
-    }
+    .tab-item.active { color: var(--cyan); border-bottom-color: var(--amber); }
 
-    /* Header right */
-    .header-right {
-      display: flex; align-items: center; gap: 8px;
-      flex-shrink: 0; margin-left: auto;
+    .header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: auto; }
+
+    /* FIX #3: Hamburger */
+    .hamburger-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px;
+      background: rgba(22,168,211,0.06); border: 1px solid var(--border); border-radius: 8px;
+      cursor: pointer; color: var(--text-muted); transition: all 0.2s; flex-shrink: 0;
     }
+    @media (min-width: 768px) { .hamburger-btn { display: none; } }
+    .hamburger-btn svg { width: 18px; height: 18px; }
+    .hamburger-btn:hover { border-color: var(--border-hover); color: var(--text-main); }
+
+    /* FIX #3: Mobile drawer */
+    .mobile-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px); z-index: 150;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    }
+    .mobile-overlay.open { opacity: 1; pointer-events: auto; }
+    .mobile-drawer {
+      position: fixed; top: 0; left: 0; bottom: 0; width: 280px;
+      background: var(--navy-mid); border-right: 1px solid var(--border);
+      z-index: 151; transform: translateX(-100%);
+      transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+      display: flex; flex-direction: column;
+    }
+    html.light .mobile-drawer { background: white; }
+    .mobile-overlay.open .mobile-drawer { transform: translateX(0); }
+    .drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+    .drawer-logo { display: flex; align-items: center; gap: 8px; }
+    .drawer-close { width: 30px; height: 30px; background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center; border-radius: 6px; transition: all 0.15s; }
+    .drawer-close:hover { background: rgba(22,168,211,0.08); color: var(--text-main); }
+    .drawer-nav { flex: 1; padding: 8px; overflow-y: auto; }
+    .drawer-tab {
+      display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-radius: 10px;
+      font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 600;
+      color: var(--text-muted); background: none; border: none; cursor: pointer; transition: all 0.15s; text-align: left; margin-bottom: 2px;
+    }
+    .drawer-tab svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .drawer-tab:hover { background: rgba(22,168,211,0.08); color: var(--text-main); }
+    .drawer-tab.active { background: rgba(22,168,211,0.12); color: var(--cyan); }
+    .drawer-footer { padding: 12px; border-top: 1px solid var(--border); }
+    .drawer-user { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(22,168,211,0.06); border-radius: 10px; margin-bottom: 8px; }
+    .drawer-user-name { font-size: 13px; font-weight: 600; color: var(--text-main); }
+    .drawer-user-role { font-size: 11px; color: var(--text-muted); }
 
     /* Estate switcher */
-    #estate-switcher-container {
-      position: relative;
-    }
-    .estate-btn {
-      display: flex; align-items: center; gap: 6px;
-      padding: 6px 10px;
-      background: rgba(22,168,211,0.08);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 13px; font-weight: 500;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .estate-btn:hover {
-      border-color: var(--border-hover);
-      color: var(--text-main);
-      background: rgba(22,168,211,0.12);
-    }
-    .estate-btn svg { width: 14px; height: 14px; }
+    #estate-switcher-container { position: relative; }
+    .estate-btn { display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: rgba(22,168,211,0.08); border: 1px solid var(--border); border-radius: 8px; font-size: 12px; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.2s; }
+    .estate-btn:hover { border-color: var(--border-hover); color: var(--text-main); }
+    .estate-btn svg { width: 13px; height: 13px; }
+    .estate-menu { position: absolute; right: 0; top: calc(100% + 6px); width: 260px; background: var(--navy-mid); border: 1px solid var(--border); border-radius: 12px; padding: 6px; box-shadow: 0 16px 48px rgba(0,0,0,0.35); z-index: 200; max-height: 320px; overflow-y: auto; }
+    html.light .estate-menu { background: white; }
 
-    /* Demo toggle */
+    /* FIX #1: Demo toggle — class-only visibility (no inline style; app.js class manipulation now works) */
     #demo-toggle-container {
-      display: flex; align-items: center; gap: 8px;
-      padding: 6px 10px;
-      background: rgba(245,166,35,0.08);
-      border: 1px solid rgba(245,166,35,0.25);
-      border-radius: 8px;
-      font-size: 12px; font-weight: 600;
-      color: var(--amber);
-      letter-spacing: 0.02em;
+      display: flex; align-items: center; gap: 8px; padding: 5px 10px;
+      background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.25); border-radius: 8px;
+      font-size: 11px; font-weight: 600; color: var(--amber);
     }
-    .toggle-switch {
-      position: relative;
-      width: 36px; height: 20px; flex-shrink: 0;
-    }
+    .toggle-switch { position: relative; width: 34px; height: 18px; flex-shrink: 0; }
     .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
-    .toggle-track {
-      position: absolute; inset: 0;
-      background: rgba(245,166,35,0.2);
-      border-radius: 20px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
+    .toggle-track { position: absolute; inset: 0; background: rgba(245,166,35,0.2); border-radius: 18px; cursor: pointer; transition: background 0.2s; }
     .toggle-switch input:checked + .toggle-track { background: var(--amber); }
-    .toggle-thumb {
-      position: absolute;
-      left: 2px; top: 2px;
-      width: 16px; height: 16px;
-      background: white;
-      border-radius: 50%;
-      transition: transform 0.2s;
-      pointer-events: none;
-    }
+    .toggle-thumb { position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: transform 0.2s; pointer-events: none; }
     .toggle-switch input:checked ~ .toggle-thumb { transform: translateX(16px); }
 
-    /* Theme toggle */
-    .icon-btn {
-      width: 34px; height: 34px;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(22,168,211,0.06);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-      color: var(--text-muted);
-    }
-    .icon-btn:hover {
-      border-color: var(--border-hover);
-      color: var(--text-main);
-      background: rgba(22,168,211,0.12);
-    }
+    /* Icon button */
+    .icon-btn { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: rgba(22,168,211,0.06); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s; color: var(--text-muted); }
+    .icon-btn:hover { border-color: var(--border-hover); color: var(--text-main); background: rgba(22,168,211,0.12); }
     .icon-btn svg { width: 16px; height: 16px; }
 
     /* User area */
     .user-label { display: none; text-align: right; }
     @media (min-width: 1024px) { .user-label { display: block; } }
-    .user-name-text {
-      font-size: 13px; font-weight: 600;
-      color: var(--text-main); line-height: 1.2;
-    }
-    .user-role-text {
-      font-size: 11px; color: var(--text-muted);
-    }
-
+    .user-name-text { font-size: 13px; font-weight: 600; color: var(--text-main); line-height: 1.2; }
+    .user-role-text { font-size: 11px; color: var(--text-muted); }
     .avatar-wrap { position: relative; }
-    .user-avatar {
-      width: 34px; height: 34px;
-      border-radius: 8px;
-      background: linear-gradient(135deg, var(--teal), var(--cyan));
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Outfit', sans-serif;
-      font-size: 13px; font-weight: 700;
-      color: var(--navy);
-      cursor: pointer;
-      border: 1px solid var(--border);
-      transition: border-color 0.2s;
-    }
+    .user-avatar { width: 34px; height: 34px; border-radius: 8px; background: linear-gradient(135deg, var(--teal), var(--cyan)); display: flex; align-items: center; justify-content: center; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; color: var(--navy); cursor: pointer; border: 1px solid var(--border); transition: border-color 0.2s; }
     .user-avatar:hover { border-color: var(--cyan); }
-    .online-dot {
-      position: absolute;
-      bottom: -2px; right: -2px;
-      width: 10px; height: 10px;
-      background: var(--success);
-      border-radius: 50%;
-      border: 2px solid var(--navy);
-    }
+    .online-dot { position: absolute; bottom: -2px; right: -2px; width: 10px; height: 10px; background: var(--success); border-radius: 50%; border: 2px solid var(--navy); }
     html.light .online-dot { border-color: white; }
 
-    /* User dropdown menu */
-    .user-menu {
-      position: absolute; right: 0; top: calc(100% + 8px);
-      width: 220px;
-      background: var(--navy-mid);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 6px;
-      box-shadow: 0 16px 48px rgba(0,0,0,0.35);
-      z-index: 100;
-    }
-    html.light .user-menu {
-      background: white;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-    }
-    .user-menu-header {
-      padding: 10px 12px 8px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 4px;
-    }
-    .menu-name {
-      font-size: 13px; font-weight: 600;
-      color: var(--text-main); line-height: 1.3;
-    }
-    .menu-email {
-      font-size: 11px; color: var(--text-muted);
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    .menu-item {
-      display: flex; align-items: center; gap: 10px;
-      width: 100%; padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 13px; font-weight: 500;
-      color: var(--text-muted);
-      background: none; border: none;
-      cursor: pointer;
-      transition: all 0.15s;
-      text-align: left;
-    }
-    .menu-item:hover {
-      background: rgba(22,168,211,0.08);
-      color: var(--text-main);
-    }
+    /* User dropdown */
+    .user-menu { position: absolute; right: 0; top: calc(100% + 8px); width: 220px; background: var(--navy-mid); border: 1px solid var(--border); border-radius: 12px; padding: 6px; box-shadow: 0 16px 48px rgba(0,0,0,0.35); z-index: 200; }
+    html.light .user-menu { background: white; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+    .user-menu-header { padding: 10px 12px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+    .menu-name { font-size: 13px; font-weight: 600; color: var(--text-main); }
+    .menu-email { font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .menu-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-muted); background: none; border: none; cursor: pointer; transition: all 0.15s; text-align: left; }
+    .menu-item:hover { background: rgba(22,168,211,0.08); color: var(--text-main); }
     .menu-item svg { width: 15px; height: 15px; flex-shrink: 0; }
     .menu-item.danger { color: #fca5a5; }
-    .menu-item.danger:hover { background: rgba(239,68,68,0.1); color: #fca5a5; }
+    .menu-item.danger:hover { background: rgba(239,68,68,0.1); }
     .menu-separator { height: 1px; background: var(--border); margin: 4px 0; }
+    .notif-badge { min-width: 16px; height: 16px; padding: 0 4px; background: var(--danger); color: white; border-radius: 8px; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-left: auto; }
 
-    /* Notification badge */
-    .notif-badge {
-      min-width: 16px; height: 16px;
-      padding: 0 4px;
-      background: var(--danger);
-      color: white;
-      border-radius: 8px;
-      font-size: 10px; font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      margin-left: auto;
-    }
+    /* ══ MAIN ══ */
+    #main-app { position: relative; z-index: 1; }
+    .portal-main { max-width: 1400px; margin: 0 auto; padding: 28px 20px 80px; }
 
-    /* Notifications dropdown */
-    .notif-panel {
-      padding: 8px;
-      border-top: 1px solid var(--border);
-      margin-top: 4px;
-    }
-    .notif-item {
-      padding: 8px 10px;
-      border-radius: 6px;
-      margin-bottom: 4px;
-      font-size: 12px;
-    }
-    .notif-item-title { font-weight: 600; color: var(--text-main); }
-    .notif-item-time { color: var(--text-muted); margin-top: 1px; }
-
-    /* Estate switcher dropdown */
-    .estate-menu {
-      position: absolute; right: 0; top: calc(100% + 6px);
-      width: 260px;
-      background: var(--navy-mid);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 6px;
-      box-shadow: 0 16px 48px rgba(0,0,0,0.35);
-      z-index: 100;
-      max-height: 320px; overflow-y: auto;
-    }
-    html.light .estate-menu { background: white; }
-
-    /* ── MAIN CONTENT ── */
-    .portal-main {
-      position: relative; z-index: 1;
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 28px 20px 60px;
-    }
-
-    /* ── CARDS ── */
-    .modern-card {
-      background: var(--navy-card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    html.light .modern-card {
-      background: white;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-    }
+    /* ══ CARDS ══ */
+    .modern-card { background: var(--navy-card); border: 1px solid var(--border); border-radius: 14px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: border-color 0.2s, box-shadow 0.2s; }
+    html.light .modern-card { background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.06); backdrop-filter: none; }
     .modern-card:hover { border-color: var(--border-hover); }
 
-    /* ── BADGES ── */
-    .badge {
-      display: inline-flex; align-items: center;
-      padding: 3px 8px;
-      border-radius: 5px;
-      font-size: 10px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.4px;
-    }
-    .badge-success { background: rgba(34,197,94,0.15); color: #6ee7b7; }
+    /* ══ BADGES ══ */
+    .badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+    .badge-success { background: rgba(34,197,94,0.15);  color: #6ee7b7; }
     .badge-warning { background: rgba(245,158,11,0.15); color: #fcd34d; }
     .badge-danger  { background: rgba(239,68,68,0.15);  color: #fca5a5; }
-    .badge-info    { background: rgba(22,168,211,0.15);  color: var(--pale); }
-    .badge-good    { background: rgba(34,197,94,0.12);   color: #86efac; }
+    .badge-info    { background: rgba(22,168,211,0.15); color: #cceeff; }
+    .badge-good    { background: rgba(34,197,94,0.12);  color: #86efac; }
 
+    /* FIX #13 + #14: Light mode badge overrides — all five variants */
     html.light .badge-success { background: #dcfce7; color: #16a34a; }
     html.light .badge-warning { background: #fef9c3; color: #a16207; }
     html.light .badge-danger  { background: #fee2e2; color: #dc2626; }
     html.light .badge-info    { background: #dbeafe; color: #1d4ed8; }
+    html.light .badge-good    { background: #d1fae5; color: #047857; }
 
-    /* ── STATUS DOTS ── */
-    .status-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      display: inline-block;
-      margin-right: 6px;
-    }
+    /* ══ STATUS DOTS ══ */
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 6px; }
     .status-dot.green  { background: var(--success); }
     .status-dot.orange { background: var(--warning); }
     .status-dot.red    { background: var(--danger); }
     .status-dot.gray   { background: var(--text-muted); }
 
-    /* ── BUTTONS ── */
-    .btn-primary {
-      background: linear-gradient(135deg, var(--amber), var(--amber-dim));
-      color: var(--navy);
-      padding: 9px 16px;
-      border-radius: 8px;
-      font-family: 'Outfit', sans-serif;
-      font-size: 13px; font-weight: 700;
-      border: none; cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s;
-    }
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 18px rgba(245,166,35,0.3);
-    }
-
-    .btn-secondary {
-      background: rgba(22,168,211,0.08);
-      color: var(--text-muted);
-      padding: 9px 16px;
-      border-radius: 8px;
-      font-size: 13px; font-weight: 600;
-      border: 1px solid var(--border);
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .btn-secondary:hover {
-      border-color: var(--border-hover);
-      color: var(--text-main);
-      background: rgba(22,168,211,0.12);
-    }
-
-    html.light .btn-secondary {
-      background: #f3f4f6; color: #374151; border-color: #d1d5db;
-    }
+    /* ══ BUTTONS ══ */
+    .btn-primary { background: linear-gradient(135deg, var(--amber), var(--amber-dim)); color: var(--navy); padding: 9px 16px; border-radius: 8px; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700; border: none; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(245,166,35,0.3); }
+    .btn-primary:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+    .btn-secondary { background: rgba(22,168,211,0.08); color: var(--text-muted); padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; border: 1px solid var(--border); cursor: pointer; transition: all 0.15s; }
+    .btn-secondary:hover { border-color: var(--border-hover); color: var(--text-main); background: rgba(22,168,211,0.12); }
+    html.light .btn-secondary { background: #f3f4f6; color: #374151; border-color: #d1d5db; }
     html.light .btn-secondary:hover { background: #e5e7eb; color: #111827; }
 
-    /* ── TABLES ── */
-    .modern-table th {
-      background: rgba(10,42,61,0.5);
-      color: var(--text-muted);
-      font-weight: 600; font-size: 10.5px;
-      text-transform: uppercase; letter-spacing: 0.5px;
-      padding: 11px 16px; text-align: left;
-    }
-    html.light .modern-table th {
-      background: #f9fafb; color: #6b7280;
-    }
-    .modern-table td {
-      padding: 13px 16px;
-      border-bottom: 1px solid var(--border);
-      font-size: 13px;
-      color: var(--text-main);
-    }
+    /* ══ TABLES ══ */
+    .modern-table th { background: rgba(10,42,61,0.5); color: var(--text-muted); font-weight: 600; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; padding: 11px 16px; text-align: left; }
+    html.light .modern-table th { background: #f9fafb; color: #6b7280; }
+    .modern-table td { padding: 13px 16px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-main); }
     html.light .modern-table td { border-color: #f3f4f6; }
     .modern-table tr:hover td { background: rgba(22,168,211,0.04); }
     html.light .modern-table tr:hover td { background: #fafafa; }
 
-    /* ── TEXT UTILITIES ── */
+    /* ══ TEXT UTILS ══ */
     .text-primary   { color: var(--text-main); }
     .text-secondary { color: var(--text-muted); }
-    .text-muted     { color: var(--text-muted); opacity: 0.7; }
     .font-space     { font-family: 'Outfit', sans-serif; }
 
-    /* ── FORM INPUTS ── */
-    input[type="text"],
-    input[type="email"],
-    input[type="tel"],
-    input[type="number"],
-    input[type="date"],
-    input[type="file"],
-    input[type="password"],
-    select, textarea {
-      background: rgba(10,42,61,0.6);
-      border: 1px solid var(--border);
-      color: var(--text-main);
-      border-radius: 8px;
-      font-family: 'DM Sans', sans-serif;
-      transition: border-color 0.2s;
+    /* ══ FORM INPUTS ══ */
+    input[type="text"], input[type="email"], input[type="tel"],
+    input[type="number"], input[type="date"], input[type="file"],
+    input[type="password"], select, textarea {
+      background: rgba(10,42,61,0.6); border: 1px solid var(--border);
+      color: var(--text-main); border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: border-color 0.2s;
     }
-    input:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: var(--cyan);
-      box-shadow: 0 0 0 3px rgba(22,168,211,0.12);
-    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(22,168,211,0.12); }
     input::placeholder, textarea::placeholder { color: rgba(111,168,192,0.4); }
     select option { background: #0d3550; color: var(--text-main); }
-
-    html.light input, html.light select, html.light textarea {
-      background: white;
-      border-color: #d1d5db;
-      color: #0a2a3d;
-    }
+    html.light input, html.light select, html.light textarea { background: white; border-color: #d1d5db; color: #0a2a3d; }
     html.light input::placeholder, html.light textarea::placeholder { color: #9ca3af; }
     html.light select option { background: white; color: #0a2a3d; }
 
-    /* ── MAP ── */
-    #map {
-      height: 460px;
-      background: rgba(10,42,61,0.4);
-      border-radius: 10px;
-      overflow: hidden;
-    }
+    /* ══ MAP ══ */
+    #map { height: 460px; background: rgba(10,42,61,0.4); border-radius: 10px; overflow: hidden; }
 
-    /* ── HIDDEN UTILITY ── */
+    /* ══ UTILITY ══ */
     .hidden { display: none !important; }
-
     [id^="content-"] { display: block; }
     [id^="content-"].hidden { display: none !important; }
 
-    /* ── LOADING SPINNER ── */
-    .fg-spinner {
-      width: 40px; height: 40px;
-      border: 3px solid var(--border);
-      border-top-color: var(--cyan);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .fg-spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--cyan); border-radius: 50%; animation: _spin 0.8s linear infinite; }
+    @keyframes _spin { to { transform: rotate(360deg); } }
 
-    /* ── TOAST ── */
-    .fg-toast {
-      position: fixed; top: 16px; right: 16px; z-index: 9999;
-      padding: 12px 18px;
-      border-radius: 10px;
-      font-size: 14px; font-weight: 500;
-      animation: toast-in 0.3s ease;
-      max-width: 360px;
-    }
-    .fg-toast.success {
-      background: rgba(34,197,94,0.15);
-      border: 1px solid rgba(34,197,94,0.3);
-      color: #6ee7b7;
-    }
-    .fg-toast.error {
-      background: rgba(239,68,68,0.15);
-      border: 1px solid rgba(239,68,68,0.3);
-      color: #fca5a5;
-    }
-    @keyframes toast-in {
-      from { opacity: 0; transform: translateY(-8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
+    .fg-toast { position: fixed; top: 16px; right: 16px; z-index: 9999; padding: 12px 18px; border-radius: 10px; font-size: 14px; font-weight: 500; animation: _toast-in 0.3s ease; max-width: 360px; }
+    .fg-toast.success { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: #6ee7b7; }
+    .fg-toast.error   { background: rgba(239,68,68,0.15);  border: 1px solid rgba(239,68,68,0.3);  color: #fca5a5; }
+    @keyframes _toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* ── SCROLLBAR ── */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(22,168,211,0.2);
-      border-radius: 3px;
-    }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(22,168,211,0.35); }
-
-    /* ── SUPPORT TAB specific ── */
-    .support-contact-card {
-      display: flex; flex-direction: column; align-items: center;
-      text-align: center; gap: 6px;
-    }
-    .support-icon-wrap {
-      width: 44px; height: 44px;
-      border-radius: 50%;
-      background: rgba(22,168,211,0.1);
-      border: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 4px;
-    }
+    /* ══ SUPPORT ══ */
+    .support-icon-wrap { width: 44px; height: 44px; border-radius: 50%; background: rgba(22,168,211,0.1); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; margin-bottom: 4px; }
     .support-icon-wrap svg { width: 20px; height: 20px; color: var(--cyan); }
 
-    /* ── ANIMATION ── */
-    @keyframes fade-up {
-      from { opacity: 0; transform: translateY(10px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fade-up { animation: fade-up 0.4s ease; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(22,168,211,0.2); border-radius: 3px; }
+
+    @keyframes _fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-up { animation: _fade-up 0.4s ease; }
   </style>
 
-  <!-- Socket.io Client Library -->
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-  <!-- API Client -->
   <script src="js/api.js"></script>
-  <!-- Auth Module (loaded here so auth guard works before body renders) -->
-  <script src="js/auth.js"></script>
 </head>
 <body>
+
+<!-- FIX #3: Mobile nav overlay + drawer -->
+<div class="mobile-overlay" id="mobile-overlay" onclick="closeMobileNav()">
+  <div class="mobile-drawer" onclick="event.stopPropagation()">
+    <div class="drawer-header">
+      <div class="drawer-logo">
+        <svg style="width:28px;height:28px" viewBox="200 60 280 270" xmlns="http://www.w3.org/2000/svg">
+          <defs><clipPath id="dc"><circle cx="340" cy="182" r="108"/></clipPath></defs>
+          <circle cx="340" cy="182" r="108" fill="#0a2a3d"/>
+          <g clip-path="url(#dc)"><rect x="232" y="214" width="216" height="90" fill="#0d7fa0"/>
+          <path d="M232 214 Q276 200 320 214 Q364 228 408 214 L448 210 L448 216 Q364 216 320 216 Q276 216 254 202 232 216Z" fill="#16a8d3"/></g>
+          <circle cx="340" cy="182" r="108" fill="none" stroke="#1cb8e8" stroke-width="2" opacity="0.35"/>
+          <path d="M340 110 C358 132 374 148 374 166 C374 186 358 202 340 202 C322 202 306 186 306 166 C306 148 322 132 340 110Z" fill="#16a8d3"/>
+          <circle cx="340" cy="110" r="5" fill="#f5a623"/>
+        </svg>
+        <span style="font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;color:var(--text-main)">FlowGuard</span>
+      </div>
+      <button class="drawer-close" onclick="closeMobileNav()">
+        <svg style="width:18px;height:18px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <nav class="drawer-nav">
+      <button class="drawer-tab active" id="drawer-tab-dashboard"        onclick="switchTab('dashboard');closeMobileNav()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Home
+      </button>
+      <button class="drawer-tab" id="drawer-tab-assets"                  onclick="switchTab('assets');closeMobileNav()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        My Assets
+      </button>
+      <button class="drawer-tab" id="drawer-tab-alerts-incidents"        onclick="switchTab('alerts-incidents');closeMobileNav()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        Alerts &amp; Incidents
+      </button>
+      <button class="drawer-tab" id="drawer-tab-billing"                 onclick="switchTab('billing');closeMobileNav()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+        Billing &amp; SLA
+      </button>
+      <button class="drawer-tab" id="drawer-tab-support"                 onclick="switchTab('support');closeMobileNav()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        Support
+      </button>
+    </nav>
+    <div class="drawer-footer">
+      <div class="drawer-user">
+        <div class="user-avatar" style="cursor:default"><span id="drawer-initials">—</span></div>
+        <div>
+          <div class="drawer-user-name" id="drawer-name">Loading…</div>
+          <div class="drawer-user-role" id="drawer-role">Client Portal</div>
+        </div>
+      </div>
+      <button class="menu-item danger" style="border-radius:8px;width:100%" onclick="Modal.showLogoutConfirm()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Sign Out
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="main-app">
 
-  <!-- ══════════════════════════════════════════
-       HEADER
-  ══════════════════════════════════════════ -->
+  <!-- ══ HEADER ══ -->
   <header class="portal-header">
     <div class="header-inner">
 
-      <!-- Logo -->
-      <a href="#" class="logo-area" onclick="switchTab('dashboard'); return false;">
+      <button class="hamburger-btn" onclick="openMobileNav()" aria-label="Open navigation">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+
+      <a href="#" class="logo-area" onclick="switchTab('dashboard');return false;">
         <svg class="logo-mark-sm" viewBox="200 60 280 270" xmlns="http://www.w3.org/2000/svg">
           <defs><clipPath id="lc"><circle cx="340" cy="182" r="108"/></clipPath></defs>
           <circle cx="340" cy="182" r="148" fill="none" stroke="#16a8d3" stroke-width="1.2" opacity="0.15"/>
@@ -652,33 +429,28 @@
         </div>
       </a>
 
-      <!-- Navigation tabs -->
       <nav class="portal-nav" id="main-nav">
-        <button id="tab-dashboard"         class="tab-item active"   onclick="switchTab('dashboard')">Home</button>
-        <button id="tab-assets"            class="tab-item"          onclick="switchTab('assets')">My Assets</button>
-        <button id="tab-alerts-incidents"  class="tab-item"          onclick="switchTab('alerts-incidents')">Alerts & Incidents</button>
-        <button id="tab-billing"           class="tab-item"          onclick="switchTab('billing')">Billing & SLA</button>
-        <button id="tab-support"           class="tab-item"          onclick="switchTab('support')">Support</button>
+        <button id="tab-dashboard"        class="tab-item active" onclick="switchTab('dashboard')">Home</button>
+        <button id="tab-assets"           class="tab-item"        onclick="switchTab('assets')">My Assets</button>
+        <button id="tab-alerts-incidents" class="tab-item"        onclick="switchTab('alerts-incidents')">Alerts &amp; Incidents</button>
+        <button id="tab-billing"          class="tab-item"        onclick="switchTab('billing')">Billing &amp; SLA</button>
+        <button id="tab-support"          class="tab-item"        onclick="switchTab('support')">Support</button>
       </nav>
 
-      <!-- Right controls -->
       <div class="header-right">
 
-        <!-- Estate switcher (hidden until multi-property) -->
         <div id="estate-switcher-container" class="hidden" style="position:relative">
           <button id="estate-switcher-btn" onclick="toggleEstateSwitcher()" class="estate-btn">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-            <span id="current-estate-name" style="font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Select Property</span>
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:12px;height:12px;flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            <span id="current-estate-name" style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Property</span>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:11px;height:11px;flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </button>
-          <div id="estate-switcher-menu" class="estate-menu hidden">
-            <!-- Populated by app.js -->
-          </div>
+          <div id="estate-switcher-menu" class="estate-menu hidden"></div>
         </div>
 
-        <!-- Demo mode toggle (shown for pre-active states) -->
-        <div id="demo-toggle-container" class="hidden" style="display:none">
-          <span style="font-size:11px;font-weight:600;color:var(--amber);letter-spacing:0.04em">DEMO</span>
+        <!-- FIX #1: class="hidden" only — no inline style attribute -->
+        <div id="demo-toggle-container" class="hidden">
+          <span>DEMO</span>
           <label class="toggle-switch">
             <input type="checkbox" id="demo-toggle">
             <div class="toggle-track"></div>
@@ -686,52 +458,42 @@
           </label>
         </div>
 
-        <!-- Theme toggle -->
-        <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme" id="theme-toggle-header">
-          <!-- Sun (shown in dark mode) -->
+        <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">
           <svg id="theme-icon-sun" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
           </svg>
-          <!-- Moon (shown in light mode) -->
           <svg id="theme-icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="hidden">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
           </svg>
         </button>
 
-        <!-- User name (desktop) -->
         <div class="user-label">
           <div class="user-name-text" id="user-name">Loading…</div>
           <div class="user-role-text" id="user-role">Client Portal</div>
         </div>
 
-        <!-- Avatar + dropdown -->
         <div class="avatar-wrap" style="position:relative">
           <div class="user-avatar" id="user-avatar" onclick="toggleUserMenu()">
             <span id="user-initials">—</span>
           </div>
           <div class="online-dot"></div>
 
-          <!-- Dropdown -->
           <div id="user-menu" class="user-menu hidden">
             <div class="user-menu-header">
               <div class="menu-name" id="menu-user-name">Loading…</div>
               <div class="menu-email" id="menu-user-email"></div>
             </div>
-
             <button onclick="openAccountSettings()" class="menu-item">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
               Account Settings
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:13px;height:13px;margin-left:auto;opacity:0.5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:12px;height:12px;margin-left:auto;opacity:0.5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
-
             <button onclick="openNotifications()" class="menu-item">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
               Notifications
               <span class="notif-badge hidden" id="notif-count">0</span>
             </button>
-
             <div class="menu-separator"></div>
-
             <button onclick="Modal.showLogoutConfirm()" class="menu-item danger">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
               Sign Out
@@ -743,113 +505,41 @@
     </div>
   </header>
 
-
-  <!-- ══════════════════════════════════════════
-       MAIN CONTENT
-  ══════════════════════════════════════════ -->
+  <!-- ══ MAIN CONTENT ══ -->
   <main class="portal-main">
 
-    <!-- Dashboard tab (populated entirely by dashboard.js / app.js) -->
-    <div id="content-dashboard" class="animate-fade-up"></div>
+    <!-- FIX #4: All JS-module-owned tabs are EMPTY containers. No scaffold HTML here.
+         AlertsTab / AssetsTab / BillingTab / Dashboard each do container.innerHTML = '...'
+         so anything pre-rendered here would be immediately destroyed. -->
+    <div id="content-dashboard"        class="animate-fade-up"></div>
+    <div id="content-assets"           class="hidden"></div>
+    <div id="content-alerts-incidents" class="hidden"></div>
+    <div id="content-billing"          class="hidden"></div>
 
-    <!-- Assets tab (populated by assets-tab.js) -->
-    <div id="content-assets" class="hidden">
-      <div class="flex items-center justify-between mb-6">
-        <div>
-          <h2 class="text-2xl font-bold font-space text-primary">My Assets</h2>
-          <p class="text-sm text-secondary mt-1">Drainage infrastructure for <span id="assets-estate-name" class="font-semibold text-primary"></span></p>
-        </div>
-        <button class="btn-primary flex items-center gap-2" onclick="AssetsTab && AssetsTab.reportIssue && AssetsTab.reportIssue()">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          Report Issue
-        </button>
-      </div>
-
-      <!-- Asset overview stats (populated by AssetsTab) -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div class="modern-card p-5">
-          <p class="text-xs font-medium text-secondary mb-2">Total Assets</p>
-          <p class="text-3xl font-bold font-space text-primary" id="assets-total">—</p>
-          <p class="text-xs text-secondary mt-1">Monitored infrastructure</p>
-        </div>
-        <div class="modern-card p-5">
-          <p class="text-xs font-medium text-secondary mb-2">Health Status</p>
-          <p class="text-3xl font-bold font-space text-green-400" id="assets-health">—</p>
-          <p class="text-xs text-secondary mt-1">Average condition</p>
-        </div>
-        <div class="modern-card p-5">
-          <p class="text-xs font-medium text-secondary mb-2">Next Maintenance</p>
-          <p class="text-3xl font-bold font-space text-primary" id="assets-next-maintenance">—</p>
-          <p class="text-xs text-secondary mt-1">Scheduled service</p>
-        </div>
-      </div>
-
-      <!-- Assets table -->
+    <!-- FIX #5/#6/#7: Incident report form lives OUTSIDE the AlertsTab container
+         so it is never clobbered. switchTab() shows/hides it alongside the alerts tab. -->
+    <div id="content-incident-report" class="hidden" style="margin-top:24px">
       <div class="modern-card p-6">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-bold text-primary">Infrastructure Assets</h3>
-          <div class="flex gap-2">
-            <button class="btn-secondary text-xs py-2">Filter</button>
-            <button class="btn-secondary text-xs py-2">Export CSV</button>
-          </div>
+          <h3 class="text-sm font-bold text-primary">Report New Incident</h3>
+          <span class="badge badge-info">Creates a support ticket</span>
         </div>
-        <div class="overflow-x-auto">
-          <table class="w-full modern-table">
-            <thead>
-              <tr>
-                <th>Asset Name</th>
-                <th>Type</th>
-                <th>Length / Size</th>
-                <th>Health</th>
-                <th>Last Maintenance</th>
-                <th>Uptime</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="assets-table-body">
-              <!-- Populated by AssetsTab JS -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Alerts & Incidents tab (populated by alerts-tab.js) -->
-    <div id="content-alerts-incidents" class="hidden">
-      <div class="flex items-center justify-between mb-6">
-        <div>
-          <h2 class="text-2xl font-bold font-space text-primary">Alerts & Incidents</h2>
-          <p class="text-sm text-secondary mt-1">Active alerts and incident reporting for your estate</p>
-        </div>
-      </div>
-
-      <!-- Active alerts (populated by AlertsTab JS) -->
-      <div class="modern-card p-6 mb-6">
-        <h3 class="text-sm font-bold text-primary mb-4">Active Alerts</h3>
-        <div id="active-alerts-list" class="space-y-3">
-          <!-- Loading state until AlertsTab populates -->
-          <div class="flex items-center justify-center py-8 text-secondary text-sm">
-            <div class="fg-spinner mr-3"></div>
-            Loading alerts…
-          </div>
-        </div>
-      </div>
-
-      <!-- Report new incident -->
-      <div class="modern-card p-6 mb-6">
-        <h3 class="text-sm font-bold text-primary mb-4">Report New Incident</h3>
-        <form id="incident-form" class="space-y-4">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form id="incident-form" novalidate>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4" style="margin-bottom:16px">
             <div>
-              <label class="block text-xs font-bold text-secondary mb-2">Location / Zone</label>
-              <select id="incident-zone" class="w-full px-4 py-2 rounded-lg">
-                <!-- Zones populated dynamically by AlertsTab or empty state -->
+              <label class="block text-xs font-bold text-secondary" style="margin-bottom:6px">Location / Zone</label>
+              <select id="incident-zone" style="width:100%;padding:10px 14px">
                 <option value="">Select zone…</option>
+                <option value="main_entrance">Main Entrance</option>
+                <option value="residential_area">Residential Area</option>
+                <option value="commercial_area">Commercial Area</option>
+                <option value="perimeter">Perimeter</option>
+                <option value="other">Other</option>
               </select>
             </div>
             <div>
-              <label class="block text-xs font-bold text-secondary mb-2">Issue Type</label>
-              <select id="incident-type" class="w-full px-4 py-2 rounded-lg">
+              <label class="block text-xs font-bold text-secondary" style="margin-bottom:6px">Issue Type</label>
+              <select id="incident-type" style="width:100%;padding:10px 14px">
                 <option value="blockage">Blockage</option>
                 <option value="overflow">Overflow</option>
                 <option value="sensor_malfunction">Sensor Malfunction</option>
@@ -858,268 +548,176 @@
               </select>
             </div>
           </div>
-          <div>
-            <label class="block text-xs font-bold text-secondary mb-2">Severity Level</label>
-            <div class="flex gap-4">
-              <label class="flex items-center gap-2 text-sm text-primary cursor-pointer">
+          <div style="margin-bottom:16px">
+            <label class="block text-xs font-bold text-secondary" style="margin-bottom:8px">Severity Level</label>
+            <div style="display:flex;gap:20px;flex-wrap:wrap">
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:var(--text-main)">
                 <input type="radio" name="severity" value="critical" class="accent-red-500"> Critical
               </label>
-              <label class="flex items-center gap-2 text-sm text-primary cursor-pointer">
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:var(--text-main)">
                 <input type="radio" name="severity" value="moderate" checked class="accent-yellow-500"> Moderate
               </label>
-              <label class="flex items-center gap-2 text-sm text-primary cursor-pointer">
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;color:var(--text-main)">
                 <input type="radio" name="severity" value="minor" class="accent-cyan-500"> Minor
               </label>
             </div>
           </div>
-          <div>
-            <label class="block text-xs font-bold text-secondary mb-2">Description</label>
-            <textarea id="incident-description" rows="4" class="w-full px-4 py-2 rounded-lg" placeholder="Describe the issue in detail…"></textarea>
+          <div style="margin-bottom:16px">
+            <label class="block text-xs font-bold text-secondary" style="margin-bottom:6px">Description *</label>
+            <textarea id="incident-description" rows="4" style="width:100%;padding:10px 14px" placeholder="Describe the issue in detail…"></textarea>
           </div>
-          <div>
-            <label class="block text-xs font-bold text-secondary mb-2">Photo Evidence <span class="font-normal opacity-60">(optional)</span></label>
-            <input type="file" accept="image/*" id="incident-photo" class="w-full px-4 py-2 rounded-lg">
+          <div style="margin-bottom:16px">
+            <label class="block text-xs font-bold text-secondary" style="margin-bottom:6px">Photo Evidence <span style="font-weight:400;opacity:0.6">(optional)</span></label>
+            <input type="file" accept="image/*" id="incident-photo" style="width:100%;padding:10px 14px">
           </div>
-          <div class="flex gap-3">
-            <button type="submit" class="btn-primary">Submit Report</button>
+          <div id="incident-alert" class="hidden" style="font-size:12px;padding:10px 14px;border-radius:8px;margin-bottom:14px"></div>
+          <div style="display:flex;gap:10px">
+            <button type="submit" class="btn-primary" id="incident-submit-btn">Submit Report</button>
             <button type="reset" class="btn-secondary">Clear</button>
           </div>
         </form>
       </div>
-
-      <!-- Recent incidents (populated by AlertsTab JS) -->
-      <div class="modern-card p-6">
-        <h3 class="text-sm font-bold text-primary mb-4">Recent Incident Reports</h3>
-        <div id="recent-incidents-list" class="space-y-2">
-          <!-- Populated by AlertsTab JS -->
-        </div>
-      </div>
     </div>
 
-    <!-- Billing & SLA tab (populated by billing-tab.js) -->
-    <div id="content-billing" class="hidden">
-      <div class="flex items-center justify-between mb-6">
-        <div>
-          <h2 class="text-2xl font-bold font-space text-primary">Billing & SLA</h2>
-          <p class="text-sm text-secondary mt-1">Contract details and service level agreement performance</p>
-        </div>
-      </div>
-
-      <!-- Contract overview (populated by BillingTab JS) -->
-      <div class="modern-card p-6 mb-6">
-        <h3 class="text-sm font-bold text-primary mb-4">Contract Overview</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <div class="space-y-3">
-              <div class="flex justify-between py-2 border-b" style="border-color:var(--border)">
-                <span class="text-sm text-secondary">Monthly Fee</span>
-                <span class="text-sm font-bold text-primary" id="billing-monthly-fee">—</span>
-              </div>
-              <div class="flex justify-between py-2 border-b" style="border-color:var(--border)">
-                <span class="text-sm text-secondary">Service Tier</span>
-                <span class="badge badge-info" id="billing-tier">—</span>
-              </div>
-              <div class="flex justify-between py-2 border-b" style="border-color:var(--border)">
-                <span class="text-sm text-secondary">Contract Start</span>
-                <span class="text-sm font-semibold text-primary" id="billing-start-date">—</span>
-              </div>
-              <div class="flex justify-between py-2">
-                <span class="text-sm text-secondary">Next Renewal</span>
-                <span class="text-sm font-semibold text-primary" id="billing-renewal-date">—</span>
-              </div>
-            </div>
-          </div>
-          <div>
-            <h4 class="text-xs font-bold text-secondary uppercase tracking-wider mb-4">SLA Performance</h4>
-            <div class="space-y-4">
-              <div>
-                <div class="flex justify-between text-sm mb-1">
-                  <span class="text-secondary">Response Time</span>
-                  <span class="font-bold text-primary" id="sla-response">—</span>
-                </div>
-                <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--border)">
-                  <div id="sla-response-bar" class="h-full rounded-full bg-green-500" style="width:0%"></div>
-                </div>
-              </div>
-              <div>
-                <div class="flex justify-between text-sm mb-1">
-                  <span class="text-secondary">Uptime (30 days)</span>
-                  <span class="font-bold text-primary" id="sla-uptime">—</span>
-                </div>
-                <div class="h-1.5 rounded-full overflow-hidden" style="background:var(--border)">
-                  <div id="sla-uptime-bar" class="h-full rounded-full bg-green-500" style="width:0%"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Payment history (populated by BillingTab JS) -->
-      <div class="modern-card p-6 mb-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-bold text-primary">Payment History</h3>
-          <button class="btn-secondary text-xs py-2">Download All</button>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full modern-table">
-            <thead>
-              <tr>
-                <th>Invoice</th>
-                <th>Period</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Date</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="billing-history-body">
-              <!-- Populated by BillingTab JS -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Support tab (populated by SupportTab JS defined below) -->
+    <!-- Support tab — SupportTab inline module manages this div's children -->
     <div id="content-support" class="hidden">
-      <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center justify-between" style="margin-bottom:24px">
         <div>
-          <h2 class="text-2xl font-bold font-space text-primary">Support</h2>
-          <p class="text-sm text-secondary mt-1">Submit tickets and track your service requests</p>
+          <h2 class="font-space text-primary" style="font-size:22px;font-weight:700">Support</h2>
+          <p class="text-secondary" style="font-size:13px;margin-top:4px">Submit tickets and track your service requests</p>
         </div>
         <button class="btn-primary" onclick="SupportTab.openNewTicket()">
-          <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <svg style="width:14px;height:14px;display:inline;margin-right:6px;vertical-align:-2px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           New Ticket
         </button>
       </div>
-
-      <!-- Quick contact -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div class="modern-card p-5 support-contact-card">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4" style="margin-bottom:24px">
+        <div class="modern-card p-5" style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px">
           <div class="support-icon-wrap">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
           </div>
-          <p class="text-xs font-semibold text-secondary">24/7 Phone Support</p>
-          <a href="tel:02017003062" class="text-sm font-bold text-primary hover:text-cyan-400 transition-colors">020 1700 3062</a>
+          <p class="text-secondary" style="font-size:12px;font-weight:600">24/7 Phone Support</p>
+          <a href="tel:02017003062" class="text-primary" style="font-size:13px;font-weight:700;text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color=''">020 1700 3062</a>
         </div>
-        <div class="modern-card p-5 support-contact-card">
+        <div class="modern-card p-5" style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px">
           <div class="support-icon-wrap">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
           </div>
-          <p class="text-xs font-semibold text-secondary">Email Support</p>
-          <a href="mailto:support@flowguard.ng" class="text-sm font-bold text-primary hover:text-cyan-400 transition-colors">support@flowguard.ng</a>
+          <p class="text-secondary" style="font-size:12px;font-weight:600">Email Support</p>
+          <a href="mailto:support@flowguard.ng" class="text-primary" style="font-size:13px;font-weight:700;text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--cyan)'" onmouseout="this.style.color=''">support@flowguard.ng</a>
         </div>
-        <div class="modern-card p-5 support-contact-card">
+        <div class="modern-card p-5" style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px">
           <div class="support-icon-wrap">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           </div>
-          <p class="text-xs font-semibold text-secondary">SLA Response</p>
-          <p class="text-sm font-bold text-primary" id="support-response-time">—</p>
+          <p class="text-secondary" style="font-size:12px;font-weight:600">SLA Response</p>
+          <p class="text-primary" id="support-response-time" style="font-size:13px;font-weight:700">Per contract SLA</p>
         </div>
       </div>
-
-      <!-- Ticket list -->
       <div class="modern-card p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-bold text-primary">Your Tickets</h3>
-          <div class="flex gap-2">
-            <button class="btn-secondary text-xs py-2" onclick="SupportTab.filterTickets('all')" id="filter-all">All</button>
-            <button class="btn-secondary text-xs py-2" onclick="SupportTab.filterTickets('open')" id="filter-open">Open</button>
-            <button class="btn-secondary text-xs py-2" onclick="SupportTab.filterTickets('resolved')" id="filter-resolved">Resolved</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <h3 class="text-primary" style="font-size:14px;font-weight:700">Your Tickets</h3>
+          <div style="display:flex;gap:8px">
+            <button class="btn-secondary" style="font-size:12px;padding:6px 12px" id="filter-all"      onclick="SupportTab.filterTickets('all')">All</button>
+            <button class="btn-secondary" style="font-size:12px;padding:6px 12px" id="filter-open"     onclick="SupportTab.filterTickets('open')">Open</button>
+            <button class="btn-secondary" style="font-size:12px;padding:6px 12px" id="filter-resolved" onclick="SupportTab.filterTickets('resolved')">Resolved</button>
           </div>
         </div>
-        <div class="overflow-x-auto">
+        <div style="overflow-x:auto">
           <table class="w-full modern-table">
-            <thead>
-              <tr>
-                <th>Ticket ID</th>
-                <th>Subject</th>
-                <th>Type</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
+            <thead><tr>
+              <th>Ticket ID</th><th>Subject</th><th>Type</th>
+              <th>Priority</th><th>Status</th><th>Created</th><th>Actions</th>
+            </tr></thead>
             <tbody id="support-tickets-body">
-              <!-- Populated by SupportTab JS -->
+              <tr><td colspan="7" style="text-align:center;padding:40px 0">
+                <div style="display:flex;align-items:center;justify-content:center;gap:10px;color:var(--text-muted);font-size:13px">
+                  <div class="fg-spinner" style="width:20px;height:20px;border-width:2px"></div>
+                  Loading tickets…
+                </div>
+              </td></tr>
             </tbody>
           </table>
         </div>
-        <div id="support-empty-state" class="hidden text-center py-12">
-          <svg class="w-12 h-12 mx-auto text-secondary mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-          <p class="text-sm text-secondary">No tickets found</p>
+        <div id="support-empty-state" class="hidden" style="text-align:center;padding:48px 0">
+          <svg style="width:40px;height:40px;margin:0 auto 10px;color:var(--text-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <p class="text-secondary" style="font-size:13px">No tickets found</p>
         </div>
       </div>
     </div>
 
   </main>
-</div><!-- end #main-app -->
+</div>
 
 
 <!-- ══════════════════════════════════════════
-     INLINE SCRIPTS — UI UTILITIES
+     INLINE JS — UI LAYER
 ══════════════════════════════════════════ -->
 <script>
+  var PORTAL_API = 'https://api.flowguard.ng/api/v1';
+
+  // ── Mobile nav ──
+  function openMobileNav()  { document.getElementById('mobile-overlay').classList.add('open'); }
+  function closeMobileNav() { document.getElementById('mobile-overlay').classList.remove('open'); }
+
   // ── Theme ──
   function toggleTheme() {
-    const html = document.documentElement;
-    const isDark = html.classList.contains('dark');
-    html.classList.toggle('dark', !isDark);
-    html.classList.toggle('light', isDark);
+    var html = document.documentElement;
+    var isDark = html.classList.contains('dark');
+    html.classList.remove('dark','light');
+    html.classList.add(isDark ? 'light' : 'dark');
     localStorage.setItem('theme', isDark ? 'light' : 'dark');
     updateThemeIcons();
     if (typeof initMap === 'function') initMap();
   }
-
   function updateThemeIcons() {
-    const isDark = document.documentElement.classList.contains('dark');
-    document.getElementById('theme-icon-sun')?.classList.toggle('hidden', !isDark);
-    document.getElementById('theme-icon-moon')?.classList.toggle('hidden', isDark);
+    var isDark = document.documentElement.classList.contains('dark');
+    var sun  = document.getElementById('theme-icon-sun');
+    var moon = document.getElementById('theme-icon-moon');
+    if (sun)  sun.classList.toggle('hidden', !isDark);
+    if (moon) moon.classList.toggle('hidden', isDark);
   }
 
-  function loadTheme() {
-    const saved = localStorage.getItem('theme') || 'dark';
-    document.documentElement.classList.remove('dark', 'light');
-    document.documentElement.classList.add(saved);
-    updateThemeIcons();
-  }
-
-  // ── Dropdown toggles ──
+  // ── Dropdowns ──
   function toggleUserMenu() {
     document.getElementById('user-menu')?.classList.toggle('hidden');
     document.getElementById('estate-switcher-menu')?.classList.add('hidden');
   }
-
+  // FIX #8: Single definition (duplicate removed from previous version)
   function toggleEstateSwitcher() {
     document.getElementById('estate-switcher-menu')?.classList.toggle('hidden');
     document.getElementById('user-menu')?.classList.add('hidden');
   }
-
-  // Close dropdowns on outside click
   document.addEventListener('click', function(e) {
-    const userMenu  = document.getElementById('user-menu');
-    const userAvtar = document.getElementById('user-avatar');
-    const estMenu   = document.getElementById('estate-switcher-menu');
-    const estBtn    = document.getElementById('estate-switcher-btn');
-    if (userMenu  && !userAvtar?.contains(e.target) && !userMenu.contains(e.target))  userMenu.classList.add('hidden');
-    if (estMenu   && !estBtn?.contains(e.target)    && !estMenu.contains(e.target))   estMenu.classList.add('hidden');
+    var um = document.getElementById('user-menu');
+    var ua = document.getElementById('user-avatar');
+    var em = document.getElementById('estate-switcher-menu');
+    var eb = document.getElementById('estate-switcher-btn');
+    if (um && !ua?.contains(e.target) && !um.contains(e.target))  um.classList.add('hidden');
+    if (em && !eb?.contains(e.target) && !em.contains(e.target))  em.classList.add('hidden');
   });
 
-  // ── Tab switching ──
+  // FIX #5: Tab switching — shows incident form alongside alerts tab, syncs mobile drawer
   function switchTab(tab) {
-    const tabs = ['dashboard', 'assets', 'alerts-incidents', 'billing', 'support'];
+    var TABS = ['dashboard','assets','alerts-incidents','billing','support'];
 
-    // Update tab buttons
-    tabs.forEach(t => document.getElementById(`tab-${t}`)?.classList.remove('active'));
-    document.getElementById(`tab-${tab}`)?.classList.add('active');
+    TABS.forEach(function(t) {
+      // desktop buttons
+      var btn = document.getElementById('tab-' + t);
+      if (btn) btn.classList.toggle('active', t === tab);
+      // drawer buttons
+      var dbtn = document.getElementById('drawer-tab-' + t);
+      if (dbtn) dbtn.classList.toggle('active', t === tab);
+      // content
+      var cont = document.getElementById('content-' + t);
+      if (cont) cont.classList.add('hidden');
+    });
 
-    // Hide all content
-    tabs.forEach(t => document.getElementById(`content-${t}`)?.classList.add('hidden'));
+    // Show/hide incident form with alerts tab
+    var incForm = document.getElementById('content-incident-report');
+    if (incForm) incForm.classList.toggle('hidden', tab !== 'alerts-incidents');
 
-    // Show selected
-    const container = document.getElementById(`content-${tab}`);
+    var container = document.getElementById('content-' + tab);
     if (container) {
       container.classList.remove('hidden');
       if (typeof App !== 'undefined' && App.renderTab) {
@@ -1127,398 +725,340 @@
       }
     }
 
-    // Close dropdowns
     document.getElementById('user-menu')?.classList.add('hidden');
+    document.getElementById('estate-switcher-menu')?.classList.add('hidden');
   }
 
-  // ── Panel helpers ──
-  function togglePanel(name) {
-    const panel = document.getElementById(`${name}-panel`);
-    const other = name === 'settings' ? 'notifications' : 'settings';
-    document.getElementById(`${other}-panel`)?.classList.add('hidden');
-    panel?.classList.toggle('hidden');
-  }
-
-  function toggleEstateSwitcher() {
-    const menu = document.getElementById('estate-switcher-menu');
-    if (menu) menu.classList.toggle('hidden');
-  }
-
+  // ── Navigation helpers ──
   function openAccountSettings() {
     document.getElementById('user-menu')?.classList.add('hidden');
     switchTab('dashboard');
-    const container = document.getElementById('content-dashboard');
-    if (container && typeof AccountSettings !== 'undefined') {
-      AccountSettings.render(container);
-    }
+    var c = document.getElementById('content-dashboard');
+    if (c && typeof AccountSettings !== 'undefined') AccountSettings.render(c);
   }
-
   function openNotifications() {
     document.getElementById('user-menu')?.classList.add('hidden');
     switchTab('dashboard');
-    const container = document.getElementById('content-dashboard');
-    if (container && typeof NotificationsPage !== 'undefined') {
-      NotificationsPage.render(container);
-    }
+    var c = document.getElementById('content-dashboard');
+    if (c && typeof NotificationsPage !== 'undefined') NotificationsPage.render(c);
   }
 
-  // ── Toast helper ──
-  function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `fg-toast ${type}`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3500);
+  // FIX #9: Notification count — fetched from API, updates badge
+  async function fetchNotifCount() {
+    try {
+      var token = localStorage.getItem('token');
+      var res = await fetch(PORTAL_API + '/notifications', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (!res.ok) return;
+      var data = await res.json();
+      var count = (data.data || []).filter(function(n) { return !n.read; }).length;
+      var badge = document.getElementById('notif-count');
+      if (badge && count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.classList.remove('hidden');
+      }
+    } catch(e) { /* non-critical, silent */ }
   }
 
-  // ── Map (placeholder for future Leaflet integration) ──
+  // FIX #12: SLA response time from billing API, not hardcoded
+  async function fetchSLATime() {
+    try {
+      var token = localStorage.getItem('token');
+      var prop  = typeof StateManager !== 'undefined' ? StateManager.getCurrentProperty() : null;
+      if (!prop) return;
+      var res = await fetch(PORTAL_API + '/billing/' + prop.property_id, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (!res.ok) return;
+      var data  = await res.json();
+      var hours = data.data?.sla?.response_time_hours;
+      var el    = document.getElementById('support-response-time');
+      if (el && hours) el.textContent = '\u2264 ' + hours + ' hours (SLA)';
+    } catch(e) { /* silent */ }
+  }
+
+  // ── Toast ──
+  function showToast(msg, type) {
+    var t = document.createElement('div');
+    t.className = 'fg-toast ' + (type || 'success');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function() { t.remove(); }, 3500);
+  }
+
+  // ── Map placeholder ──
   function initMap() {
-    const map = document.getElementById('map');
+    var map = document.getElementById('map');
     if (!map) return;
-    const isDark = document.documentElement.classList.contains('dark');
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 800 460');
-    svg.setAttribute('width', '100%');
-    svg.setAttribute('height', '460');
-    svg.style.background = isDark ? '#0a2a3d' : '#f0f7fa';
-
-    // Grid
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    const pat  = document.createElementNS('http://www.w3.org/2000/svg', 'pattern');
-    pat.setAttribute('id', 'fg-grid');
-    pat.setAttribute('width', '40'); pat.setAttribute('height', '40');
-    pat.setAttribute('patternUnits', 'userSpaceOnUse');
-    const gp = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    gp.setAttribute('d', 'M 40 0 L 0 0 0 40');
-    gp.setAttribute('fill', 'none');
-    gp.setAttribute('stroke', isDark ? 'rgba(22,168,211,0.08)' : 'rgba(22,168,211,0.12)');
-    gp.setAttribute('stroke-width', '1');
+    var dark = document.documentElement.classList.contains('dark');
+    var svg  = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('viewBox','0 0 800 460'); svg.setAttribute('width','100%'); svg.setAttribute('height','460');
+    svg.style.background = dark ? '#0a2a3d' : '#f0f7fa';
+    var defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+    var pat  = document.createElementNS('http://www.w3.org/2000/svg','pattern');
+    pat.setAttribute('id','fg-grid'); pat.setAttribute('width','40'); pat.setAttribute('height','40'); pat.setAttribute('patternUnits','userSpaceOnUse');
+    var gp = document.createElementNS('http://www.w3.org/2000/svg','path');
+    gp.setAttribute('d','M 40 0 L 0 0 0 40'); gp.setAttribute('fill','none');
+    gp.setAttribute('stroke', dark ? 'rgba(22,168,211,0.08)' : 'rgba(22,168,211,0.12)'); gp.setAttribute('stroke-width','1');
     pat.appendChild(gp); defs.appendChild(pat); svg.appendChild(defs);
+    var bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bg.setAttribute('width','800'); bg.setAttribute('height','460'); bg.setAttribute('fill','url(#fg-grid)'); svg.appendChild(bg);
+    map.innerHTML=''; map.appendChild(svg);
+  }
 
-    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    bg.setAttribute('width', '800'); bg.setAttribute('height', '460');
-    bg.setAttribute('fill', 'url(#fg-grid)'); svg.appendChild(bg);
+  // FIX #6/#7: Incident form — wired submit handler, POSTs to /incidents
+  document.addEventListener('DOMContentLoaded', function() {
+    var form = document.getElementById('incident-form');
+    if (!form) return;
 
-    const addLabel = (x, y, text) => {
-      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      t.setAttribute('x', x); t.setAttribute('y', y);
-      t.setAttribute('fill', isDark ? '#6fa8c0' : '#4a7a94');
-      t.setAttribute('font-size', '11'); t.setAttribute('font-weight', '600');
-      t.textContent = text; svg.appendChild(t);
-    };
-    addLabel(140, 70, 'Lekki Phase 1');
-    addLabel(540, 110, 'Victoria Island');
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var btn     = document.getElementById('incident-submit-btn');
+      var alertEl = document.getElementById('incident-alert');
+      alertEl.classList.add('hidden');
 
-    const lines = [
-      { points: '100,150 200,200 300,250', color: '#22c55e' },
-      { points: '550,180 600,220 650,260', color: '#22c55e' },
-      { points: '250,300 350,350 450,380', color: '#f59e0b' },
-      { points: '150,250 200,290 250,330', color: '#f59e0b' }
-    ];
-    lines.forEach(l => {
-      const pl = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-      pl.setAttribute('points', l.points); pl.setAttribute('fill', 'none');
-      pl.setAttribute('stroke', l.color); pl.setAttribute('stroke-width', '4');
-      pl.setAttribute('stroke-linecap', 'round'); pl.setAttribute('opacity', '0.8');
-      svg.appendChild(pl);
+      var severity = (form.querySelector('input[name="severity"]:checked') || {}).value || 'moderate';
+      var desc     = document.getElementById('incident-description').value.trim();
+      if (!desc) { showIncidentMsg('error', 'Please describe the issue before submitting.'); return; }
+
+      var token = localStorage.getItem('token');
+      var prop  = typeof StateManager !== 'undefined' ? StateManager.getCurrentProperty() : null;
+      var payload = {
+        zone       : document.getElementById('incident-zone').value,
+        type       : document.getElementById('incident-type').value,
+        severity   : severity,
+        description: desc,
+        property_id: prop ? prop.property_id : undefined
+      };
+
+      var orig = btn.textContent;
+      btn.textContent = 'Submitting\u2026'; btn.disabled = true;
+      try {
+        var res = await fetch(PORTAL_API + '/incidents', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        var data = await res.json();
+        if (data.success) {
+          form.reset();
+          showIncidentMsg('success', 'Report submitted. Ref: ' + (data.data?.incident_id || 'Pending'));
+          // Refresh alerts panel if visible
+          if (typeof AlertsTab !== 'undefined' && prop) {
+            var ac = document.getElementById('content-alerts-incidents');
+            if (ac && !ac.classList.contains('hidden')) AlertsTab.render(ac, prop);
+          }
+        } else {
+          showIncidentMsg('error', data.error || 'Failed to submit. Please try again.');
+        }
+      } catch(err) {
+        showIncidentMsg('error', 'Connection failed. Please try again.');
+      }
+      btn.textContent = orig; btn.disabled = false;
     });
 
-    map.innerHTML = '';
-    map.appendChild(svg);
-  }
-
-  // ── Time ──
-  function updateTime() {
-    const el = document.getElementById('current-time');
-    if (el) {
-      el.textContent = new Date().toLocaleString('en-NG', {
-        timeZone: 'Africa/Lagos', hour: '2-digit', minute: '2-digit',
-        month: 'short', day: 'numeric'
-      });
+    function showIncidentMsg(type, msg) {
+      var el = document.getElementById('incident-alert');
+      el.classList.remove('hidden');
+      var isOk = type === 'success';
+      el.style.cssText = 'font-size:12px;padding:10px 14px;border-radius:8px;margin-bottom:14px;display:block;'
+        + 'background:' + (isOk ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)') + ';'
+        + 'border:1px solid ' + (isOk ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)') + ';'
+        + 'color:' + (isOk ? '#6ee7b7' : '#fca5a5');
+      el.textContent = msg;
+      setTimeout(function() { el.classList.add('hidden'); }, 8000);
     }
-  }
-
-  window.addEventListener('load', () => {
-    loadTheme();
-    setInterval(updateTime, 30000);
   });
 
 
   // ══════════════════════════════════════════
   // SUPPORT TAB MODULE
-  // Fetches tickets from API; no hardcoded data
+  // FIX #11: render() accepts container param (used for future-proofing)
   // ══════════════════════════════════════════
-  const SupportTab = (function() {
-    const API_BASE = 'https://api.flowguard.ng/api/v1';
-    let allTickets = [];
-    let currentFilter = 'all';
+  var SupportTab = (function() {
+    var allTickets = [];
+    var currentFilter = 'all';
 
+    // FIX #11: container param accepted; DOM IDs are stable since support HTML is always present
     async function render(container) {
       await loadTickets();
-      renderResponseTime();
+      fetchSLATime();
     }
 
     async function loadTickets() {
-      const tbody = document.getElementById('support-tickets-body');
-      const empty = document.getElementById('support-empty-state');
+      var tbody = document.getElementById('support-tickets-body');
       if (!tbody) return;
-
-      tbody.innerHTML = `
-        <tr><td colspan="7" class="text-center py-8">
-          <div class="flex items-center justify-center gap-2 text-secondary text-sm">
-            <div class="fg-spinner" style="width:20px;height:20px;border-width:2px"></div>
-            Loading tickets…
-          </div>
-        </td></tr>`;
-
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px 0"><div style="display:flex;align-items:center;justify-content:center;gap:10px;color:var(--text-muted);font-size:13px"><div class="fg-spinner" style="width:20px;height:20px;border-width:2px"></div>Loading\u2026</div></td></tr>';
       try {
-        const token = localStorage.getItem('token');
-        const property = typeof StateManager !== 'undefined' ? StateManager.getCurrentProperty() : null;
-        const url = property
-          ? `${API_BASE}/properties/${property.property_id}/tickets`
-          : `${API_BASE}/tickets`;
-
-        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
-
-        if (res.ok) {
-          const data = await res.json();
-          allTickets = data.data || [];
-        } else {
-          allTickets = [];
-        }
-      } catch (e) {
-        console.error('Support tickets load error:', e);
-        allTickets = [];
-      }
-
+        var token = localStorage.getItem('token');
+        var prop  = typeof StateManager !== 'undefined' ? StateManager.getCurrentProperty() : null;
+        var url   = prop ? PORTAL_API + '/properties/' + prop.property_id + '/tickets' : PORTAL_API + '/tickets';
+        var res   = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+        allTickets = res.ok ? ((await res.json()).data || []) : [];
+      } catch(e) { allTickets = []; }
       renderTickets();
     }
 
-    function renderResponseTime() {
-      const property = typeof StateManager !== 'undefined' ? StateManager.getCurrentProperty() : null;
-      const el = document.getElementById('support-response-time');
-      if (!el) return;
-      // Will be overridden by real SLA data from BillingTab; show placeholder
-      el.textContent = '≤ 4 hours (per SLA)';
-    }
-
     function renderTickets() {
-      const tbody = document.getElementById('support-tickets-body');
-      const empty = document.getElementById('support-empty-state');
+      var tbody = document.getElementById('support-tickets-body');
+      var empty = document.getElementById('support-empty-state');
       if (!tbody) return;
 
-      const filtered = currentFilter === 'all'
-        ? allTickets
+      var filtered = currentFilter === 'all' ? allTickets
         : currentFilter === 'open'
-          ? allTickets.filter(t => t.status !== 'resolved' && t.status !== 'closed')
-          : allTickets.filter(t => t.status === 'resolved' || t.status === 'closed');
+          ? allTickets.filter(function(t) { return t.status !== 'resolved' && t.status !== 'closed'; })
+          : allTickets.filter(function(t) { return t.status === 'resolved' || t.status === 'closed'; });
 
       if (filtered.length === 0) {
         tbody.innerHTML = '';
-        empty?.classList.remove('hidden');
+        if (empty) empty.classList.remove('hidden');
         return;
       }
-      empty?.classList.add('hidden');
+      if (empty) empty.classList.add('hidden');
 
-      tbody.innerHTML = filtered.map(t => {
-        const statusClass = t.status === 'resolved' || t.status === 'closed'
-          ? 'badge-success'
-          : t.status === 'in_progress' ? 'badge-warning' : 'badge-info';
-        const priorityClass = t.priority === 'urgent' || t.priority === 'critical'
-          ? 'badge-danger'
-          : t.priority === 'high' ? 'badge-warning' : 'badge-good';
-        const created = t.created_at
-          ? new Date(t.created_at).toLocaleDateString('en-NG', { month: 'short', day: 'numeric', year: 'numeric' })
-          : '—';
-        return `
-          <tr>
-            <td class="font-mono text-xs">${t.ticket_id || t.id || '—'}</td>
-            <td class="text-sm">${t.subject || t.title || '—'}</td>
-            <td class="text-xs text-secondary">${t.type || '—'}</td>
-            <td><span class="badge ${priorityClass}">${t.priority || 'Normal'}</span></td>
-            <td><span class="badge ${statusClass}">${(t.status || '').replace(/_/g, ' ')}</span></td>
-            <td class="text-xs text-secondary">${created}</td>
-            <td>
-              <button onclick="SupportTab.viewTicket('${t.ticket_id || t.id}')"
-                class="text-xs font-medium hover:text-cyan-400 transition-colors" style="color:var(--cyan)">
-                View
-              </button>
-            </td>
-          </tr>`;
+      tbody.innerHTML = filtered.map(function(t) {
+        var sc  = (t.status === 'resolved' || t.status === 'closed') ? 'badge-success' : t.status === 'in_progress' ? 'badge-warning' : 'badge-info';
+        var pc  = (t.priority === 'urgent' || t.priority === 'critical') ? 'badge-danger' : t.priority === 'high' ? 'badge-warning' : 'badge-good';
+        var dt  = t.created_at ? new Date(t.created_at).toLocaleDateString('en-NG',{month:'short',day:'numeric',year:'numeric'}) : '\u2014';
+        var tid = t.ticket_id || t.id || '\u2014';
+        return '<tr>'
+          + '<td style="font-family:monospace;font-size:12px">' + tid + '</td>'
+          + '<td style="font-size:13px">' + (t.subject || t.title || '\u2014') + '</td>'
+          + '<td style="font-size:12px;color:var(--text-muted)">' + (t.type || '\u2014') + '</td>'
+          + '<td><span class="badge ' + pc + '">' + (t.priority || 'Normal') + '</span></td>'
+          + '<td><span class="badge ' + sc + '">' + (t.status || '').replace(/_/g,' ') + '</span></td>'
+          + '<td style="font-size:12px;color:var(--text-muted)">' + dt + '</td>'
+          + '<td><button onclick="SupportTab.viewTicket(\'' + tid + '\')" style="font-size:12px;font-weight:600;color:var(--cyan);background:none;border:none;cursor:pointer">View</button></td>'
+          + '</tr>';
       }).join('');
     }
 
     function filterTickets(filter) {
       currentFilter = filter;
-      ['all', 'open', 'resolved'].forEach(f => {
-        const btn = document.getElementById(`filter-${f}`);
-        if (btn) btn.style.borderColor = f === filter ? 'var(--cyan)' : '';
+      ['all','open','resolved'].forEach(function(f) {
+        var b = document.getElementById('filter-' + f);
+        if (b) b.style.borderColor = (f === filter) ? 'var(--cyan)' : '';
       });
       renderTickets();
     }
 
     function openNewTicket() {
-      // Creates a lightweight modal for ticket submission
-      const existing = document.getElementById('new-ticket-modal');
-      if (existing) existing.remove();
-
-      const modal = document.createElement('div');
+      var ex = document.getElementById('new-ticket-modal');
+      if (ex) ex.remove();
+      var modal = document.createElement('div');
       modal.id = 'new-ticket-modal';
-      modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4';
-      modal.style.background = 'rgba(0,0,0,0.6)';
-      modal.style.backdropFilter = 'blur(6px)';
-      modal.innerHTML = `
-        <div class="modern-card w-full max-w-lg p-6 animate-fade-up">
-          <div class="flex items-center justify-between mb-5">
-            <h3 class="font-display text-lg font-bold text-primary">New Support Ticket</h3>
-            <button onclick="document.getElementById('new-ticket-modal').remove()" class="icon-btn">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-          </div>
-          <form id="new-ticket-form" class="space-y-4">
-            <div>
-              <label class="block text-xs font-bold text-secondary mb-2">Subject *</label>
-              <input type="text" name="subject" required placeholder="Describe your issue briefly"
-                class="w-full px-4 py-3 rounded-lg text-sm">
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-bold text-secondary mb-2">Type</label>
-                <select name="type" class="w-full px-4 py-3 rounded-lg text-sm">
-                  <option value="technical">Technical</option>
-                  <option value="billing">Billing</option>
-                  <option value="maintenance">Maintenance</option>
-                  <option value="emergency">Emergency</option>
-                  <option value="general">General</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-secondary mb-2">Priority</label>
-                <select name="priority" class="w-full px-4 py-3 rounded-lg text-sm">
-                  <option value="normal">Normal</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-secondary mb-2">Description *</label>
-              <textarea name="description" rows="4" required placeholder="Provide full details of the issue…"
-                class="w-full px-4 py-3 rounded-lg text-sm"></textarea>
-            </div>
-            <div id="ticket-error" class="hidden text-xs text-red-400 p-3 rounded-lg" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2)"></div>
-            <div class="flex gap-3 pt-1">
-              <button type="button" onclick="document.getElementById('new-ticket-modal').remove()" class="btn-secondary flex-1">
-                Cancel
-              </button>
-              <button type="submit" class="btn-primary flex-1" id="ticket-submit-btn">
-                Submit Ticket
-              </button>
-            </div>
-          </form>
-        </div>`;
+      modal.style.cssText = 'position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px)';
+      modal.innerHTML = '<div class="modern-card" style="width:100%;max-width:520px;padding:24px;max-height:90vh;overflow-y:auto">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px"><h3 class="font-space text-primary" style="font-size:17px;font-weight:700">New Support Ticket</h3>'
+        + '<button onclick="document.getElementById(\'new-ticket-modal\').remove()" class="icon-btn"><svg style="width:16px;height:16px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>'
+        + '<form id="new-ticket-form" style="display:flex;flex-direction:column;gap:14px">'
+        + '<div><label class="text-secondary" style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:6px">Subject *</label>'
+        + '<input type="text" name="subject" required placeholder="Describe your issue" style="width:100%;padding:10px 14px;font-size:14px"></div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
+        + '<div><label class="text-secondary" style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:6px">Type</label>'
+        + '<select name="type" style="width:100%;padding:10px 14px;font-size:14px"><option value="technical">Technical</option><option value="billing">Billing</option><option value="maintenance">Maintenance</option><option value="emergency">Emergency</option><option value="general">General</option></select></div>'
+        + '<div><label class="text-secondary" style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:6px">Priority</label>'
+        + '<select name="priority" style="width:100%;padding:10px 14px;font-size:14px"><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></div></div>'
+        + '<div><label class="text-secondary" style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:6px">Description *</label>'
+        + '<textarea name="description" rows="4" required placeholder="Provide full details\u2026" style="width:100%;padding:10px 14px;font-size:14px"></textarea></div>'
+        + '<div id="new-ticket-error" class="hidden" style="font-size:12px;padding:10px 14px;border-radius:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#fca5a5"></div>'
+        + '<div style="display:flex;gap:10px"><button type="button" onclick="document.getElementById(\'new-ticket-modal\').remove()" class="btn-secondary" style="flex:1">Cancel</button>'
+        + '<button type="submit" class="btn-primary" id="ticket-submit-btn" style="flex:1">Submit Ticket</button></div>'
+        + '</form></div>';
       document.body.appendChild(modal);
-
-      modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+      modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
 
       document.getElementById('new-ticket-form').addEventListener('submit', async function(e) {
         e.preventDefault();
-        const fd = new FormData(this);
-        const payload = Object.fromEntries(fd);
-        const btn = document.getElementById('ticket-submit-btn');
-        const errEl = document.getElementById('ticket-error');
-        btn.textContent = 'Submitting…'; btn.disabled = true;
-
+        var payload = Object.fromEntries(new FormData(this));
+        var btn     = document.getElementById('ticket-submit-btn');
+        var errEl   = document.getElementById('new-ticket-error');
+        var token   = localStorage.getItem('token');
+        var prop    = typeof StateManager !== 'undefined' ? StateManager.getCurrentProperty() : null;
+        if (prop) payload.property_id = prop.property_id;
+        btn.textContent = 'Submitting\u2026'; btn.disabled = true; errEl.classList.add('hidden');
         try {
-          const token = localStorage.getItem('token');
-          const property = typeof StateManager !== 'undefined' ? StateManager.getCurrentProperty() : null;
-          if (property) payload.property_id = property.property_id;
-
-          const res = await fetch(`${API_BASE}/tickets`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          const data = await res.json();
-
-          if (data.success) {
-            modal.remove();
-            showToast('Ticket submitted successfully!', 'success');
-            await loadTickets();
-          } else {
-            errEl.textContent = data.error || 'Failed to submit ticket.';
-            errEl.classList.remove('hidden');
-            btn.textContent = 'Submit Ticket'; btn.disabled = false;
-          }
-        } catch (err) {
-          errEl.textContent = 'Connection failed. Please try again.';
-          errEl.classList.remove('hidden');
-          btn.textContent = 'Submit Ticket'; btn.disabled = false;
-        }
+          var res  = await fetch(PORTAL_API + '/tickets', { method:'POST', headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+          var data = await res.json();
+          if (data.success) { modal.remove(); showToast('Ticket submitted!','success'); await loadTickets(); }
+          else { errEl.textContent = data.error || 'Failed to submit.'; errEl.classList.remove('hidden'); btn.textContent='Submit Ticket'; btn.disabled=false; }
+        } catch(err) { errEl.textContent='Connection failed.'; errEl.classList.remove('hidden'); btn.textContent='Submit Ticket'; btn.disabled=false; }
       });
     }
 
-    function viewTicket(ticketId) {
-      const ticket = allTickets.find(t => (t.ticket_id || t.id) === ticketId);
-      if (!ticket) return;
-      Modal.showAlert({
-        type: 'info',
-        title: ticket.subject || ticket.title,
-        message: `Status: ${ticket.status} · Priority: ${ticket.priority || 'Normal'} · Created: ${ticket.created_at ? new Date(ticket.created_at).toLocaleDateString('en-NG') : '—'}`
-      });
+    function viewTicket(tid) {
+      var t = allTickets.find(function(x){ return (x.ticket_id||x.id) === tid; });
+      if (!t || typeof Modal === 'undefined') return;
+      Modal.showAlert({ type:'info', title: t.subject||t.title||'Ticket '+tid,
+        message: 'Status: '+(t.status||'\u2014')+' \u00B7 Priority: '+(t.priority||'Normal')+' \u00B7 Created: '+(t.created_at ? new Date(t.created_at).toLocaleDateString('en-NG') : '\u2014') });
     }
 
-    return { render, loadTickets, filterTickets, openNewTicket, viewTicket };
+    return { render:render, loadTickets:loadTickets, filterTickets:filterTickets, openNewTicket:openNewTicket, viewTicket:viewTicket };
   })();
 
 
   // ══════════════════════════════════════════
-  // PATCH: Hook support tab into App.renderTab
+  // ON LOAD — post-module bootstrapping
   // ══════════════════════════════════════════
-  // We wait for App to load, then wrap its renderTab
   window.addEventListener('load', function() {
+    updateThemeIcons();
+
+    // FIX #9: fetch notification count after modules settle
+    setTimeout(fetchNotifCount, 1500);
+
+    // Patch App.renderTab to handle support tab
     if (typeof App !== 'undefined') {
-      const origRenderTab = App.renderTab;
+      var orig = App.renderTab;
       App.renderTab = function(tabName, container) {
-        if (tabName === 'support') {
-          SupportTab.render(container);
-          return;
-        }
-        return origRenderTab.call(App, tabName, container);
+        if (tabName === 'support') { SupportTab.render(container); return; }
+        return orig.call(App, tabName, container);
       };
+    }
+
+    // Mirror Auth-populated header values into mobile drawer
+    var hName = document.getElementById('user-name');
+    var hInit = document.getElementById('user-initials');
+    if (hName && hInit) {
+      var obs = new MutationObserver(function() {
+        var dn = document.getElementById('drawer-name');
+        var di = document.getElementById('drawer-initials');
+        var dr = document.getElementById('drawer-role');
+        var hr = document.getElementById('user-role');
+        if (dn) dn.textContent = hName.textContent;
+        if (di) di.textContent = hInit.textContent;
+        if (dr && hr) dr.textContent = hr.textContent;
+      });
+      obs.observe(hName,  { childList:true, subtree:true, characterData:true });
+      obs.observe(hInit,  { childList:true, subtree:true, characterData:true });
     }
   });
 </script>
 
 
-<!-- ═══════════════════════════════════════════
-     JAVASCRIPT MODULES — load order preserved
-═══════════════════════════════════════════ -->
-
-<!-- Core -->
+<!-- ══════════════════════════════════════════
+     JS MODULES
+     FIX #17: auth.js in <body> — DOM exists when it parses
+══════════════════════════════════════════ -->
+<script src="js/auth.js"></script>
 <script src="js/modal.js"></script>
 <script src="js/stateManager.js"></script>
 <script src="js/demo-data.js"></script>
 
-<!-- Components (load before tab modules) -->
 <script src="js/property-registration.js"></script>
 <script src="js/property-dashboard.js"></script>
 
-<!-- Tab Modules -->
 <script src="js/assets-tab.js"></script>
 <script src="js/alerts-tab.js"></script>
 <script src="js/billing-tab.js"></script>
 
-<!-- Page Modules -->
 <script src="js/account-settings.js"></script>
 <script src="js/notifications-page.js"></script>
 
-<!-- Features -->
 <script src="js/onboarding.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/billing.js"></script>
 
-<!-- Controller (loads last) -->
 <script src="js/app.js"></script>
 
 </body>
