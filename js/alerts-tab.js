@@ -134,7 +134,7 @@ const AlertsTab = (function() {
                     </ul>
                 </div>
                 <button onclick="toggleDemoMode()" class="mt-8 px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:shadow-lg transition-all">
-                    👁️ Preview with Demo Mode
+                    ️ Preview with Demo Mode
                 </button>
             </div>
         `;
@@ -211,7 +211,7 @@ const AlertsTab = (function() {
                                                 </div>
                                                 <p class="text-sm ${config.text} mb-2">${alert.message}</p>
                                                 <div class="flex items-center gap-4 text-xs ${config.text}">
-                                                    <span>📅 ${timeAgo}</span>
+                                                    <span> ${timeAgo}</span>
                                                     <span class="px-2 py-1 ${config.bg} border ${config.border} rounded font-semibold uppercase">${alert.severity}</span>
                                                 </div>
                                             </div>

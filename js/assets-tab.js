@@ -132,7 +132,7 @@ const AssetsTab = (function() {
                     </ul>
                 </div>
                 <button onclick="toggleDemoMode()" class="mt-8 px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:shadow-lg transition-all">
-                    👁️ Preview with Demo Mode
+                    ️ Preview with Demo Mode
                 </button>
             </div>
         `;

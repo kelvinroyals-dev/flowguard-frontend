@@ -5,7 +5,7 @@
 
 function renderPropertyDashboard(container, property) {
     const status = property.status || 'submitted';
-    
+
     // Determine which phase to show
     switch(status) {
         case 'submitted':
@@ -50,7 +50,7 @@ function renderInspectionPending(container, property) {
                         </div>
                     </div>
                     <div class="flex-1">
-                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Property Submitted Successfully! 🎉</h2>
+                        <h2 class="text-3xl font-bold text-gray-900 mb-2">Property Submitted Successfully! </h2>
                         <p class="text-lg text-gray-700 mb-4">Our team is reviewing your submission. You'll receive a call within <strong>24 hours</strong> to schedule your site inspection.</p>
                         <div class="flex gap-4">
                             <span class="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm">
@@ -76,7 +76,7 @@ function renderInspectionPending(container, property) {
                                 ${formatStatus(property.status)}
                             </span>
                         </div>
-                        
+
                         <div class="grid grid-cols-2 gap-6">
                             <div>
                                 <p class="text-sm font-semibold text-gray-500 mb-1">PROPERTY NAME</p>
@@ -114,12 +114,12 @@ function renderInspectionPending(container, property) {
                         ` : ''}
 
                         <div class="mt-6 pt-6 border-t border-gray-200 flex gap-3">
-                            <button onclick="viewFullPropertyDetails('${property.property_id}')" 
+                            <button onclick="viewFullPropertyDetails('${property.property_id}')"
                                 class="flex-1 px-6 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-all">
                                 View Full Details
                             </button>
-                            <button onclick="editProperty('${property.property_id}')" 
-                                class="flex-1 px-6 py-3 border-2 border-[#2c9aa3] text-[#2c9aa3] font-bold rounded-xl hover:bg-[#2c9aa3] hover:text-white transition-all">
+                            <button onclick="editProperty('${property.property_id}')"
+                                class="flex-1 px-6 py-3 border-2 border-[var(--cyan-bright)] text-[var(--cyan-bright)] font-bold rounded-xl hover:bg-[var(--cyan-bright)] hover:text-white transition-all">
                                 Edit Information
                             </button>
                         </div>
@@ -142,8 +142,8 @@ function renderInspectionPending(container, property) {
                 <!-- Sidebar -->
                 <div class="space-y-6">
                     <!-- Add Another Property -->
-                    <button onclick="addAnotherProperty()" 
-                        class="w-full px-6 py-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 font-bold hover:border-[#2c9aa3] hover:text-[#2c9aa3] hover:bg-[#2c9aa3]/5 transition-all flex items-center justify-center gap-2">
+                    <button onclick="addAnotherProperty()"
+                        class="w-full px-6 py-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 font-bold hover:border-[var(--cyan-bright)] hover:text-[var(--cyan-bright)] hover:bg-[var(--cyan-bright)]/5 transition-all flex items-center justify-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                         </svg>
@@ -153,7 +153,7 @@ function renderInspectionPending(container, property) {
                     <!-- What's Next Card -->
                     <div class="glass rounded-xl p-6 shadow-lg">
                         <div class="flex items-center gap-3 mb-4">
-                            <div class="w-10 h-10 bg-gradient-to-br from-[#2a7096] to-[#2c9aa3] rounded-lg flex items-center justify-center">
+                            <div class="w-10 h-10 bg-gradient-to-br from-[var(--cyan)] to-[var(--cyan-bright)] rounded-lg flex items-center justify-center">
                                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
@@ -173,14 +173,14 @@ function renderInspectionPending(container, property) {
                     <!-- Contact Support -->
                     <div class="glass rounded-xl p-6 shadow-lg">
                         <h4 class="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <svg class="w-5 h-5 text-[#2a7096]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-[var(--cyan)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/>
                             </svg>
                             Need Assistance?
                         </h4>
                         <p class="text-sm text-gray-600 mb-4">Questions about your submission? We're here to help!</p>
                         <div class="space-y-3">
-                            <a href="tel:+2348XXXXXXXX" class="flex items-center gap-3 text-sm hover:text-[#2a7096] transition-colors">
+                            <a href="tel:+2348XXXXXXXX" class="flex items-center gap-3 text-sm hover:text-[var(--cyan)] transition-colors">
                                 <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                                     <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
@@ -191,7 +191,7 @@ function renderInspectionPending(container, property) {
                                     <p class="text-gray-600">+234-XXX-XXX-XXXX</p>
                                 </div>
                             </a>
-                            <a href="mailto:support@flowguard.ng" class="flex items-center gap-3 text-sm hover:text-[#2a7096] transition-colors">
+                            <a href="mailto:support@flowguard.ng" class="flex items-center gap-3 text-sm hover:text-[var(--cyan)] transition-colors">
                                 <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                                     <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
@@ -227,7 +227,7 @@ function renderInspectionPending(container, property) {
                             </div>
                             <div class="pt-2 mt-2 border-t border-[#74bcc2] flex justify-between">
                                 <span class="font-semibold text-gray-900">Total:</span>
-                                <span class="font-bold text-[#2a7096]">2-3 weeks</span>
+                                <span class="font-bold text-[var(--cyan)]">2-3 weeks</span>
                             </div>
                         </div>
                     </div>
@@ -267,7 +267,7 @@ function renderTimelineStep(state, title, time, description) {
 function renderNextStep(num, title, description) {
     return `
         <li class="flex gap-3">
-            <div class="flex-shrink-0 w-6 h-6 bg-gradient-to-br from-[#2a7096] to-[#2c9aa3] rounded-full flex items-center justify-center">
+            <div class="flex-shrink-0 w-6 h-6 bg-gradient-to-br from-[var(--cyan)] to-[var(--cyan-bright)] rounded-full flex items-center justify-center">
                 <span class="text-white text-xs font-bold">${num}</span>
             </div>
             <div>
@@ -310,9 +310,9 @@ function formatStatus(status) {
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-        month: 'long', 
-        day: 'numeric', 
+    return date.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit'

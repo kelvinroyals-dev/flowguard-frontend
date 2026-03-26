@@ -19,16 +19,16 @@ function renderDemoData(container) {
                     </div>
                     <div class="flex-1">
                         <div class="flex items-center gap-3 mb-2">
-                            <h2 class="text-2xl font-bold text-amber-900">🎭 Demo Mode Active</h2>
+                            <h2 class="text-2xl font-bold text-amber-900"> Demo Mode Active</h2>
                             <span class="px-3 py-1 bg-amber-200 text-amber-900 text-sm font-bold rounded-full">PREVIEW</span>
                         </div>
                         <p class="text-lg text-amber-800 mb-4">
-                            You're viewing <strong>"Palm Gardens Estate"</strong> - a sample property showcasing Flow Guard's complete monitoring system. 
+                            You're viewing <strong>"Palm Gardens Estate"</strong> - a sample property showcasing Flow Guard's complete monitoring system.
                             This is demo data to help you understand our platform's capabilities.
                         </p>
-                        <button onclick="disableDemoMode()" 
-                            class="px-6 py-3 bg-gradient-to-r from-[#2a7096] to-[#2c9aa3] text-white font-bold rounded-xl hover:shadow-lg transition-all">
-                            🏠 Register Your Property to See Real Data
+                        <button onclick="disableDemoMode()"
+                            class="px-6 py-3 bg-gradient-to-r from-[var(--cyan)] to-[var(--cyan-bright)] text-white font-bold rounded-xl hover:shadow-lg transition-all">
+                             Register Your Property to See Real Data
                         </button>
                     </div>
                 </div>
@@ -110,7 +110,7 @@ function renderDemoData(container) {
                             ${renderDemoSensor('S-006', 'Parking Lot Drain', 88, 'critical', '0.8 L/s', 'Alert')}
                         </div>
 
-                        <button onclick="viewAllSensors()" class="w-full mt-6 py-3 border-2 border-gray-200 text-gray-700 font-bold rounded-xl hover:border-[#2c9aa3] hover:text-[#2c9aa3] transition-all">
+                        <button onclick="viewAllSensors()" class="w-full mt-6 py-3 border-2 border-gray-200 text-gray-700 font-bold rounded-xl hover:border-[var(--cyan-bright)] hover:text-[var(--cyan-bright)] transition-all">
                             View All 12 Sensors →
                         </button>
                     </div>
@@ -131,7 +131,7 @@ function renderDemoData(container) {
                     <!-- Estate Info -->
                     <div class="glass rounded-xl p-6 shadow-lg">
                         <div class="flex items-center gap-3 mb-4">
-                            <div class="w-12 h-12 bg-gradient-to-br from-[#2a7096] to-[#2c9aa3] rounded-xl flex items-center justify-center">
+                            <div class="w-12 h-12 bg-gradient-to-br from-[var(--cyan)] to-[var(--cyan-bright)] rounded-xl flex items-center justify-center">
                                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                                 </svg>
@@ -165,26 +165,26 @@ function renderDemoData(container) {
                     <div class="glass rounded-xl p-6 shadow-lg">
                         <h4 class="font-bold text-gray-900 mb-4">Quick Actions</h4>
                         <div class="space-y-2">
-                            <button class="w-full px-4 py-3 bg-gradient-to-r from-[#2a7096] to-[#2c9aa3] text-white rounded-lg font-semibold hover:shadow-lg transition-all">
-                                📊 View Full Dashboard
+                            <button class="w-full px-4 py-3 bg-gradient-to-r from-[var(--cyan)] to-[var(--cyan-bright)] text-white rounded-lg font-semibold hover:shadow-lg transition-all">
+                                 View Full Dashboard
                             </button>
-                            <button class="w-full px-4 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-lg font-semibold hover:border-[#2c9aa3] transition-all">
-                                📈 View Analytics
+                            <button class="w-full px-4 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-lg font-semibold hover:border-[var(--cyan-bright)] transition-all">
+                                 View Analytics
                             </button>
-                            <button class="w-full px-4 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-lg font-semibold hover:border-[#2c9aa3] transition-all">
-                                📄 Download Reports
+                            <button class="w-full px-4 py-3 bg-white border-2 border-gray-200 text-gray-700 rounded-lg font-semibold hover:border-[var(--cyan-bright)] transition-all">
+                                 Download Reports
                             </button>
                         </div>
                     </div>
 
                     <!-- CTA Card -->
-                    <div class="bg-gradient-to-br from-[#2a7096] to-[#2c9aa3] rounded-xl p-6 text-white shadow-xl">
+                    <div class="bg-gradient-to-br from-[var(--cyan)] to-[var(--cyan-bright)] rounded-xl p-6 text-white shadow-xl">
                         <h4 class="font-bold text-xl mb-2">Ready to protect your property?</h4>
                         <p class="text-blue-100 mb-4 text-sm">
                             Register your estate to get real-time monitoring and professional drainage management.
                         </p>
-                        <button onclick="disableDemoMode()" 
-                            class="w-full px-6 py-3 bg-white text-[#2a7096] font-bold rounded-lg hover:bg-gray-50 transition-all">
+                        <button onclick="disableDemoMode()"
+                            class="w-full px-6 py-3 bg-white text-[var(--cyan)] font-bold rounded-lg hover:bg-gray-50 transition-all">
                             Get Started →
                         </button>
                     </div>
@@ -215,7 +215,7 @@ function renderDemoSensor(id, name, level, severity, flow, status) {
         high: 'bg-orange-100 text-orange-700',
         critical: 'bg-red-100 text-red-700'
     };
-    
+
     const levelColors = {
         normal: 'bg-green-500',
         moderate: 'bg-yellow-500',
@@ -224,7 +224,7 @@ function renderDemoSensor(id, name, level, severity, flow, status) {
     };
 
     return `
-        <div class="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-xl hover:border-[#2c9aa3]/30 hover:shadow-md transition-all cursor-pointer">
+        <div class="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-xl hover:border-[var(--cyan-bright)]/30 hover:shadow-md transition-all cursor-pointer">
             <div class="flex-shrink-0">
                 <div class="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center font-bold text-gray-700">
                     ${id.split('-')[1]}
@@ -296,7 +296,7 @@ function renderFeature(text) {
 async function disableDemoMode() {
     demoMode = false;
     updateDemoToggle();
-    
+
     const token = localStorage.getItem('token');
     try {
         await fetch(`${API_BASE}/preferences`, {
@@ -310,7 +310,7 @@ async function disableDemoMode() {
     } catch(e) {
         console.error('Failed to save preference:', e);
     }
-    
+
     renderMainContent();
 }
 
@@ -343,23 +343,23 @@ const DemoData = (function() {
             created_at: new Date().toISOString()
         }
     ];
-    
+
     let currentEstateIndex = 0;
-    
+
     function getCurrentEstate() {
         return demoEstates[currentEstateIndex];
     }
-    
+
     function getEstates() {
         return demoEstates;
     }
-    
+
     function setCurrentEstate(index) {
         if (index >= 0 && index < demoEstates.length) {
             currentEstateIndex = index;
         }
     }
-    
+
     return {
         getCurrentEstate,
         getEstates,

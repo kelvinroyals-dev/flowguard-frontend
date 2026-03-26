@@ -11,7 +11,7 @@ const App = (function() {
     // INITIALIZE APPLICATION
     // ============================================
     async function init() {
-        console.log('🚀 Initializing Flow Guard Client Portal...');
+        console.log(' Initializing Flow Guard Client Portal...');
         
         // Update user info in header
         Auth.updateUserInfo();
@@ -22,7 +22,7 @@ const App = (function() {
         // Setup event listeners
         setupEventListeners();
         
-        console.log('✅ Portal initialized');
+        console.log(' Portal initialized');
     }
     
     // ============================================
@@ -74,8 +74,8 @@ const App = (function() {
             
             // Initialize state manager with REAL properties
             const currentState = StateManager.init(properties, preferences);
-            console.log('📊 Current state:', currentState);
-            console.log('🎭 Demo mode:', isDemoMode);
+            console.log(' Current state:', currentState);
+            console.log(' Demo mode:', isDemoMode);
             
             // Update navigation visibility
             updateNavigation();
@@ -114,21 +114,21 @@ const App = (function() {
         const state = StateManager.getCurrentState();
         const property = StateManager.getCurrentProperty();
         
-        console.log('🎨 Rendering state:', state);
-        console.log('🎭 Demo mode:', isDemoMode);
+        console.log(' Rendering state:', state);
+        console.log(' Demo mode:', isDemoMode);
         
         // Demo mode handling for pre-ACTIVE states
         // Show full dashboard with demo data (preview what portal will look like)
         if (isDemoMode && state !== StateManager.STATES.ACTIVE && property) {
             // User has property waiting for deployment + demo ON
-            console.log('📊 Rendering demo dashboard for pre-ACTIVE state');
+            console.log(' Rendering demo dashboard for pre-ACTIVE state');
             Dashboard.renderDemo(container, property);
             return;
         }
         
         // Demo mode for NO_PROPERTY state
         if (isDemoMode && state === StateManager.STATES.NO_PROPERTY) {
-            console.log('📊 Rendering demo dashboard for NO_PROPERTY state');
+            console.log(' Rendering demo dashboard for NO_PROPERTY state');
             const demoProperty = {
                 property_id: 'DEMO-ESTATE-001',
                 property_name: 'Palm Gardens Estate (Demo)',
@@ -141,7 +141,7 @@ const App = (function() {
         }
         
         // Normal rendering based on state
-        console.log('📊 Rendering normal view for state:', state);
+        console.log(' Rendering normal view for state:', state);
         switch(state) {
             case StateManager.STATES.NO_PROPERTY:
                 Onboarding.renderProgressHomepage(container);
@@ -193,7 +193,7 @@ const App = (function() {
             container.innerHTML = `
                 <div class="max-w-4xl mx-auto">
                     <div class="modern-card p-8 mb-8 bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800">
-                        <h2 class="text-2xl font-bold text-primary mb-2">Inspection Report Ready! ✅</h2>
+                        <h2 class="text-2xl font-bold text-primary mb-2">Inspection Report Ready! </h2>
                         <p class="text-secondary">Your site inspection has been completed. Review the findings below.</p>
                     </div>
                     
@@ -243,7 +243,7 @@ const App = (function() {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                     </div>
-                    <h2 class="text-2xl font-bold text-primary mb-4">Payment Received! 🎉</h2>
+                    <h2 class="text-2xl font-bold text-primary mb-4">Payment Received! </h2>
                     <p class="text-lg text-secondary mb-8">Your system deployment is being scheduled. You'll receive a confirmation within 48 hours.</p>
                     
                     <div class="max-w-md mx-auto text-left">
@@ -457,7 +457,7 @@ const App = (function() {
             return;
         }
         
-        console.log(`🎨 Rendering ${tabName} tab - Demo: ${isDemoMode}, State: ${state}`);
+        console.log(` Rendering ${tabName} tab - Demo: ${isDemoMode}, State: ${state}`);
         
         // Assets Tab
         if (tabName === 'assets') {

@@ -175,7 +175,7 @@ const AccountSettings = (function() {
                     <div class="flex gap-6 mb-6">
                         <!-- Avatar -->
                         <div class="flex-shrink-0">
-                            <div class="w-24 h-24 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-3">
+                            <div class="w-24 h-24 bg-gradient-to-br from-[#0d7fa0] to-[#16a8d3] rounded-full flex items-center justify-center text-white font-bold text-2xl mb-3">
                                 ${getInitials(user?.fullName || 'User')}
                             </div>
                             <button type="button" class="text-xs text-blue-600 hover:text-blue-700 font-medium">Change Photo</button>
@@ -358,23 +358,32 @@ const AccountSettings = (function() {
     function renderDangerSection() {
         return `
             <div class="modern-card p-6">
-                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-6">Danger Zone</h3>
-                
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Danger Zone</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Irreversible account actions. Proceed with caution.</p>
+
                 <div class="space-y-4">
-                    <div class="p-4 border-2 border-red-200 dark:border-red-900/50 rounded-xl bg-red-50 dark:bg-red-900/10">
-                        <h4 class="font-bold text-gray-900 dark:text-gray-100 mb-2">Deactivate Account</h4>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Temporarily disable your account. You can reactivate it anytime.</p>
-                        <button class="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-medium rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors">
-                            Deactivate Account
-                        </button>
+                    <div class="p-5 border-2 border-orange-200 dark:border-orange-900/50 rounded-xl bg-orange-50 dark:bg-orange-900/10">
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="flex-1">
+                                <h4 class="font-bold text-gray-900 dark:text-gray-100 mb-1">Deactivate Account</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Temporarily suspends your account and pauses all property monitoring. You can reactivate at any time by contacting support@flowguard.ng.</p>
+                            </div>
+                            <button id="deactivate-account-btn" onclick="AccountSettings.handleDeactivate()" class="flex-shrink-0 px-4 py-2 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 font-semibold rounded-lg hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors text-sm">
+                                Deactivate
+                            </button>
+                        </div>
                     </div>
-                    
-                    <div class="p-4 border-2 border-red-300 dark:border-red-800 rounded-xl bg-red-100 dark:bg-red-900/20">
-                        <h4 class="font-bold text-gray-900 dark:text-gray-100 mb-2">Delete Account Permanently</h4>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Once deleted, your account cannot be recovered. All data will be permanently removed.</p>
-                        <button class="px-4 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors">
-                            Delete Account
-                        </button>
+
+                    <div class="p-5 border-2 border-red-300 dark:border-red-800 rounded-xl bg-red-50 dark:bg-red-900/15">
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="flex-1">
+                                <h4 class="font-bold text-gray-900 dark:text-gray-100 mb-1">Delete Account Permanently</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Permanently erases all your data, registered properties, and service history. Your FlowGuard contract will also be terminated. This <strong>cannot</strong> be undone.</p>
+                            </div>
+                            <button id="delete-account-btn" onclick="AccountSettings.handleDelete()" class="flex-shrink-0 px-4 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors text-sm">
+                                Delete Account
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -631,11 +640,88 @@ const AccountSettings = (function() {
         switchTab('dashboard');
     }
 
+    async function handleDeactivate() {
+        Modal.showConfirm({
+            title: 'Deactivate Account',
+            message: 'Your account will be suspended and all monitoring will pause. You can reactivate by contacting support@flowguard.ng.',
+            confirmText: 'Deactivate',
+            cancelText: 'Cancel',
+            confirmClass: 'bg-orange-600 hover:bg-orange-700',
+            onConfirm: async () => {
+                const btn = document.getElementById('deactivate-account-btn');
+                if (btn) { btn.textContent = 'Deactivating...'; btn.disabled = true; }
+                try {
+                    const token = Auth.getToken();
+                    const res = await fetch(`${API_BASE}/account/deactivate`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        Modal.showAlert({ type: 'success', title: 'Account Deactivated', message: 'Your account has been suspended. You will now be signed out.' });
+                        setTimeout(() => Auth.logout(), 2000);
+                    } else {
+                        Modal.showAlert({ type: 'error', title: 'Failed', message: data.error || 'Could not deactivate account. Please try again.' });
+                        if (btn) { btn.textContent = 'Deactivate'; btn.disabled = false; }
+                    }
+                } catch (err) {
+                    Modal.showAlert({ type: 'error', title: 'Connection Error', message: 'Could not reach the server. Please try again.' });
+                    if (btn) { btn.textContent = 'Deactivate'; btn.disabled = false; }
+                }
+            }
+        });
+    }
+
+    function handleDelete() {
+        // First confirm
+        Modal.showConfirm({
+            title: 'Delete Account Permanently',
+            message: 'This will permanently erase all your data, properties, and service history. Your FlowGuard contract will also be terminated. This cannot be undone.',
+            confirmText: 'Yes, Delete My Account',
+            cancelText: 'Cancel',
+            confirmClass: 'bg-red-600 hover:bg-red-700',
+            onConfirm: () => {
+                // Second confirm: require typing DELETE
+                Modal.showConfirm({
+                    title: 'Final Confirmation Required',
+                    message: 'Type DELETE in the field below to confirm. This action is permanent and irreversible.',
+                    confirmText: 'Delete Permanently',
+                    cancelText: 'Cancel',
+                    confirmClass: 'bg-red-600 hover:bg-red-700',
+                    onConfirm: async () => {
+                        const btn = document.getElementById('delete-account-btn');
+                        if (btn) { btn.textContent = 'Deleting...'; btn.disabled = true; }
+                        try {
+                            const token = Auth.getToken();
+                            const res = await fetch(`${API_BASE}/account`, {
+                                method: 'DELETE',
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                                localStorage.clear();
+                                window.location.href = 'login.html';
+                            } else {
+                                Modal.showAlert({ type: 'error', title: 'Failed', message: data.error || 'Could not delete account.' });
+                                if (btn) { btn.textContent = 'Delete Account'; btn.disabled = false; }
+                            }
+                        } catch (err) {
+                            Modal.showAlert({ type: 'error', title: 'Connection Error', message: 'Could not reach the server. Please try again.' });
+                            if (btn) { btn.textContent = 'Delete Account'; btn.disabled = false; }
+                        }
+                    }
+                });
+            }
+        });
+    }
+
     return {
         render,
         switchSection,
         editProperty,
         closeEditModal,
-        close
+        close,
+        handleDeactivate,
+        handleDelete
     };
 })();

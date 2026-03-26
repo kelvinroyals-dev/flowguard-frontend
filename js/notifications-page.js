@@ -32,16 +32,14 @@ const NotificationsPage = (function() {
                 const data = await response.json();
                 allNotifications = data.data || [];
             } else {
-                // Use demo notifications if API fails
-                allNotifications = getDemoNotifications();
+                allNotifications = [];
             }
             
             renderNotifications(container);
             
         } catch (error) {
             console.error('Notifications load error:', error);
-            // Use demo notifications on error
-            allNotifications = getDemoNotifications();
+            allNotifications = [];
             renderNotifications(container);
         }
     }
