@@ -187,48 +187,115 @@ const App = (function() {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
+            // 404 means the inspection record hasn't been uploaded yet even though
+            // the property status was set to report_ready. Show a waiting state.
+            if (!res.ok) {
+                renderInspectionPending(container, property);
+                return;
+            }
+            
             const data = await res.json();
             const inspection = data.data;
             
+            // Guard: if data shape is missing, fall back gracefully
+            if (!inspection || !inspection.findings) {
+                renderInspectionPending(container, property);
+                return;
+            }
+            
+            const recommendations = Array.isArray(inspection.findings.recommendations)
+                ? inspection.findings.recommendations
+                : [];
+            const criticalIssues = inspection.findings.criticalIssues ?? 0;
+            const overallCondition = inspection.findings.overallCondition || 'Under review';
+            const reportUrl = inspection.reportUrl
+                ? `${API_BASE}${inspection.reportUrl}`
+                : null;
+            
             container.innerHTML = `
-                <div class="max-w-4xl mx-auto">
-                    <div class="modern-card p-8 mb-8 bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800">
-                        <h2 class="text-2xl font-bold text-primary mb-2">Inspection Report Ready! </h2>
-                        <p class="text-secondary">Your site inspection has been completed. Review the findings below.</p>
+                <div class="space-y-6">
+                    <div class="notice ok">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div>
+                            <strong>Inspection Report Ready</strong> — Your site inspection for <strong>${property.property_name}</strong> has been completed. Review the findings and download your report below.
+                        </div>
                     </div>
                     
-                    <div class="modern-card p-8 mb-8">
-                        <h3 class="text-xl font-bold text-primary mb-4">Inspection Summary</h3>
-                        <div class="grid grid-cols-2 gap-6 mb-6">
+                    <div class="modern-card p-6">
+                        <h3 class="font-space text-primary mb-5" style="font-size:1.05rem;font-weight:700;">Inspection Summary</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                             <div>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Overall Condition</p>
-                                <p class="text-lg font-bold text-primary">${inspection.findings.overallCondition}</p>
+                                <p class="text-secondary" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Overall Condition</p>
+                                <p class="text-primary" style="font-size:1.1rem;font-weight:700;">${overallCondition}</p>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Critical Issues</p>
-                                <p class="text-lg font-bold text-${inspection.findings.criticalIssues > 0 ? 'red' : 'green'}-600">${inspection.findings.criticalIssues}</p>
+                                <p class="text-secondary" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Critical Issues Found</p>
+                                <p style="font-size:1.1rem;font-weight:700;color:${criticalIssues > 0 ? 'var(--err, #dc2626)' : 'var(--ok, #0a8a6a)'};">${criticalIssues}</p>
                             </div>
                         </div>
                         
-                        <h4 class="font-bold text-primary mb-3">Recommendations</h4>
-                        <ul class="list-disc list-inside space-y-2 text-gray-700 dark:text-gray-300">
-                            ${inspection.findings.recommendations.map(rec => `<li>${rec}</li>`).join('')}
-                        </ul>
+                        ${recommendations.length > 0 ? `
+                            <p class="text-secondary" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Recommendations</p>
+                            <ul style="display:flex;flex-direction:column;gap:6px;list-style:none;padding:0;">
+                                ${recommendations.map(rec => `
+                                    <li style="display:flex;align-items:flex-start;gap:8px;font-size:.85rem;color:var(--ink-2,#2d5068);">
+                                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:2px;color:var(--blue,#16a8d3);">
+                                            <path stroke-linecap="round" d="M9 5l7 7-7 7"/>
+                                        </svg>
+                                        ${rec}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        ` : ''}
                         
-                        <a href="${API_BASE}${inspection.reportUrl}" target="_blank" class="inline-flex items-center gap-2 mt-6 px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                            </svg>
-                            Download Full Report (PDF)
-                        </a>
+                        ${reportUrl ? `
+                            <a href="${reportUrl}" target="_blank" rel="noopener noreferrer"
+                               class="btn btn-primary" style="display:inline-flex;margin-top:20px;text-decoration:none;">
+                                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                Download Full Inspection Report (PDF)
+                            </a>
+                        ` : ''}
                     </div>
                 </div>
             `;
             
         } catch (error) {
-            console.error('Failed to load inspection:', error);
-            container.innerHTML = '<div class="text-center text-red-600">Failed to load inspection report</div>';
+            console.error('Failed to load inspection report:', error);
+            renderInspectionPending(container, property);
         }
+    }
+    
+    // Shown when inspection endpoint returns 404 or data is not yet available
+    function renderInspectionPending(container, property) {
+        container.innerHTML = `
+            <div class="space-y-6">
+                <div class="notice info">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    <div>Your inspection for <strong>${property.property_name}</strong> is complete. The report is being prepared and will appear here shortly.</div>
+                </div>
+                
+                <div class="modern-card p-8 text-center">
+                    <div style="width:56px;height:56px;border-radius:50%;background:rgba(22,168,211,.1);border:2px solid rgba(22,168,211,.25);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" style="color:var(--blue,#16a8d3);">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                    <h3 class="font-space text-primary" style="font-size:1.1rem;font-weight:700;margin-bottom:8px;">Inspection Report Being Prepared</h3>
+                    <p class="text-secondary" style="font-size:.85rem;max-width:420px;margin:0 auto 20px;line-height:1.6;">
+                        Your site inspection is complete. Our team is compiling the findings and the report will be available here within 24 hours.
+                    </p>
+                    <p class="text-secondary" style="font-size:.78rem;">Questions? Contact <a href="mailto:support@flowguard.ng" style="color:var(--blue,#16a8d3);">support@flowguard.ng</a> or call 020 1700 3062.</p>
+                </div>
+            </div>
+        `;
     }
     
     // ============================================
