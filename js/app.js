@@ -509,19 +509,20 @@ const App = (function() {
         if (tabName === 'billing') {
             if (isDemoMode) {
                 BillingTab.renderDemo(container, property || { property_name: 'Demo Property' });
-            } else if (state === StateManager.STATES.ACTIVE && property) {
-                BillingTab.render(container, property);
             } else if (property) {
-                BillingTab.renderEmpty(container, property);
+                BillingTab.render(container, property);
+            } else {
+                BillingTab.renderEmpty(container, { property_name: 'your property' });
             }
             return;
         }
 
-        // Live Monitoring Tab — reuses AssetsTab sensor view
+        // Live Monitoring Tab
         if (tabName === 'monitoring') {
+            const propStatus = property ? property.status : null;
             if (isDemoMode) {
                 AssetsTab.renderDemo(container, property || { property_name: 'Demo Property' });
-            } else if (state === StateManager.STATES.ACTIVE && property) {
+            } else if (propStatus === 'active' && property) {
                 AssetsTab.render(container, property);
             } else {
                 container.innerHTML = `
