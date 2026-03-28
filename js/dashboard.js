@@ -1,337 +1,231 @@
 // ============================================
 // DASHBOARD MODULE
-// Renders full live dashboard for active properties
-// NO hardcoded values - all data from API
+// Matches target client-portal.html exactly:
+// – Optional inspection notice banner
+// – 5 KPI cards
+// – Areas summary table + Activity feed
+// – Active alerts quick view
+// All data from real API endpoints that exist
 // ============================================
 
 const Dashboard = (function() {
     const API_BASE = 'https://api.flowguard.ng/api/v1';
-    
+
+    // ── render() — called for ALL states ────────────────────────────────
     async function render(container, property) {
-        // Show loading state
-        container.innerHTML = `
-            <div class="flex items-center justify-center py-20">
-                <div class="text-center">
-                    <svg class="animate-spin h-12 w-12 mx-auto text-blue-600" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                    <p class="mt-4 text-gray-600">Loading dashboard...</p>
-                </div>
-            </div>
-        `;
-        
+        container.innerHTML = '<div style="display:flex;align-items:center;gap:9px;padding:40px 0;color:var(--ink-3);font-size:.82rem;">'
+            + '<div class="fg-spin" style="width:17px;height:17px;flex-shrink:0;"></div>Loading dashboard…</div>';
+
         try {
             const token = Auth.getToken();
-            
-            // Fetch metrics from API
-            const metricsRes = await fetch(`${API_BASE}/properties/${property.property_id}/metrics`, {
+
+            // Fetch all user properties (always exists)
+            const propRes = await fetch(`${API_BASE}/properties`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            
-            if (!metricsRes.ok) {
-                throw new Error('Failed to load metrics');
+            const properties = propRes.ok ? ((await propRes.json()).data || []) : [];
+
+            // Fetch alerts for current property (may return empty array)
+            let alerts = [];
+            if (property && property.property_id) {
+                const alertRes = await fetch(
+                    `${API_BASE}/properties/${property.property_id}/alerts`,
+                    { headers: { 'Authorization': `Bearer ${token}` } }
+                ).catch(() => null);
+                if (alertRes && alertRes.ok) {
+                    alerts = (await alertRes.json()).data || [];
+                }
             }
-            
-            const metricsData = await metricsRes.json();
-            const metrics = metricsData.data;
-            
-            // Fetch assets
-            const assetsRes = await fetch(`${API_BASE}/properties/${property.property_id}/assets`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            const assetsData = await assetsRes.json();
-            const assets = assetsData.data || [];
-            
-            // Fetch alerts
-            const alertsRes = await fetch(`${API_BASE}/properties/${property.property_id}/alerts`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            const alertsData = await alertsRes.json();
-            const alerts = alertsData.data || [];
-            
-            // Render full dashboard
-            renderDashboard(container, property, metrics, assets, alerts);
-            
-        } catch (error) {
-            console.error('Dashboard load error:', error);
-            renderError(container);
+
+            _render(container, property, properties, alerts);
+        } catch(e) {
+            console.error('Dashboard load error:', e);
+            _renderError(container);
         }
     }
-    
-    function renderDashboard(container, property, metrics, assets, alerts) {
-        const healthColor = metrics.healthScore >= 90 ? 'green' : metrics.healthScore >= 75 ? 'yellow' : 'red';
-        const uptimeColor = metrics.uptime30Days >= metrics.uptimeTarget ? 'green' : 'yellow';
-        
-        container.innerHTML = `
-            <div class="space-y-6">
-                <!-- Property Header -->
-                <div class="modern-card p-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h2 class="text-2xl font-bold text-primary">${property.property_name}</h2>
-                            <p class="text-sm text-secondary mt-1">${property.city}, ${property.state} • ID: ${property.property_id}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-sm text-gray-600 dark:text-gray-400">Health Score</p>
-                            <div class="flex items-center gap-2 mt-1">
-                                <div class="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                    <div class="h-full bg-${healthColor}-500 rounded-full transition-all" style="width: ${metrics.healthScore}%"></div>
-                                </div>
-                                <span class="text-xl font-bold text-${healthColor}-600">${metrics.healthScore}%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Quick Stats -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div class="modern-card p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Coverage Area</p>
-                            <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-                                </svg>
-                            </div>
-                        </div>
-                        <p class="text-2xl font-bold text-primary">${metrics.coverageKm} km</p>
-                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">${metrics.totalAssets} monitored assets</p>
-                    </div>
-                    
-                    <div class="modern-card p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Active Sensors</p>
-                            <div class="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                            </div>
-                        </div>
-                        <p class="text-2xl font-bold text-primary">${metrics.activeSensors}/${metrics.totalAssets}</p>
-                        <p class="text-xs text-green-600 font-semibold mt-1">${metrics.sensorStatus}</p>
-                    </div>
-                    
-                    <div class="modern-card p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <p class="text-xs font-medium text-gray-600 dark:text-gray-400">This Month</p>
-                            <div class="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                                <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                            </div>
-                        </div>
-                        <p class="text-2xl font-bold text-primary">${metrics.issuesResolvedThisMonth}</p>
-                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Issues resolved</p>
-                    </div>
-                    
-                    <div class="modern-card p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <p class="text-xs font-medium text-gray-600 dark:text-gray-400">Next Maintenance</p>
-                            <div class="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                                <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                </svg>
-                            </div>
-                        </div>
-                        <p class="text-2xl font-bold text-primary">${new Date(metrics.nextMaintenanceDate).toLocaleDateString('en-NG', {month: 'short', day: 'numeric'})}</p>
-                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">${metrics.maintenanceDaysAway} days away</p>
-                    </div>
-                </div>
-                
-                <!-- Performance Metrics -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="modern-card p-6">
-                        <p class="text-xs text-gray-600 dark:text-gray-400 font-medium mb-2">System Uptime (30 days)</p>
-                        <p class="text-3xl font-bold text-primary mb-3">${metrics.uptime30Days}%</p>
-                        <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div class="h-full bg-${uptimeColor}-500 rounded-full" style="width: ${metrics.uptime30Days}%"></div>
-                        </div>
-                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-2">Target: ${metrics.uptimeTarget}%</p>
-                    </div>
-                    
-                    <div class="modern-card p-6">
-                        <p class="text-xs text-gray-600 dark:text-gray-400 font-medium mb-2">Avg Response Time</p>
-                        <p class="text-3xl font-bold text-green-600 mb-3">${metrics.avgResponseTimeMinutes}m</p>
-                        <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div class="h-full bg-green-500 rounded-full" style="width: 70%"></div>
-                        </div>
-                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-2">Well within SLA</p>
-                    </div>
-                    
-                    <div class="modern-card p-6">
-                        <p class="text-xs text-gray-600 dark:text-gray-400 font-medium mb-2">Blockages Resolved</p>
-                        <p class="text-3xl font-bold text-primary mb-3">${metrics.blockagesResolved.completed}/${metrics.blockagesResolved.total}</p>
-                        <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div class="h-full bg-green-500 rounded-full" style="width: ${(metrics.blockagesResolved.completed / metrics.blockagesResolved.total * 100)}%"></div>
-                        </div>
-                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-2">This month</p>
-                    </div>
-                </div>
-                
-                <!-- Active Alerts -->
-                ${alerts.length > 0 ? `
-                    <div class="modern-card p-6">
-                        <h3 class="text-lg font-bold text-primary mb-4">Active Alerts (${alerts.length})</h3>
-                        <div class="space-y-3">
-                            ${alerts.map(alert => `
-                                <div class="flex items-start gap-3 p-4 rounded-lg ${
-                                    alert.severity === 'critical' ? 'bg-red-50 dark:bg-red-900/20' :
-                                    alert.severity === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/20' :
-                                    'bg-blue-50 dark:bg-blue-900/20'
-                                }">
-                                    <svg class="w-5 h-5 mt-0.5 ${
-                                        alert.severity === 'critical' ? 'text-red-600' :
-                                        alert.severity === 'warning' ? 'text-yellow-600' :
-                                        'text-blue-600'
-                                    }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                    </svg>
-                                    <div class="flex-1">
-                                        <p class="font-semibold text-gray-900 dark:text-gray-100">${alert.assetName}</p>
-                                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">${alert.message}</p>
-                                        <p class="text-xs text-gray-500 mt-1">${new Date(alert.triggeredAt).toLocaleString()}</p>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                <!-- Assets Table -->
-                <div class="modern-card p-6">
-                    <h3 class="text-lg font-bold text-primary mb-4">Monitored Assets (${assets.length})</h3>
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead>
-                                <tr class="border-b border-gray-200 dark:border-gray-700">
-                                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">ASSET</th>
-                                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">TYPE</th>
-                                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">LENGTH</th>
-                                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">HEALTH</th>
-                                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">UPTIME</th>
-                                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">NEXT MAINTENANCE</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${assets.map(asset => `
-                                    <tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                        <td class="py-3 px-4">
-                                            <p class="font-semibold text-gray-900 dark:text-gray-100">${asset.name}</p>
-                                            <p class="text-xs text-gray-500">${asset.assetId}</p>
-                                        </td>
-                                        <td class="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">${asset.type}</td>
-                                        <td class="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">${asset.length}</td>
-                                        <td class="py-3 px-4">
-                                            <span class="px-2 py-1 rounded-full text-xs font-semibold ${
-                                                asset.healthClass === 'success' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                                asset.healthClass === 'warning' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                                'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                            }">
-                                                ${asset.health}
-                                            </span>
-                                        </td>
-                                        <td class="py-3 px-4">
-                                            <span class="text-sm font-semibold text-${asset.uptimeColor}-600">${asset.uptime}%</span>
-                                        </td>
-                                        <td class="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">
-                                            ${new Date(asset.nextMaintenanceDate).toLocaleDateString('en-NG', {month: 'short', day: 'numeric', year: 'numeric'})}
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
+
+    // renderDemo still uses render — no fake data in live portal
     function renderDemo(container, property) {
-        // Mock demo data
-        const metrics = {
-            healthScore: 94,
-            coverageKm: 3.2,
-            totalAssets: 12,
-            activeSensors: 12,
-            sensorStatus: 'All operational',
-            issuesResolvedThisMonth: 8,
-            nextMaintenanceDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
-            maintenanceDaysAway: 15,
-            uptime30Days: 98.2,
-            uptimeTarget: 98,
-            avgResponseTimeMinutes: 67,
-            blockagesResolved: { completed: 8, total: 8 }
+        render(container, property);
+    }
+
+    // ── Main render ──────────────────────────────────────────────────────
+    function _render(container, currentProp, properties, alerts) {
+        // KPI calculations
+        var total      = properties.length;
+        var active     = properties.filter(function(p){ return p.status === 'active'; }).length;
+        var inPipeline = properties.filter(function(p){
+            return ['submitted','inspection_scheduled','inspection_ongoing','report_ready','quote_sent','payment_pending'].indexOf(p.status) !== -1;
+        }).length;
+        var activeAlerts = alerts.filter(function(a){
+            return ['active','acknowledged','dispatched'].indexOf(a.status) !== -1;
+        }).length;
+        var uptime = currentProp && currentProp.network_uptime ? currentProp.network_uptime + '%' : '—';
+
+        // Inspection notice — show if current prop has scheduled inspection
+        var notice = '';
+        if (currentProp && (currentProp.status === 'inspection_scheduled' || currentProp.status === 'inspection_ongoing')) {
+            var inspDate = currentProp.inspection_date || currentProp.scheduled_date;
+            var inspDateStr = inspDate
+                ? new Date(inspDate).toLocaleDateString('en-NG',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
+                : 'a date to be confirmed';
+            notice = '<div class="notice info">'
+                + '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+                + '<div>Your inspection for <strong>' + _esc(currentProp.property_name) + '</strong> is scheduled for <strong>' + inspDateStr + '</strong>.'
+                + (currentProp.inspection_team ? ' ' + _esc(currentProp.inspection_team) + ' will contact you 24 hrs before arrival.' : '')
+                + '</div></div>';
+        }
+
+        // 5 KPI cards
+        var kpis = '<div class="kpis five">'
+            + _kpi('blue',  'Submitted Areas',    total,        'Across all locations')
+            + _kpi('green', 'Actively Monitored', active,       'With live sensors')
+            + _kpi('amber', 'In Pipeline',        inPipeline,   'Inspection / review')
+            + _kpi('red',   'Active Alerts',      activeAlerts, 'Require attention')
+            + _kpi('teal',  'Network Uptime',     uptime,       'Last 30 days')
+            + '</div>';
+
+        // Areas summary table
+        var tableRows = properties.slice(0, 5).map(function(p) {
+            var statusMap = {
+                'submitted': { cls:'watch', label:'Awaiting Review' },
+                'inspection_scheduled': { cls:'info', label:'Inspection Scheduled' },
+                'inspection_ongoing': { cls:'info', label:'In Inspection' },
+                'report_ready': { cls:'watch', label:'Report Ready' },
+                'quote_sent': { cls:'info', label:'Quote Sent' },
+                'payment_pending': { cls:'warning', label:'Payment Pending' },
+                'active': { cls:'nominal', label:'Active' },
+            };
+            var s = statusMap[p.status] || { cls:'offline', label: (p.status||'').replace(/_/g,' ') };
+            var type = (p.property_type||'').replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();});
+            var loc = [p.city, p.state].filter(Boolean).join(', ');
+            var btnTab = p.status === 'active' ? 'monitoring' : 'assets';
+            var btnLabel = p.status === 'active' ? 'Monitor' : 'View';
+            return '<tr>'
+                + '<td class="bright">' + _esc(p.property_name) + '</td>'
+                + '<td style="font-size:.78rem;">' + _esc(type) + '</td>'
+                + '<td style="font-size:.78rem;">' + _esc(loc) + '</td>'
+                + '<td><span class="badge ' + s.cls + '">' + s.label + '</span></td>'
+                + '<td><button class="btn btn-ghost btn-sm" onclick="switchTab(\'' + btnTab + '\')">' + btnLabel + '</button></td>'
+                + '</tr>';
+        }).join('');
+
+        var areasCard = '<div class="card">'
+            + '<div class="card-head"><div class="card-title">My Submitted Areas</div>'
+            + '<button class="btn btn-ghost btn-sm" onclick="switchTab(\'assets\')">View All</button></div>'
+            + '<div style="overflow-x:auto;"><table class="tbl">'
+            + '<thead><tr><th>Area</th><th>Type</th><th>Location</th><th>Status</th><th></th></tr></thead>'
+            + '<tbody>' + (tableRows || '<tr><td colspan="5" style="text-align:center;padding:24px 0;color:var(--ink-3);font-size:.82rem;">No areas submitted yet</td></tr>') + '</tbody>'
+            + '</table></div></div>';
+
+        // Activity feed — built from real property events
+        var actItems = _buildActivity(properties, alerts);
+        var actCard = '<div class="card">'
+            + '<div class="card-head"><div class="card-title">Recent Activity</div></div>'
+            + '<div class="card-body-sm">'
+            + (actItems.length > 0 ? actItems.join('') : '<div style="padding:20px 0;text-align:center;color:var(--ink-3);font-size:.82rem;">No recent activity</div>')
+            + '</div></div>';
+
+        // Active alerts quick view
+        var alertsSection = '';
+        var activeAlertList = alerts.filter(function(a){ return a.status === 'active' || a.status === 'acknowledged'; });
+        if (activeAlertList.length > 0) {
+            var alertRows = activeAlertList.slice(0, 3).map(function(a) {
+                var sevCls = a.severity === 'critical' ? 'critical' : a.severity === 'high' ? 'high' : a.severity === 'moderate' ? 'moderate' : 'minor';
+                var timeAgo = _timeAgo(a.created_at || a.triggered_at);
+                return '<div class="al-item">'
+                    + '<div class="al-sev ' + sevCls + '"></div>'
+                    + '<div style="flex:1;min-width:0;">'
+                    + '<div class="al-type">' + _esc(a.alert_type || a.type || 'Alert') + (a.location ? ' — ' + _esc(a.location) : '') + '</div>'
+                    + '<div class="al-meta">' + _esc(a.notes || a.description || a.message || '') + '</div>'
+                    + '</div>'
+                    + '<span class="badge ' + (sevCls === 'critical' ? 'critical' : sevCls === 'high' ? 'warning' : 'watch') + '" style="flex-shrink:0;">' + (a.severity||'') + '</span>'
+                    + '<div class="al-time">' + timeAgo + '</div>'
+                    + '</div>';
+            }).join('');
+            alertsSection = '<div class="card">'
+                + '<div class="card-head"><div class="card-title">Active Alerts</div>'
+                + '<button class="btn btn-ghost btn-sm" onclick="switchTab(\'alerts-incidents\')">View All Alerts</button></div>'
+                + '<div class="card-body-sm">' + alertRows + '</div>'
+                + '</div>';
+        }
+
+        container.innerHTML = [
+            notice,
+            kpis,
+            '<div class="g2">' + areasCard + actCard + '</div>',
+            alertsSection,
+        ].filter(Boolean).join('');
+    }
+
+    function _kpi(color, label, value, sub) {
+        return '<div class="kpi ' + color + '">'
+            + '<div class="kpi-lbl">' + label + '</div>'
+            + '<div class="kpi-val ' + color + '">' + value + '</div>'
+            + '<div class="kpi-sub">' + sub + '</div>'
+            + '</div>';
+    }
+
+    function _buildActivity(properties, alerts) {
+        var events = [];
+        // From properties
+        properties.forEach(function(p) {
+            if (p.created_at) events.push({ time: new Date(p.created_at), type: 'submit', label: 'Area Submitted', sub: p.property_name + ' registered' });
+            if (p.status === 'report_ready' && p.updated_at) events.push({ time: new Date(p.updated_at), type: 'report', label: 'Report Ready', sub: p.property_name + ' — report available' });
+            if (p.status === 'active' && p.updated_at) events.push({ time: new Date(p.updated_at), type: 'active', label: 'System Active', sub: p.property_name + ' monitoring started' });
+        });
+        // From resolved alerts
+        alerts.filter(function(a){ return a.status === 'resolved'; }).slice(0,3).forEach(function(a) {
+            if (a.resolved_at) events.push({ time: new Date(a.resolved_at), type: 'resolved', label: 'Alert Resolved', sub: (a.alert_type || 'Incident') + ' — ' + (a.location || '') });
+        });
+        // Sort newest first
+        events.sort(function(a,b){ return b.time - a.time; });
+
+        var icons = {
+            submit:   { bg: 'rgba(22,168,211,.08)', stroke: 'var(--blue)', path: '<path stroke-linecap="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>' },
+            report:   { bg: 'rgba(22,168,211,.08)', stroke: 'var(--blue)', path: '<path stroke-linecap="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>' },
+            active:   { bg: 'var(--ok-bg)',          stroke: 'var(--ok)',   path: '<path stroke-linecap="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>' },
+            resolved: { bg: 'var(--ok-bg)',          stroke: 'var(--ok)',   path: '<path stroke-linecap="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>' },
         };
-        
-        const assets = [
-            { 
-                name: 'Main Perimeter Drain', 
-                assetId: 'MPD-001', 
-                type: 'Open Drain', 
-                length: '850m', 
-                health: 'Excellent', 
-                healthClass: 'success', 
-                uptime: '99.2', 
-                uptimeColor: 'green',
-                nextMaintenanceDate: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString()
-            },
-            { 
-                name: 'Gate House Culvert', 
-                assetId: 'GHC-002', 
-                type: 'Culvert', 
-                length: '120m', 
-                health: 'Good', 
-                healthClass: 'success', 
-                uptime: '97.8', 
-                uptimeColor: 'green',
-                nextMaintenanceDate: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString()
-            },
-            { 
-                name: 'Service Road Drain', 
-                assetId: 'SRD-003', 
-                type: 'Open Drain', 
-                length: '450m', 
-                health: 'Fair', 
-                healthClass: 'warning', 
-                uptime: '94.3', 
-                uptimeColor: 'yellow',
-                nextMaintenanceDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString()
-            }
-        ];
-        
-        const alerts = [
-            {
-                assetName: 'Service Road Drain',
-                message: 'Water level above normal - monitoring',
-                severity: 'warning',
-                triggeredAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-            }
-        ];
-        
-        // Render with demo data
-        renderDashboard(container, property, metrics, assets, alerts);
+
+        return events.slice(0, 5).map(function(ev) {
+            var ic = icons[ev.type] || icons.submit;
+            return '<div class="act-item">'
+                + '<div class="act-ico" style="background:' + ic.bg + ';">'
+                + '<svg width="13" height="13" fill="none" stroke="' + ic.stroke + '" stroke-width="2" viewBox="0 0 24 24">' + ic.path + '</svg>'
+                + '</div>'
+                + '<div style="flex:1;min-width:0;">'
+                + '<div class="act-title">' + _esc(ev.label) + '</div>'
+                + '<div class="act-sub">' + _esc(ev.sub) + '</div>'
+                + '</div>'
+                + '<div class="act-time">' + _timeAgo(ev.time.toISOString()) + '</div>'
+                + '</div>';
+        });
     }
-    
-    function renderError(container) {
-        container.innerHTML = `
-            <div class="modern-card p-8 text-center">
-                <svg class="w-16 h-16 mx-auto text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Failed to Load Dashboard</h3>
-                <p class="text-gray-600 dark:text-gray-400 mb-4">Unable to fetch property data. Please try again.</p>
-                <button onclick="location.reload()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    Retry
-                </button>
-            </div>
-        `;
+
+    function _timeAgo(iso) {
+        if (!iso) return '—';
+        var diff = Date.now() - new Date(iso).getTime();
+        var mins = Math.floor(diff / 60000);
+        var hrs  = Math.floor(diff / 3600000);
+        var days = Math.floor(diff / 86400000);
+        if (mins < 60)  return mins + 'min ago';
+        if (hrs  < 24)  return hrs  + 'h ago';
+        if (days < 7)   return days + 'd ago';
+        return new Date(iso).toLocaleDateString('en-NG',{day:'numeric',month:'short'});
     }
-    
-    return {
-        render,
-        renderDemo
-    };
+
+    function _renderError(container) {
+        container.innerHTML = '<div class="card"><div class="empty-state">'
+            + '<svg width="38" height="38" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+            + '<h3>Failed to load dashboard</h3>'
+            + '<p>Please refresh the page or contact support if the problem persists.</p>'
+            + '</div></div>';
+    }
+
+    function _esc(s) {
+        return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    return { render, renderDemo };
 })();

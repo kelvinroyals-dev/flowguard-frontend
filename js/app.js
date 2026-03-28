@@ -117,63 +117,24 @@ const App = (function() {
         console.log(' Rendering state:', state);
         console.log(' Demo mode:', isDemoMode);
         
-        // Demo mode handling for pre-ACTIVE states
-        // Show full dashboard with demo data (preview what portal will look like)
-        if (isDemoMode && state !== StateManager.STATES.ACTIVE && property) {
-            // User has property waiting for deployment + demo ON
-            console.log(' Rendering demo dashboard for pre-ACTIVE state');
-            Dashboard.renderDemo(container, property);
-            return;
-        }
-        
-        // Demo mode for NO_PROPERTY state
-        if (isDemoMode && state === StateManager.STATES.NO_PROPERTY) {
-            console.log(' Rendering demo dashboard for NO_PROPERTY state');
-            const demoProperty = {
-                property_id: 'DEMO-ESTATE-001',
-                property_name: 'Palm Gardens Estate (Demo)',
-                property_type: 'residential_estate',
-                city: 'Lagos',
-                state: 'Lagos'
-            };
-            Dashboard.renderDemo(container, demoProperty);
+        // Demo mode — always show dashboard
+        if (isDemoMode) {
+            console.log(' Rendering demo dashboard');
+            Dashboard.render(container, property || { property_id: null, property_name: 'Demo Property' });
             return;
         }
         
         // Normal rendering based on state
         console.log(' Rendering normal view for state:', state);
-        switch(state) {
-            case StateManager.STATES.NO_PROPERTY:
-                Onboarding.renderProgressHomepage(container);
-                break;
-                
-            case StateManager.STATES.SUBMITTED:
-            case StateManager.STATES.INSPECTION_SCHEDULED:
-            case StateManager.STATES.INSPECTION_ONGOING:
-                Onboarding.renderInspectionTracker(container, property);
-                break;
-                
-            case StateManager.STATES.REPORT_READY:
-                renderInspectionReport(container, property);
-                break;
-                
-            case StateManager.STATES.QUOTE_SENT:
-            case StateManager.STATES.PAYMENT_PENDING:
-                Billing.renderServiceConfigurator(container, property);
-                break;
-                
-            case StateManager.STATES.PAYMENT_COMPLETED:
-            case StateManager.STATES.DEPLOYMENT_SCHEDULED:
-                renderDeploymentPending(container, property);
-                break;
-                
-            case StateManager.STATES.ACTIVE:
-                Dashboard.render(container, property);
-                break;
-                
-            default:
-                Onboarding.renderProgressHomepage(container);
+
+        // No property yet — show onboarding CTA
+        if (state === StateManager.STATES.NO_PROPERTY || !property) {
+            Onboarding.renderProgressHomepage(container);
+            return;
         }
+
+        // Dashboard always shows — state-specific detail is on the Assets tab
+        Dashboard.render(container, property);
     }
     
     // ============================================
