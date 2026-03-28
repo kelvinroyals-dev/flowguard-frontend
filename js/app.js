@@ -372,7 +372,7 @@ const App = (function() {
     }
     
     function updateNavigation() {
-        const tabs = ['dashboard', 'assets', 'alerts-incidents', 'billing', 'support'];
+        const tabs = ['dashboard', 'assets', 'monitoring', 'alerts-incidents', 'documents', 'invoices', 'billing', 'account', 'support'];
         tabs.forEach(tab => {
             const tabEl = document.getElementById(`tab-${tab}`);
             if (tabEl) {
@@ -561,8 +561,165 @@ const App = (function() {
             }
             return;
         }
+
+        // Live Monitoring Tab — reuses AssetsTab sensor view
+        if (tabName === 'monitoring') {
+            if (isDemoMode) {
+                AssetsTab.renderDemo(container, property || { property_name: 'Demo Property' });
+            } else if (state === StateManager.STATES.ACTIVE && property) {
+                AssetsTab.render(container, property);
+            } else {
+                container.innerHTML = `
+                    <div class="sec-head">
+                        <div><div class="sec-title">Live Monitoring</div>
+                        <div class="sec-sub">Real-time sensor data from your drainage network</div></div>
+                    </div>
+                    <div class="card">
+                        <div class="empty-state">
+                            <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                            <h3>Monitoring not yet active</h3>
+                            <p>Live sensor monitoring becomes available once your FlowGuard system is deployed and active.</p>
+                        </div>
+                    </div>`;
+            }
+            return;
+        }
+
+        // Invoices Tab
+        if (tabName === 'invoices') {
+            renderInvoicesTab(container, property);
+            return;
+        }
+
+        // Account Tab — delegates to AccountSettings overlay
+        if (tabName === 'account') {
+            openAccountSettings();
+            return;
+        }
     }
     
+    // ============================================
+    // INVOICES TAB
+    // ============================================
+    async function renderInvoicesTab(container, property) {
+        const token = Auth.getToken();
+
+        container.innerHTML = `
+            <div class="sec-head">
+                <div><div class="sec-title">Invoices</div>
+                <div class="sec-sub">Billing history for your FlowGuard service</div></div>
+            </div>
+            <div class="card">
+                <div style="display:flex;align-items:center;justify-content:center;padding:40px 0;gap:9px;color:var(--ink-3);font-size:.82rem;">
+                    <div class="fg-spin" style="width:17px;height:17px;flex-shrink:0;"></div>Loading invoices…
+                </div>
+            </div>`;
+
+        try {
+            if (!property) {
+                container.querySelector('.card').innerHTML = `
+                    <div class="empty-state">
+                        <svg width="38" height="38" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <h3>No property registered</h3>
+                        <p>Register a property to view billing history.</p>
+                    </div>`;
+                return;
+            }
+
+            const res = await fetch(`${API_BASE}/properties/${property.property_id}/invoices`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            const invoices = res.ok ? ((await res.json()).data || []) : [];
+
+            if (invoices.length === 0) {
+                container.querySelector('.card').innerHTML = `
+                    <div class="empty-state">
+                        <svg width="38" height="38" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <h3>No invoices yet</h3>
+                        <p>Invoices will appear here once your service is active.</p>
+                    </div>`;
+                return;
+            }
+
+            // Calculate summary
+            const outstanding = invoices.filter(i => i.status === 'sent' || i.status === 'overdue');
+            const paid        = invoices.filter(i => i.status === 'paid');
+            const totalOwed   = outstanding.reduce((s, i) => s + Number(i.balance_due || i.total_amount || 0), 0);
+            const totalPaid   = paid.reduce((s, i) => s + Number(i.total_amount || 0), 0);
+            const fmt = n => '₦' + Number(n).toLocaleString('en-NG');
+
+            const rows = invoices.map(inv => {
+                const isOwed    = inv.status === 'sent' || inv.status === 'overdue';
+                const isPaid    = inv.status === 'paid';
+                const statusCls = isPaid ? 'nominal' : inv.status === 'overdue' ? 'critical' : 'watch';
+                const statusLbl = isPaid ? 'Paid' : inv.status === 'overdue' ? 'Overdue' : 'Due';
+                const dateStr   = inv.issue_date ? new Date(inv.issue_date).toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'}) : '—';
+                const dueStr    = inv.due_date  ? new Date(inv.due_date).toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'}) : '—';
+                return `<tr>
+                    <td class="bright" style="font-family:var(--ff-m);font-size:.76rem;">${inv.invoice_id||'—'}</td>
+                    <td>${inv.description || ('Service — ' + property.property_name)}</td>
+                    <td style="font-family:var(--ff-d);font-weight:800;color:var(--ink);">${fmt(inv.total_amount||0)}</td>
+                    <td><span class="badge ${statusCls}">${statusLbl}</span></td>
+                    <td style="font-family:var(--ff-m);font-size:.75rem;color:var(--ink-3);">${dateStr}</td>
+                    <td style="font-family:var(--ff-m);font-size:.75rem;${isOwed?'color:var(--err);font-weight:700;':''}">${dueStr}</td>
+                    <td>
+                        ${isOwed ? '<button class="btn btn-primary btn-sm">Pay Now</button>' : ''}
+                        ${isPaid ? '<button class="btn btn-ghost btn-sm">Receipt</button>' : ''}
+                    </td>
+                </tr>`;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="sec-head">
+                    <div><div class="sec-title">Invoices</div>
+                    <div class="sec-sub">Billing history for your FlowGuard service</div></div>
+                </div>
+                <div class="kpis" style="grid-template-columns:repeat(3,1fr);">
+                    <div class="kpi red">
+                        <div class="kpi-lbl">Outstanding</div>
+                        <div class="kpi-val red">${fmt(totalOwed)}</div>
+                        <div class="kpi-sub">${outstanding.length} invoice${outstanding.length!==1?'s':''} pending</div>
+                    </div>
+                    <div class="kpi blue">
+                        <div class="kpi-lbl">Total Paid (YTD)</div>
+                        <div class="kpi-val blue">${fmt(totalPaid)}</div>
+                        <div class="kpi-sub">${paid.length} invoice${paid.length!==1?'s':''} cleared</div>
+                    </div>
+                    <div class="kpi green">
+                        <div class="kpi-lbl">Account Status</div>
+                        <div class="kpi-val green" style="font-size:1.4rem;">${totalOwed > 0 ? 'Payment Due' : 'Good Standing'}</div>
+                        <div class="kpi-sub">${totalOwed > 0 ? 'Please settle outstanding balance' : 'No overdue balance'}</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-head">
+                        <div class="card-title">All Invoices</div>
+                        ${outstanding.length > 0 ? '<span class="badge critical">'+outstanding.length+' outstanding</span>' : '<span class="badge nominal">All clear</span>'}
+                    </div>
+                    <div class="inv-wrap">
+                        <table class="inv-tbl">
+                            <thead><tr>
+                                <th>Invoice ID</th><th>Description</th><th>Amount</th>
+                                <th>Status</th><th>Issue Date</th><th>Due Date</th><th></th>
+                            </tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                </div>`;
+
+        } catch(e) {
+            console.error('Invoices load error:', e);
+            container.innerHTML = `
+                <div class="sec-head"><div><div class="sec-title">Invoices</div></div></div>
+                <div class="card"><div class="empty-state">
+                    <svg width="38" height="38" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <h3>Failed to load invoices</h3>
+                    <p>Please refresh the page or contact support if the problem persists.</p>
+                </div></div>`;
+        }
+    }
+
     return {
         init,
         loadAndRender,
