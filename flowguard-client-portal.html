@@ -754,6 +754,10 @@ select option{background:var(--surface);color:var(--ink);}
       <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
       <span class="nav-label">Contract &amp; SLA</span>
     </button>
+    <button id="tab-documents" class="nav-item tab-item" onclick="switchTab('documents')">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+      <span class="nav-label">Reports &amp; Docs</span>
+    </button>
 
     <div class="nav-sect">Account</div>
     <button id="tab-support" class="nav-item tab-item" onclick="switchTab('support')">
@@ -856,6 +860,9 @@ select option{background:var(--surface);color:var(--ink);}
 
     <!-- Alerts tab container — AlertsTab.render() writes here -->
     <div id="content-alerts-incidents" class="tab hidden"></div>
+
+    <!-- Documents & Reports tab — DocumentsTab module renders here -->
+    <div id="content-documents" class="tab hidden"></div>
 
     <!-- Incident report form — OUTSIDE AlertsTab container so
          AlertsTab.render(container.innerHTML=...) cannot destroy it.
@@ -1048,9 +1055,9 @@ select option{background:var(--surface);color:var(--ink);}
                 </div>
               </div>
               <div style="display:flex;flex-direction:column;gap:7px;">
-                <a href="mailto:support@flowguard.ng" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;text-decoration:none;">
+                <a href="/cdn-cgi/l/email-protection#5c2f292c2c332e281c3a30332b3b293d2e3872323b" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;text-decoration:none;">
                   <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                  support@flowguard.ng
+                  <span class="__cf_email__" data-cfemail="88fbfdf8f8e7fafcc8eee4e7ffeffde9faeca6e6ef">[email&#160;protected]</span>
                 </a>
                 <a href="tel:02017003062" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;text-decoration:none;">
                   <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
@@ -1126,7 +1133,7 @@ select option{background:var(--surface);color:var(--ink);}
 </div>
 
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 /* ══════════════════════════════════════
    PORTAL GLOBALS — all functions here are
    called directly by JS modules or by HTML.
@@ -1141,6 +1148,7 @@ var TAB_TITLES = {
   assets: 'Infrastructure',
   'alerts-incidents': 'Alerts',
   billing: 'Contract & SLA',
+  documents: 'Reports & Documents',
   support: 'Support'
 };
 
@@ -1202,7 +1210,7 @@ function togglePref(el) { el.classList.toggle('on'); el.classList.toggle('off');
    Used by openAccountSettings/openNotifications to prevent
    App.loadAndRender() race conditions. */
 function _activateDashboardView() {
-  var ALL = ['dashboard','assets','alerts-incidents','billing','support'];
+  var ALL = ['dashboard','assets','alerts-incidents','billing','documents','support'];
   ALL.forEach(function(t) {
     document.getElementById('tab-'+t)?.classList.toggle('active', t === 'dashboard');
     var c = document.getElementById('content-'+t);
@@ -1218,7 +1226,7 @@ function _activateDashboardView() {
 /* ── Tab switching ──
    Called by: nav-item onclick, account-settings.js close(), notifications-page.js close() */
 function switchTab(tab) {
-  var ALL = ['dashboard','assets','alerts-incidents','billing','support'];
+  var ALL = ['dashboard','assets','alerts-incidents','billing','documents','support'];
 
   ALL.forEach(function(t) {
     // sidebar nav buttons
@@ -1246,6 +1254,8 @@ function switchTab(tab) {
       _subView = false;
       if (tab === 'support') {
         SupportTab.render(container);
+      } else if (tab === 'documents') {
+        DocumentsTab.render(container);
       } else if (typeof App !== 'undefined' && App.renderTab) {
         App.renderTab(tab, container);
       }
@@ -1502,6 +1512,297 @@ var SupportTab = (function() {
 })();
 
 
+
+
+/* ══════════════════════════════════════
+   DOCUMENTS & REPORTS TAB
+   Fetches field_reports sent to this client
+   and renders them. "View" opens a full
+   report modal. Calls the new API endpoints
+   built in ops-routes.js.
+══════════════════════════════════════ */
+var DocumentsTab = (function() {
+
+  var _reports  = [];
+  var _filter   = 'all'; // all | inspection | incident
+
+  /* ─── Entry point ─── */
+  async function render(container) {
+    container.innerHTML = _skeleton();
+    _bindFilters();
+    await _load();
+  }
+
+  /* ─── Skeleton HTML ─── */
+  function _skeleton() {
+    return [
+      '<div class="sec-head">',
+        '<div>',
+          '<div class="sec-title">Reports &amp; Documents</div>',
+          '<div class="sec-sub">Inspection reports, incident records, and documents sent to you by FlowGuard</div>',
+        '</div>',
+        '<div style="display:flex;gap:4px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--rs);padding:2px;">',
+          '<button class="filter-btn active" id="doc-f-all"        onclick="DocumentsTab.setFilter('all')">All</button>',
+          '<button class="filter-btn"        id="doc-f-inspection" onclick="DocumentsTab.setFilter('inspection')">Inspections</button>',
+          '<button class="filter-btn"        id="doc-f-incident"   onclick="DocumentsTab.setFilter('incident')">Incidents</button>',
+        '</div>',
+      '</div>',
+      '<div id="doc-list"></div>',
+    ].join('');
+  }
+
+  function _bindFilters() {}
+
+  /* ─── Load reports ─── */
+  async function _load() {
+    var list = document.getElementById('doc-list');
+    if (!list) return;
+    list.innerHTML = '<div style="display:flex;align-items:center;gap:9px;padding:32px 0;color:var(--ink-3);font-size:.82rem;"><div class="fg-spin" style="width:17px;height:17px;flex-shrink:0;"></div>Loading reports…</div>';
+
+    try {
+      var token = localStorage.getItem('token');
+      var prop  = typeof StateManager !== 'undefined' ? StateManager.getCurrentProperty() : null;
+
+      // Primary: fetch field_reports for this client's properties
+      var url = PORTAL_API + '/field-reports?limit=100';
+      var res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+      var data = res.ok ? await res.json() : { data: [] };
+      _reports = (data.data || []).filter(function(r) {
+        return r.status === 'sent_to_client';
+      });
+
+      // If property context, also check /properties/:id/inspection
+      if (prop && _reports.length === 0) {
+        try {
+          var r2 = await fetch(PORTAL_API + '/properties/' + prop.property_id + '/inspection', {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          if (r2.ok) {
+            var d2 = await r2.json();
+            if (d2.data) _reports = [_normaliseInspection(d2.data, prop)];
+          }
+        } catch(e) {}
+      }
+    } catch(e) {
+      _reports = [];
+    }
+
+    _renderList();
+  }
+
+  function _normaliseInspection(d, prop) {
+    return {
+      report_id:         d.report_id || 'legacy',
+      report_type:       'inspection',
+      title:             'Drainage Inspection — ' + (prop ? prop.property_name : ''),
+      summary:           d.findings ? d.findings.summary || '' : '',
+      findings:          d.findings ? d.findings.findings || '' : '',
+      recommendations:   d.findings ? d.findings.recommendations || '' : '',
+      property_name:     prop ? prop.property_name : '',
+      sent_to_client_at: d.sent_to_client_at || d.completed_at || null,
+      submitted_by_name: d.submitted_by_name || '',
+      team_name:         d.team_name || '',
+      status:            'sent_to_client',
+      _raw:              d
+    };
+  }
+
+  /* ─── Render list ─── */
+  function _renderList() {
+    var list = document.getElementById('doc-list');
+    if (!list) return;
+
+    var filtered = _filter === 'all' ? _reports
+      : _reports.filter(function(r) { return r.report_type === _filter; });
+
+    if (filtered.length === 0) {
+      list.innerHTML = [
+        '<div class="card">',
+          '<div class="empty-state">',
+            '<svg width="38" height="38" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>',
+            '<h3>No reports available</h3>',
+            '<p>Reports will appear here once FlowGuard has completed an inspection or resolved an incident for your property.</p>',
+          '</div>',
+        '</div>'
+      ].join('');
+      return;
+    }
+
+    var cards = filtered.map(function(r) { return _reportCard(r); });
+    list.innerHTML = [
+      '<div class="card">',
+        '<div class="card-head">',
+          '<div class="card-title">Sent to You</div>',
+          '<span class="badge nominal">' + filtered.length + ' document' + (filtered.length !== 1 ? 's' : '') + '</span>',
+        '</div>',
+        '<div class="card-body-sm">',
+          cards.join(''),
+        '</div>',
+      '</div>'
+    ].join('');
+  }
+
+  function _reportCard(r) {
+    var typeLabel = r.report_type === 'inspection' ? 'Inspection Report'
+      : r.report_type === 'incident' ? 'Incident Report'
+      : 'Report';
+    var iconColor = r.report_type === 'inspection' ? 'var(--blue)' : 'var(--caut)';
+    var iconBg    = r.report_type === 'inspection' ? 'rgba(22,168,211,.08)' : 'rgba(194,65,12,.08)';
+    var iconBord  = r.report_type === 'inspection' ? 'rgba(22,168,211,.15)' : 'rgba(194,65,12,.18)';
+    var dateStr   = r.sent_to_client_at
+      ? new Date(r.sent_to_client_at).toLocaleDateString('en-NG', { day:'numeric', month:'short', year:'numeric' })
+      : '—';
+    var context   = [r.property_name || r.site_name || '', r.team_name || '', dateStr].filter(Boolean).join(' · ');
+    var rid       = r.report_id || '';
+
+    return [
+      '<div class="doc-item">',
+        '<div class="doc-ico" style="background:' + iconBg + ';border-color:' + iconBord + ';">',
+          '<svg width="16" height="16" fill="none" stroke="' + iconColor + '" stroke-width="1.8" viewBox="0 0 24 24">',
+            '<path stroke-linecap="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>',
+          '</svg>',
+        '</div>',
+        '<div style="flex:1;min-width:0;">',
+          '<div class="doc-name">' + _esc(r.title || typeLabel) + '</div>',
+          '<div class="doc-meta">' + _esc(typeLabel) + ' · ' + _esc(context) + '</div>',
+        '</div>',
+        '<button class="btn btn-primary btn-sm" onclick="DocumentsTab.viewReport('' + _esc(rid) + '')" style="flex-shrink:0;">',
+          '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>',
+          'View Report',
+        '</button>',
+      '</div>'
+    ].join('');
+  }
+
+  /* ─── View full report modal ─── */
+  function viewReport(reportId) {
+    var r = _reports.find(function(x) { return (x.report_id || '') === reportId; });
+    if (!r) { showToast('Report not found', 'error'); return; }
+
+    var typeLabel = r.report_type === 'inspection' ? 'Drainage Inspection Report'
+      : r.report_type === 'incident' ? 'Incident Report'
+      : 'Field Report';
+    var typeBadgeCls = r.report_type === 'inspection' ? 'info' : 'warning';
+    var dateStr = r.sent_to_client_at
+      ? new Date(r.sent_to_client_at).toLocaleDateString('en-NG', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+      : '—';
+
+    var sections = [];
+
+    if (r.summary) {
+      sections.push(_section('Overview', r.summary));
+    }
+    if (r.findings) {
+      sections.push(_section('On-site Findings', r.findings));
+    }
+    if (r.recommendations) {
+      sections.push(_section('Recommendations', r.recommendations));
+    }
+    if (r.materials_used) {
+      sections.push(_section('Materials &amp; Equipment Used', r.materials_used));
+    }
+    // Legacy inspection shape
+    if (!r.findings && r._raw && r._raw.findings) {
+      var f = r._raw.findings;
+      if (f.overallCondition)  sections.push(_section('Overall Condition',   f.overallCondition));
+      if (f.floodRiskLevel)    sections.push(_section('Flood Risk Level',     f.floodRiskLevel));
+      if (f.drainageScore)     sections.push(_section('Drainage Score',       f.drainageScore + '/100'));
+      if (f.summary)           sections.push(_section('Summary',              f.summary));
+      if (f.recommendations)   sections.push(_section('Recommendations',      f.recommendations));
+    }
+
+    var metaRow = [
+      r.property_name  ? _metaItem('Property',     r.property_name)  : '',
+      r.site_name      ? _metaItem('Site',         r.site_name)      : '',
+      r.submitted_by_name ? _metaItem('Prepared by', r.submitted_by_name) : '',
+      r.team_name      ? _metaItem('Team',         r.team_name)      : '',
+      dateStr !== '—'  ? _metaItem('Issued',       dateStr)          : '',
+    ].filter(Boolean).join('');
+
+    var body = [
+      // Report header
+      '<div style="padding:20px;background:var(--navy-deep);border-radius:var(--r);margin-bottom:20px;position:relative;overflow:hidden;">',
+        '<div style="position:absolute;inset:0;background:radial-gradient(ellipse 100% 100% at 110% 110%,rgba(13,127,160,.5) 0%,transparent 55%);pointer-events:none;"></div>',
+        '<div style="position:relative;z-index:1;">',
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">',
+            '<span class="badge ' + typeBadgeCls + '">' + typeLabel + '</span>',
+            r.report_id !== 'legacy' ? '<span style="font-family:var(--ff-m);font-size:.65rem;color:rgba(255,255,255,.3);">' + _esc(r.report_id) + '</span>' : '',
+          '</div>',
+          '<div style="font-family:var(--ff-d);font-size:1.3rem;font-weight:800;color:white;margin-bottom:8px;line-height:1.2;">' + _esc(r.title || typeLabel) + '</div>',
+          metaRow ? '<div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;">' + metaRow + '</div>' : '',
+        '</div>',
+      '</div>',
+      // Sections
+      sections.length > 0
+        ? sections.join('')
+        : '<div class="notice info"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 16v-4m0-4h.01"/></svg><div>The full narrative for this report was submitted through the field portal. Contact your account manager for a detailed copy.</div></div>',
+    ].join('');
+
+    // Open modal
+    _openReportModal(typeLabel + ': ' + (r.property_name || r.site_name || r.report_id), body);
+  }
+
+  function _section(title, content) {
+    return [
+      '<div style="margin-bottom:18px;">',
+        '<div style="font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-3);margin-bottom:7px;">' + title + '</div>',
+        '<div style="font-size:.84rem;color:var(--ink-2);line-height:1.65;white-space:pre-wrap;">' + _esc(String(content)) + '</div>',
+      '</div>'
+    ].join('');
+  }
+
+  function _metaItem(label, value) {
+    return [
+      '<div>',
+        '<div style="font-size:.57rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:2px;">' + label + '</div>',
+        '<div style="font-size:.78rem;font-weight:600;color:rgba(255,255,255,.8);">' + _esc(String(value)) + '</div>',
+      '</div>'
+    ].join('');
+  }
+
+  function _openReportModal(title, bodyHTML) {
+    // Remove any existing report modal
+    document.getElementById('doc-report-modal')?.remove();
+
+    var m = document.createElement('div');
+    m.id = 'doc-report-modal';
+    m.className = 'modal-over show';
+    m.style.cssText = 'align-items:flex-start;padding-top:40px;';
+    m.innerHTML = [
+      '<div class="modal" style="max-width:680px;max-height:86vh;">',
+        '<div class="modal-head">',
+          '<div class="modal-title">' + _esc(title) + '</div>',
+          '<button class="modal-close" onclick="document.getElementById('doc-report-modal').remove()">✕</button>',
+        '</div>',
+        '<div class="modal-body" style="padding:20px;">' + bodyHTML + '</div>',
+        '<div class="modal-foot">',
+          '<button class="btn btn-ghost" onclick="document.getElementById('doc-report-modal').remove()">Close</button>',
+        '</div>',
+      '</div>'
+    ].join('');
+    document.body.appendChild(m);
+    m.addEventListener('click', function(e) { if (e.target === m) m.remove(); });
+  }
+
+  /* ─── Filter ─── */
+  function setFilter(f) {
+    _filter = f;
+    ['all','inspection','incident'].forEach(function(x) {
+      var btn = document.getElementById('doc-f-' + x);
+      if (btn) btn.classList.toggle('active', x === f);
+    });
+    _renderList();
+  }
+
+  /* ─── Helpers ─── */
+  function _esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  return { render, setFilter, viewReport };
+
+})();
+
 /* ── Bootstrap ── */
 window.addEventListener('load', function() {
   _syncThemeIcons();
@@ -1533,12 +1834,4 @@ window.addEventListener('load', function() {
 <script src="js/assets-tab.js"></script>
 <script src="js/alerts-tab.js"></script>
 <script src="js/billing-tab.js"></script>
-<script src="js/account-settings.js"></script>
-<script src="js/notifications-page.js"></script>
-<script src="js/onboarding.js"></script>
-<script src="js/dashboard.js"></script>
-<script src="js/billing.js"></script>
-<script src="js/app.js"></script>
-
-</body>
-</html>
+<script src="js/accou
