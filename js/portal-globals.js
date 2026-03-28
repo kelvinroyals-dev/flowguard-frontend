@@ -578,6 +578,89 @@ var DocumentsTab = (function() {
     ].join('');
   }
 
+  /* ─── View report modal ─── */
+  function viewReport(reportId) {
+    var r = _reports.find(function(x) { return (x.report_id || '') === reportId; });
+    if (!r) { showToast('Report not found', 'error'); return; }
+
+    var typeLabel = r.report_type === 'inspection' ? 'Drainage Inspection Report'
+      : r.report_type === 'incident' ? 'Incident Report' : 'Field Report';
+    var typeBadgeCls = r.report_type === 'inspection' ? 'info' : 'warning';
+    var dateStr = r.sent_to_client_at
+      ? new Date(r.sent_to_client_at).toLocaleDateString('en-NG', {weekday:'long', day:'numeric', month:'long', year:'numeric'})
+      : '—';
+
+    function sec(title, content) {
+      if (!content) return '';
+      return '<div style="margin-bottom:18px;">'
+        + '<div style="font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-3);margin-bottom:7px;">' + title + '</div>'
+        + '<div style="font-size:.84rem;color:var(--ink-2);line-height:1.65;white-space:pre-wrap;">' + _esc(String(content)) + '</div>'
+        + '</div>';
+    }
+    function meta(label, value) {
+      if (!value) return '';
+      return '<div><div style="font-size:.57rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:2px;">' + label + '</div>'
+        + '<div style="font-size:.78rem;font-weight:600;color:rgba(255,255,255,.8);">' + _esc(String(value)) + '</div></div>';
+    }
+
+    var sections = [
+      sec('Overview',           r.summary),
+      sec('Overall Condition',  r.overall_condition),
+      sec('Flood Risk Level',   r.flood_risk_level),
+      sec('Drainage Score',     r.drainage_condition_score ? r.drainage_condition_score + '/100' : ''),
+      sec('On-site Findings',   r.findings),
+      sec('Recommendations',    r.recommendations),
+      sec('Materials & Equipment', r.materials_used),
+    ].filter(Boolean).join('');
+
+    if (!sections) {
+      sections = '<div class="notice info"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 16v-4m0-4h.01"/></svg>'
+        + '<div>Contact your FlowGuard account manager for the full report narrative.</div></div>';
+    }
+
+    var metaRow = [
+      meta('Property',   r.property_name || r.site_name || ''),
+      meta('Condition',  r.overall_condition || ''),
+      meta('Flood Risk', r.flood_risk_level || ''),
+      meta('Prepared by', r.submitted_by_name || ''),
+      meta('Team',       r.team_name || ''),
+      meta('Issued',     dateStr !== '—' ? dateStr : ''),
+    ].filter(Boolean).join('');
+
+    var body = '<div style="padding:20px;background:var(--navy-deep);border-radius:var(--r);margin-bottom:20px;position:relative;overflow:hidden;">'
+      + '<div style="position:absolute;inset:0;background:radial-gradient(ellipse 100% 100% at 110% 110%,rgba(13,127,160,.5) 0%,transparent 55%);pointer-events:none;"></div>'
+      + '<div style="position:relative;z-index:1;">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
+      + '<span class="badge ' + typeBadgeCls + '">' + typeLabel + '</span>'
+      + (r.report_id && r.report_id !== 'legacy' ? '<span style="font-family:var(--ff-m);font-size:.65rem;color:rgba(255,255,255,.3);">' + _esc(r.report_id) + '</span>' : '')
+      + '</div>'
+      + '<div style="font-family:var(--ff-d);font-size:1.3rem;font-weight:800;color:white;margin-bottom:8px;line-height:1.2;">' + _esc(r.title || typeLabel) + '</div>'
+      + (metaRow ? '<div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;">' + metaRow + '</div>' : '')
+      + '</div></div>'
+      + sections;
+
+    // Remove any existing modal
+    var existing = document.getElementById('doc-report-modal');
+    if (existing) existing.remove();
+
+    var m = document.createElement('div');
+    m.id = 'doc-report-modal';
+    m.className = 'modal-over show';
+    m.style.cssText = 'align-items:flex-start;padding-top:40px;';
+    m.innerHTML = '<div class="modal" style="max-width:680px;max-height:86vh;">'
+      + '<div class="modal-head"><div class="modal-title">' + _esc(typeLabel + ': ' + (r.property_name || r.site_name || r.report_id)) + '</div>'
+      + '<button class="modal-close" onclick="document.getElementById(\'doc-report-modal\').remove()">✕</button></div>'
+      + '<div class="modal-body" style="padding:20px;">' + body + '</div>'
+      + '<div class="modal-foot">'
+      + '<button class="btn btn-ghost" onclick="document.getElementById(\'doc-report-modal\').remove()">Close</button>'
+      + '<button class="btn btn-primary" onclick="DocumentsTab.downloadPDF(\'' + _esc(r.report_id || '') + '\')">'
+      + '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/><' + '/svg>'
+      + 'Download PDF</button>'
+      + '</div></div>';
+    document.body.appendChild(m);
+    m.addEventListener('click', function(e) { if (e.target === m) m.remove(); });
+  }
+
   /* ─── PDF download — DOM-based to avoid </tag> in string literals ─── */
   function downloadPDF(reportId) {
     var r = _reports.find(function(x) { return (x.report_id || '') === reportId; });
