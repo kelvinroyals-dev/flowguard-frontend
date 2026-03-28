@@ -881,72 +881,7 @@ select option{background:var(--surface);color:var(--ink);}
     <div id="content-billing"   class="tab hidden"></div>
     <div id="content-account"   class="tab hidden"></div>
 
-    <!-- Incident report form — OUTSIDE AlertsTab container so
-         AlertsTab.render(container.innerHTML=...) cannot destroy it.
-         switchTab() shows/hides this alongside the alerts tab. -->
-    <div id="content-incident-report" class="hidden" style="padding:0 22px 22px">
-      <div class="card">
-        <div class="card-head">
-          <div>
-            <div class="card-title">Report Drainage Incident</div>
-            <div style="font-size:.72rem;color:var(--ink-3);margin-top:2px;">Logged to your FlowGuard operations team · Creates a tracked service ticket</div>
-          </div>
-          <span class="badge info" id="incident-sla-badge">SLA-governed response</span>
-        </div>
-        <div class="card-body">
-          <div class="f-row" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:0;" class="f-row">
-            <div class="f-field">
-              <label class="f-label">Service Layer</label>
-              <select id="incident-layer" class="f-input">
-                <option value="monitoring">Sentinel Network — Monitoring</option>
-                <option value="prevention">Bio-Treatment — Prevention</option>
-                <option value="response">Heavy-Plant — Response Required</option>
-                <option value="unknown">Not sure</option>
-              </select>
-            </div>
-            <div class="f-field">
-              <label class="f-label">Incident Type</label>
-              <select id="incident-type" class="f-input">
-                <option value="active_blockage">Active Blockage</option>
-                <option value="overflow">Overflow / Flooding</option>
-                <option value="siltation">Siltation / FOG Buildup</option>
-                <option value="sensor_gap">Sensor Data Gap</option>
-                <option value="structural">Structural Damage</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div class="f-field">
-              <label class="f-label">Priority</label>
-              <select id="incident-severity" class="f-input">
-                <option value="emergency">Emergency — Dispatch Required</option>
-                <option value="urgent">Urgent — Within SLA Window</option>
-                <option value="routine">Routine — Next Treatment Cycle</option>
-                <option value="observation">Observation — Log Only</option>
-              </select>
-            </div>
-          </div>
-          <div class="f-field">
-            <label class="f-label">Location / Zone</label>
-            <input type="text" id="incident-zone" class="f-input" placeholder="e.g. Block C perimeter drain, Gate 2 culvert…">
-          </div>
-          <div class="f-field">
-            <label class="f-label">Description *</label>
-            <textarea id="incident-description" class="f-input" rows="3" placeholder="Describe conditions — water level, visible blockage, sensor readings, access constraints…" style="resize:vertical;"></textarea>
-          </div>
-          <div class="f-field" style="margin-bottom:0;">
-            <label class="f-label">Photo Evidence <span style="font-weight:400;text-transform:none;opacity:.6;letter-spacing:0">— optional</span></label>
-            <input type="file" accept="image/*" id="incident-photo" class="f-input">
-          </div>
-          <div id="incident-alert" class="hidden" style="margin-top:12px;padding:10px 13px;border-radius:var(--rs);font-size:.8rem;"></div>
-          <div style="margin-top:14px;display:flex;gap:7px;">
-            <button class="btn btn-primary" id="incident-submit-btn" type="button">Submit Incident Report</button>
-            <button class="btn btn-ghost" onclick="document.getElementById('incident-form')&&document.getElementById('incident-form').reset()">Clear</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- Wrap in a form so reset works -->
-    <form id="incident-form" style="display:none"></form>
+
 
     <!-- ══════ SUPPORT TAB ══════
          Static HTML managed by SupportTab inline module.
@@ -1236,7 +1171,6 @@ function _activateDashboardView() {
     var c = document.getElementById('content-'+t);
     if (c) c.classList.add('hidden');
   });
-  document.getElementById('content-incident-report')?.classList.add('hidden');
   document.getElementById('content-dashboard')?.classList.remove('hidden');
   document.getElementById('user-menu')?.classList.add('hidden');
   var tEl = document.getElementById('tb-title');
@@ -1256,9 +1190,6 @@ function switchTab(tab) {
     if (c) c.classList.add('hidden');
   });
 
-  // Incident form shows only alongside alerts tab
-  var ir = document.getElementById('content-incident-report');
-  if (ir) ir.classList.toggle('hidden', tab !== 'alerts-incidents');
 
   // Show selected panel
   var container = document.getElementById('content-' + tab);
@@ -1380,54 +1311,7 @@ function initMap() {
   pat.appendChild(path); defs.appendChild(pat); svg.appendChild(defs);
   var rect = document.createElementNS(ns,'rect'); rect.setAttribute('width','800'); rect.setAttribute('height','460'); rect.setAttribute('fill','url(#mpg3)'); svg.appendChild(rect);
   el.innerHTML = ''; el.appendChild(svg);
-}
 
-/* ── Incident form ── */
-document.addEventListener('DOMContentLoaded', function() {
-  var submitBtn = document.getElementById('incident-submit-btn');
-  if (!submitBtn) return;
-
-  submitBtn.addEventListener('click', async function() {
-    var alertEl = document.getElementById('incident-alert');
-    alertEl.classList.add('hidden');
-    var desc = document.getElementById('incident-description').value.trim();
-    if (!desc) { _showIncMsg('error', 'Please describe the drainage condition.'); return; }
-    var token = localStorage.getItem('token');
-    var prop  = typeof StateManager !== 'undefined' ? StateManager.getCurrentProperty() : null;
-    var payload = {
-      layer:       document.getElementById('incident-layer').value,
-      type:        document.getElementById('incident-type').value,
-      severity:    document.getElementById('incident-severity').value,
-      zone:        document.getElementById('incident-zone').value.trim(),
-      description: desc,
-      property_id: prop ? prop.property_id : undefined
-    };
-    var orig = this.textContent;
-    this.textContent = 'Submitting…'; this.disabled = true;
-    try {
-      var res = await fetch(PORTAL_API + '/incidents', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      var data = await res.json();
-      if (data.success) {
-        ['incident-zone','incident-description'].forEach(function(id) { var el=document.getElementById(id); if(el) el.value=''; });
-        _showIncMsg('success', 'Report submitted. Ref: ' + (data.data?.incident_id || 'Pending'));
-        if (typeof AlertsTab !== 'undefined' && prop) { var ac = document.getElementById('content-alerts-incidents'); if (ac && !ac.classList.contains('hidden')) AlertsTab.render(ac, prop); }
-      } else { _showIncMsg('error', data.error || 'Submission failed.'); }
-    } catch(e) { _showIncMsg('error', 'Connection failed. Please try again.'); }
-    this.textContent = orig; this.disabled = false;
-  });
-
-  function _showIncMsg(type, msg) {
-    var el = document.getElementById('incident-alert');
-    el.classList.remove('hidden');
-    var ok = type === 'success';
-    el.style.cssText = 'padding:10px 13px;border-radius:var(--rs);font-size:.8rem;display:block;'
-      + 'background:' + (ok ? 'var(--ok-bg)' : 'var(--err-bg)') + ';'
-      + 'border:1px solid ' + (ok ? 'rgba(10,138,106,.3)' : 'rgba(220,38,38,.3)') + ';'
-      + 'color:' + (ok ? 'var(--ok)' : 'var(--err)');
-    el.textContent = msg;
-    setTimeout(function() { el.classList.add('hidden'); }, 8000);
-  }
-});
 
 /* ══════════════════════════════════════
    SUPPORT TAB MODULE

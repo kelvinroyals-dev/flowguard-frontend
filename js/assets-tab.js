@@ -1,297 +1,250 @@
 // ============================================
-// ASSETS TAB MODULE
-// Handles Assets tab rendering for all states
+// SUBMITTED AREAS TAB
+// Renders all user properties as pipeline cards
+// matching the target client-portal.html design
 // ============================================
 
 const AssetsTab = (function() {
     const API_BASE = 'https://api.flowguard.ng/api/v1';
-    
-    // ============================================
-    // REAL DATA - Fetch from API
-    // ============================================
+
+    // ── Status → pipeline step mapping ──────────────────────────────────
+    const STATUS_STEP = {
+        'submitted':            2,
+        'inspection_scheduled': 3,
+        'inspection_ongoing':   3,
+        'report_ready':         4,
+        'quote_sent':           5,
+        'payment_pending':      6,
+        'payment_completed':    6,
+        'deployment_scheduled': 6,
+        'active':               7,
+    };
+
+    const STATUS_BADGE = {
+        'submitted':            { cls: 'watch',   label: 'Awaiting Review' },
+        'inspection_scheduled': { cls: 'info',    label: 'Inspection Scheduled' },
+        'inspection_ongoing':   { cls: 'info',    label: 'Inspection Ongoing' },
+        'report_ready':         { cls: 'watch',   label: 'Report Ready' },
+        'quote_sent':           { cls: 'info',    label: 'Quote Sent' },
+        'payment_pending':      { cls: 'warning', label: 'Payment Pending' },
+        'payment_completed':    { cls: 'nominal', label: 'Payment Received' },
+        'deployment_scheduled': { cls: 'info',    label: 'Deployment Scheduled' },
+        'active':               { cls: 'nominal', label: 'Active — Monitored' },
+    };
+
+    const STEPS = ['Submitted','Reviewed','Inspection','Report','Quote','Payment','Active'];
+
+    // ── Entry points ─────────────────────────────────────────────────────
     async function render(container, property) {
-        container.innerHTML = `
-            <div class="flex items-center justify-center py-20">
-                <div class="text-center">
-                    <svg class="animate-spin h-12 w-12 mx-auto text-blue-600" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                    <p class="mt-4 text-gray-600 dark:text-gray-400">Loading assets...</p>
-                </div>
-            </div>
-        `;
-        
+        await _loadAndRender(container);
+    }
+
+    async function renderEmpty(container, property) {
+        await _loadAndRender(container);
+    }
+
+    function renderDemo(container, property) {
+        // Still fetch real data — demo mode shows the same pipeline view
+        _loadAndRender(container);
+    }
+
+    // ── Main loader ───────────────────────────────────────────────────────
+    async function _loadAndRender(container) {
+        container.innerHTML = '<div style="display:flex;align-items:center;gap:9px;padding:40px 0;color:var(--ink-3);font-size:.82rem;">'
+            + '<div class="fg-spin" style="width:17px;height:17px;flex-shrink:0;"></div>Loading areas…</div>';
+
         try {
             const token = Auth.getToken();
-            const response = await fetch(`${API_BASE}/properties/${property.property_id}/assets`, {
+            const res = await fetch(`${API_BASE}/properties`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            
-            if (!response.ok) {
-                throw new Error('Failed to load assets');
-            }
-            
-            const data = await response.json();
-            const assets = data.data || [];
-            
-            renderAssetsContent(container, property, assets);
-            
-        } catch (error) {
-            console.error('Assets load error:', error);
-            renderError(container);
+            if (!res.ok) throw new Error('Failed to load properties');
+            const data = await res.json();
+            const properties = data.data || [];
+            _render(container, properties);
+        } catch(e) {
+            console.error('Areas load error:', e);
+            container.innerHTML = '<div class="card"><div class="empty-state">'
+                + '<svg width="38" height="38" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+                + '<h3>Failed to load areas</h3><p>Please refresh the page.</p>'
+                + '</div></div>';
         }
     }
-    
-    // ============================================
-    // DEMO MODE - Show demo assets
-    // ============================================
-    function renderDemo(container, property) {
-        const demoAssets = [
-            {
-                asset_id: 'MPD-001',
-                name: 'Main Perimeter Drain',
-                type: 'Open Drain',
-                length_meters: 850,
-                health_score: 95,
-                status: 'operational',
-                last_maintenance: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-                next_maintenance: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString()
-            },
-            {
-                asset_id: 'GHC-002',
-                name: 'Gate House Culvert',
-                type: 'Culvert',
-                length_meters: 120,
-                health_score: 88,
-                status: 'operational',
-                last_maintenance: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-                next_maintenance: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString()
-            },
-            {
-                asset_id: 'SRD-003',
-                name: 'Service Road Drain',
-                type: 'Open Drain',
-                length_meters: 450,
-                health_score: 72,
-                status: 'needs_attention',
-                last_maintenance: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-                next_maintenance: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString()
-            },
-            {
-                asset_id: 'RSD-004',
-                name: 'Residential Section Drain',
-                type: 'Covered Drain',
-                length_meters: 650,
-                health_score: 91,
-                status: 'operational',
-                last_maintenance: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-                next_maintenance: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-            }
-        ];
-        
-        renderAssetsContent(container, property, demoAssets);
-    }
-    
-    // ============================================
-    // EMPTY STATE - System not deployed yet
-    // ============================================
-    function renderEmpty(container, property) {
-        container.innerHTML = `
-            <div class="max-w-2xl mx-auto py-20 text-center">
-                <div class="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full mx-auto mb-6 flex items-center justify-center">
-                    <svg class="w-12 h-12 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                    </svg>
-                </div>
-                <h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">Assets Coming Soon</h3>
-                <p class="text-gray-600 dark:text-gray-400 mb-6">
-                    Your asset inventory will be available once our team completes the site inspection and system deployment for <strong>${property.property_name}</strong>.
-                </p>
-                <div class="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-6 text-left">
-                    <h4 class="font-bold text-blue-900 dark:text-blue-300 mb-3">What are Assets?</h4>
-                    <ul class="space-y-2 text-sm text-blue-800 dark:text-blue-400">
-                        <li class="flex items-start gap-2">
-                            <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
-                            <span>Drains, culverts, and channels in your property</span>
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
-                            <span>Real-time health monitoring and condition scores</span>
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
-                            <span>Maintenance schedules and service history</span>
-                        </li>
-                    </ul>
-                </div>
-                <button onclick="toggleDemoMode()" class="mt-8 px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:shadow-lg transition-all">
-                    ️ Preview with Demo Mode
-                </button>
-            </div>
-        `;
-    }
-    
-    // ============================================
-    // SHARED RENDERING - Used by both real and demo
-    // ============================================
-    function renderAssetsContent(container, property, assets) {
-        const totalAssets = assets.length;
-        const avgHealth = totalAssets > 0 
-            ? Math.round(assets.reduce((sum, a) => sum + (a.health_score || 0), 0) / totalAssets) 
-            : 0;
-        
-        // Find next maintenance
-        let nextMaintenance = '--';
-        if (assets.length > 0) {
-            const upcoming = assets
-                .filter(a => a.next_maintenance)
-                .sort((a, b) => new Date(a.next_maintenance) - new Date(b.next_maintenance));
-            
-            if (upcoming.length > 0) {
-                const days = Math.ceil((new Date(upcoming[0].next_maintenance) - new Date()) / (1000 * 60 * 60 * 24));
-                nextMaintenance = days > 0 ? `${days} days` : 'Overdue';
-            }
+
+    function _render(container, properties) {
+        var header = '<div class="sec-head">'
+            + '<div><div class="sec-title">Submitted Areas</div>'
+            + '<div class="sec-sub">All drainage estates and communities you have registered with FlowGuard</div></div>'
+            + '<button class="btn btn-primary" onclick="openModal(\'modal-submit\')">'
+            + '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>'
+            + 'Submit New Area</button>'
+            + '</div>';
+
+        if (properties.length === 0) {
+            container.innerHTML = header
+                + '<div class="card"><div class="empty-state">'
+                + '<svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline stroke-linecap="round" stroke-linejoin="round" points="9 22 9 12 15 12 15 22"/></svg>'
+                + '<h3>No areas submitted yet</h3>'
+                + '<p>Submit your first drainage area to get started.</p>'
+                + '</div></div>';
+            return;
         }
-        
-        container.innerHTML = `
-            <div class="space-y-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="text-2xl font-bold font-space text-primary">My Assets</h2>
-                        <p class="text-sm text-secondary mt-1">Drainage infrastructure for <span class="font-semibold text-primary">${property.property_name}</span></p>
-                    </div>
-                    <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
-                        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        Report Issue
-                    </button>
-                </div>
 
-                <!-- Stats Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="modern-card p-5">
-                        <p class="text-xs font-medium text-secondary mb-2">Total Assets</p>
-                        <p class="text-3xl font-bold font-space text-primary">${totalAssets}</p>
-                        <p class="text-xs text-secondary mt-1">Monitored infrastructure</p>
-                    </div>
-                    <div class="modern-card p-5">
-                        <p class="text-xs font-medium text-secondary mb-2">Health Status</p>
-                        <p class="text-3xl font-bold font-space ${avgHealth >= 80 ? 'text-green-600' : avgHealth >= 60 ? 'text-yellow-600' : 'text-red-600'}">${avgHealth}%</p>
-                        <p class="text-xs text-secondary mt-1">Average condition</p>
-                    </div>
-                    <div class="modern-card p-5">
-                        <p class="text-xs font-medium text-secondary mb-2">Next Maintenance</p>
-                        <p class="text-3xl font-bold font-space text-primary">${nextMaintenance}</p>
-                        <p class="text-xs text-secondary mt-1">Scheduled service</p>
-                    </div>
-                </div>
+        var cards = properties.map(function(p) { return _propertyCard(p); }).join('');
+        container.innerHTML = header + cards;
+    }
 
-                <!-- Assets Table -->
-                <div class="modern-card p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-sm font-bold text-primary">Infrastructure Assets</h3>
-                        <div class="flex gap-2">
-                            <button class="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-xs font-medium">Filter</button>
-                            <button class="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-xs font-medium">Export CSV</button>
-                        </div>
-                    </div>
-                    
-                    ${assets.length > 0 ? `
-                        <div class="overflow-x-auto">
-                            <table class="w-full">
-                                <thead class="bg-gray-50 dark:bg-gray-800">
-                                    <tr>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400">Asset ID</th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400">Name</th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400">Type</th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400">Length</th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400">Health</th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400">Status</th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400">Next Service</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                    ${assets.map(asset => {
-                                        const healthColor = asset.health_score >= 80 ? 'green' : asset.health_score >= 60 ? 'yellow' : 'red';
-                                        const statusClass = asset.status === 'operational' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
-                                        const nextService = asset.next_maintenance 
-                                            ? new Date(asset.next_maintenance).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })
-                                            : '--';
-                                        
-                                        return `
-                                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                                                <td class="px-4 py-3 text-sm font-mono text-gray-900 dark:text-gray-100">${asset.asset_id}</td>
-                                                <td class="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">${asset.name}</td>
-                                                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">${asset.type}</td>
-                                                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">${asset.length_meters}m</td>
-                                                <td class="px-4 py-3">
-                                                    <div class="flex items-center gap-2">
-                                                        <div class="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                                            <div class="bg-${healthColor}-600 h-2 rounded-full" style="width: ${asset.health_score}%"></div>
-                                                        </div>
-                                                        <span class="text-sm font-semibold text-${healthColor}-600">${asset.health_score}%</span>
-                                                    </div>
-                                                </td>
-                                                <td class="px-4 py-3">
-                                                    <span class="inline-block px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">
-                                                        ${asset.status.replace(/_/g, ' ')}
-                                                    </span>
-                                                </td>
-                                                <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">${nextService}</td>
-                                            </tr>
-                                        `;
-                                    }).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    ` : `
-                        <div class="text-center py-12">
-                            <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
-                            </svg>
-                            <p class="text-gray-600 dark:text-gray-400">No assets found</p>
-                        </div>
-                    `}
-                </div>
-            </div>
-        `;
+    function _propertyCard(p) {
+        var status   = p.status || 'submitted';
+        var step     = STATUS_STEP[status] || 1;
+        var badge    = STATUS_BADGE[status] || { cls: 'offline', label: status.replace(/_/g,' ') };
+        var isActive = status === 'active';
+
+        var submittedStr = p.created_at
+            ? new Date(p.created_at).toLocaleDateString('en-NG', { day:'numeric', month:'short', year:'numeric' })
+            : '—';
+        var inspDate = p.inspection_date || p.scheduled_date
+            ? new Date(p.inspection_date || p.scheduled_date).toLocaleDateString('en-NG', { day:'numeric', month:'short', year:'numeric' })
+            : '—';
+
+        var typeLabel = (p.property_type || '').replace(/_/g,' ').replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+        var location  = [p.city, p.state].filter(Boolean).join(', ');
+        var subtitle  = [typeLabel, location, p.coverage_area ? p.coverage_area + ' km²' : ''].filter(Boolean).join(' · ');
+
+        // Action button
+        var actionBtn = isActive
+            ? '<button class="btn btn-primary btn-sm" onclick="switchTab(\'monitoring\')">View Sensors</button>'
+            : '<button class="btn btn-ghost btn-sm">Edit</button>';
+
+        // 4-col metadata grid — varies by status
+        var meta;
+        if (isActive) {
+            meta = _metaGrid([
+                { label: 'Active Since',  value: submittedStr },
+                { label: 'Sensors',       value: p.sensors_online ? p.sensors_online + ' Online' : '—', color: 'var(--ok)' },
+                { label: 'Monthly Fee',   value: p.monthly_fee ? '₦' + Number(p.monthly_fee).toLocaleString('en-NG') : '—', font: 'var(--ff-d)', size: '.9rem', weight: '800' },
+                { label: 'SLA Uptime',    value: p.network_uptime ? p.network_uptime + '%' : '—', color: 'var(--ok)' },
+            ]);
+        } else if (status === 'inspection_scheduled' || status === 'inspection_ongoing') {
+            meta = _metaGrid([
+                { label: 'Submitted',       value: submittedStr },
+                { label: 'Inspection Date', value: inspDate },
+                { label: 'Urgency',         value: _urgencyBadge(p.urgency_level) },
+                { label: 'Assigned Team',   value: p.inspection_team || p.assigned_team || '—' },
+            ]);
+        } else {
+            meta = _metaGrid([
+                { label: 'Submitted',    value: submittedStr },
+                { label: 'Urgency',      value: _urgencyBadge(p.urgency_level) },
+                { label: 'Ref',          value: p.property_id, font: 'var(--ff-m)', size: '.74rem', color: 'var(--ink-3)' },
+                { label: 'Est. Response',value: '3–5 business days' },
+            ]);
+        }
+
+        // Pipeline tracker
+        var tracker = _pipelineTracker(step);
+
+        // Contextual notice
+        var notice = _contextNotice(status, p, inspDate);
+
+        return '<div class="card">'
+            + '<div class="card-head">'
+            + '<div><div class="card-title">' + _esc(p.property_name) + '</div>'
+            + (subtitle ? '<div style="font-size:.74rem;color:var(--ink-3);margin-top:2px;">' + _esc(subtitle) + '</div>' : '')
+            + '</div>'
+            + '<div style="display:flex;align-items:center;gap:8px;">'
+            + '<span class="badge ' + badge.cls + '">' + badge.label + '</span>'
+            + actionBtn
+            + '</div>'
+            + '</div>'
+            + '<div class="card-body">'
+            + meta
+            + '<div style="font-size:.64rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px;">Pipeline Progress</div>'
+            + tracker
+            + notice
+            + '</div>'
+            + '</div>';
     }
-    
-    function renderError(container) {
-        container.innerHTML = `
-            <div class="modern-card p-8 text-center">
-                <svg class="w-16 h-16 mx-auto text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Failed to Load Assets</h3>
-                <p class="text-gray-600 dark:text-gray-400 mb-4">Unable to fetch asset data. Please try again.</p>
-                <button onclick="location.reload()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    Retry
-                </button>
-            </div>
-        `;
+
+    function _metaGrid(items) {
+        var cols = items.map(function(item) {
+            var val = item.value || '—';
+            // If already contains HTML tags (badge), render raw
+            var isHtml = val.indexOf('<') !== -1;
+            var valHtml = isHtml ? val
+                : '<div style="'
+                    + 'font-family:' + (item.font || 'var(--ff-b)') + ';'
+                    + 'font-size:' + (item.size || '.84rem') + ';'
+                    + 'font-weight:' + (item.weight || '600') + ';'
+                    + 'color:' + (item.color || 'var(--ink)') + ';">'
+                    + _esc(String(val)) + '</div>';
+            return '<div>'
+                + '<div style="font-size:.62rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px;">' + item.label + '</div>'
+                + valHtml
+                + '</div>';
+        }).join('');
+        return '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">' + cols + '</div>';
     }
-    
-    return {
-        render,
-        renderDemo,
-        renderEmpty
-    };
+
+    function _urgencyBadge(level) {
+        if (!level) return '—';
+        var map = { low:'offline', medium:'watch', high:'warning', critical:'critical' };
+        var cls = map[level.toLowerCase()] || 'offline';
+        var lbl = level.charAt(0).toUpperCase() + level.slice(1);
+        return '<span class="badge ' + cls + '">' + lbl + '</span>';
+    }
+
+    function _pipelineTracker(currentStep) {
+        var steps = STEPS.map(function(label, i) {
+            var num = i + 1;
+            var isDone = num < currentStep;
+            var isCur  = num === currentStep;
+            var isPend = num > currentStep;
+            var dotCls = isDone ? 'done' : isCur ? 'cur' : 'pend';
+            var lblCls = isDone ? 'done' : isCur ? 'cur' : 'pend';
+            var stepCls= isDone ? 'done' : '';
+            var dotContent = isDone ? '✓' : num;
+            // Last step active = green
+            var dotStyle = (isDone && num === 7) ? 'style="background:var(--ok);"' : '';
+            var lblStyle = (isDone && num === 7) ? 'style="color:var(--ok);"' : '';
+            return '<div class="pl-step ' + stepCls + '">'
+                + '<div class="pl-dot ' + dotCls + '" ' + dotStyle + '>' + dotContent + '</div>'
+                + '<div class="pl-lbl ' + lblCls + '" ' + lblStyle + '>' + label + '</div>'
+                + '</div>';
+        }).join('');
+        return '<div class="pl-track">' + steps + '</div>';
+    }
+
+    function _contextNotice(status, p, inspDate) {
+        var msg = '';
+        var type = 'info';
+        if (status === 'inspection_scheduled') {
+            msg = 'Inspection confirmed for <strong>' + _esc(inspDate) + '</strong>.'
+                + (p.contact_phone ? ' Our team will call you at ' + _esc(p.contact_phone) + ' at least 24 hours before arrival.' : '');
+        } else if (status === 'inspection_ongoing') {
+            msg = 'Site inspection is currently in progress. Our team is on site.';
+        } else if (status === 'report_ready') {
+            msg = 'Inspection complete. Your report is being reviewed and will be available in the Reports &amp; Docs section shortly.';
+        } else if (status === 'quote_sent') {
+            msg = 'Your inspection report is ready and a service quote has been sent. Review it in the <strong>Contract &amp; SLA</strong> section.';
+        } else if (status === 'payment_pending' || status === 'payment_completed') {
+            msg = 'Payment received. Our team is scheduling your system deployment — you\'ll be notified within 48 hours.';
+            type = 'ok';
+        } else if (status === 'active') {
+            return '';
+        } else {
+            msg = 'Our team is currently reviewing your submission. You will be notified by email once an inspection date is confirmed.';
+        }
+        if (!msg) return '';
+        return '<div class="notice ' + type + '" style="margin-top:14px;">'
+            + '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+            + '<div>' + msg + '</div>'
+            + '</div>';
+    }
+
+    function _esc(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    return { render, renderDemo, renderEmpty };
 })();
-
-// Helper function for demo toggle button in empty state
-function toggleDemoMode() {
-    const toggle = document.getElementById('demo-toggle');
-    if (toggle) {
-        toggle.checked = !toggle.checked;
-        toggle.dispatchEvent(new Event('change'));
-    }
-}

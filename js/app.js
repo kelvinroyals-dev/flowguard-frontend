@@ -526,15 +526,9 @@ const App = (function() {
         
         console.log(` Rendering ${tabName} tab - Demo: ${isDemoMode}, State: ${state}`);
         
-        // Assets Tab
+        // Assets Tab — always renders, fetches all properties internally
         if (tabName === 'assets') {
-            if (isDemoMode) {
-                AssetsTab.renderDemo(container, property || { property_name: 'Demo Property' });
-            } else if (state === StateManager.STATES.ACTIVE && property) {
-                AssetsTab.render(container, property);
-            } else if (property) {
-                AssetsTab.renderEmpty(container, property);
-            }
+            AssetsTab.render(container, property || {});
             return;
         }
         
@@ -542,10 +536,10 @@ const App = (function() {
         if (tabName === 'alerts-incidents') {
             if (isDemoMode) {
                 AlertsTab.renderDemo(container, property || { property_name: 'Demo Property' });
-            } else if (state === StateManager.STATES.ACTIVE && property) {
-                AlertsTab.render(container, property);
             } else if (property) {
-                AlertsTab.renderEmpty(container, property);
+                AlertsTab.render(container, property);
+            } else {
+                AlertsTab.renderEmpty(container, { property_name: 'your property' });
             }
             return;
         }
