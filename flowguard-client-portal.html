@@ -816,6 +816,12 @@ select option{background:var(--surface);color:var(--ink);}
       <input placeholder="Search…" aria-label="Search">
     </div>
 
+    <!-- Submit Area CTA — always visible -->
+    <button class="btn btn-primary btn-sm" onclick="openModal('modal-submit')">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+      Submit Area
+    </button>
+
     <!-- Estate switcher -->
     <div id="estate-switcher-container" class="hidden">
       <button id="estate-switcher-btn" onclick="toggleEstateSwitcher()" class="est-btn" aria-haspopup="true">
