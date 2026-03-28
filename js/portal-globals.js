@@ -66,6 +66,63 @@ document.addEventListener('click', function(e) {
 /* ── Modal ── */
 function openModal(id)  { var m = document.getElementById(id); if (m) m.classList.add('show'); }
 function closeModal(id) { var m = document.getElementById(id); if (m) m.classList.remove('show'); }
+
+/* ── Submit Area ── */
+async function submitArea() {
+  var name    = (document.getElementById('sub-name')    ||{}).value || '';
+  var type    = (document.getElementById('sub-type')    ||{}).value || '';
+  var city    = (document.getElementById('sub-city')    ||{}).value || '';
+  var state   = (document.getElementById('sub-state')   ||{}).value || '';
+  var address = (document.getElementById('sub-address') ||{}).value || '';
+  var area    = (document.getElementById('sub-area')    ||{}).value || '';
+  var urgency = (document.getElementById('sub-urgency') ||{}).value || 'medium';
+  var desc    = (document.getElementById('sub-desc')    ||{}).value || '';
+  var errEl   = document.getElementById('sub-error');
+  var btn     = document.getElementById('sub-btn');
+
+  if (!name.trim() || !type || !city.trim() || !state.trim()) {
+    if (errEl) { errEl.textContent = 'Please fill in Area Name, Property Type, City and State.'; errEl.classList.remove('hidden'); }
+    return;
+  }
+  if (errEl) errEl.classList.add('hidden');
+  if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+
+  try {
+    var token = localStorage.getItem('token');
+    var res = await fetch(PORTAL_API + '/properties', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        propertyName:     name.trim(),
+        propertyType:     type,
+        city:             city.trim(),
+        state:            state.trim(),
+        addressLine1:     address.trim(),
+        coverageArea:     area.trim(),
+        urgencyLevel:     urgency,
+        issueDescription: desc.trim()
+      })
+    });
+    var data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Submission failed');
+
+    ['sub-name','sub-type','sub-city','sub-state','sub-address','sub-area','sub-desc'].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.value = '';
+    });
+    var urgEl = document.getElementById('sub-urgency');
+    if (urgEl) urgEl.value = 'medium';
+
+    closeModal('modal-submit');
+    showToast('Area submitted! Our team will be in touch within 3–5 business days.', 'success');
+    setTimeout(function() {
+      if (typeof App !== 'undefined' && App.loadAndRender) App.loadAndRender();
+    }, 600);
+
+  } catch(e) {
+    if (errEl) { errEl.textContent = e.message || 'Submission failed. Please try again.'; errEl.classList.remove('hidden'); }
+    if (btn) { btn.disabled = false; btn.textContent = 'Submit Area'; }
+  }
+}
 document.querySelectorAll('.modal-over').forEach(function(ov) {
   ov.addEventListener('click', function(e) { if (e.target === ov) ov.classList.remove('show'); });
 });
@@ -117,9 +174,10 @@ function switchTab(tab) {
     } else {
       _subView = false;
       if (tab === 'support') {
-        SupportTab.render(container);
+        if (typeof SupportTab !== 'undefined') SupportTab.render(container);
       } else if (tab === 'documents') {
-        DocumentsTab.render(container);
+        if (typeof DocumentsTab !== 'undefined') DocumentsTab.render(container);
+        else container.innerHTML = '<div class="empty-state"><h3>Loading…</h3><p>Please refresh the page.</p></div>';
       } else if (tab === 'account') {
         openAccountSettings();
         return;

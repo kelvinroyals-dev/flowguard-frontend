@@ -1054,29 +1054,42 @@ select option{background:var(--surface);color:var(--ink);}
     <div class="modal-body">
       <p style="font-size:.8rem;color:var(--ink-3);margin-bottom:18px;line-height:1.6;">Our team reviews submissions within 3–5 business days and will contact you to schedule an inspection.</p>
       <div class="f-row">
-        <div class="f-field"><label class="f-label">Area / Estate Name</label><input class="f-input" placeholder="e.g. Parkview Towers Phase 2"></div>
+        <div class="f-field"><label class="f-label">Area / Estate Name *</label><input id="sub-name" class="f-input" placeholder="e.g. Parkview Towers Phase 2"></div>
         <div class="f-field">
-          <label class="f-label">Property Type</label>
-          <select class="f-input"><option value="">Select type…</option><option>Residential Estate</option><option>Commercial Complex</option><option>Industrial Park</option><option>Mixed Use</option><option>Individual Building</option></select>
+          <label class="f-label">Property Type *</label>
+          <select id="sub-type" class="f-input">
+            <option value="">Select type…</option>
+            <option value="residential_estate">Residential Estate</option>
+            <option value="commercial_complex">Commercial Complex</option>
+            <option value="industrial_park">Industrial Park</option>
+            <option value="mixed_use">Mixed Use</option>
+            <option value="individual_building">Individual Building</option>
+          </select>
         </div>
       </div>
       <div class="f-row">
-        <div class="f-field"><label class="f-label">City</label><input class="f-input" placeholder="e.g. Lekki"></div>
-        <div class="f-field"><label class="f-label">State</label><input class="f-input" placeholder="e.g. Lagos"></div>
+        <div class="f-field"><label class="f-label">City *</label><input id="sub-city" class="f-input" placeholder="e.g. Lekki"></div>
+        <div class="f-field"><label class="f-label">State *</label><input id="sub-state" class="f-input" placeholder="e.g. Lagos"></div>
       </div>
-      <div class="f-field"><label class="f-label">Full Address</label><input class="f-input" placeholder="Street address"></div>
+      <div class="f-field"><label class="f-label">Full Address</label><input id="sub-address" class="f-input" placeholder="Street address"></div>
       <div class="f-row">
-        <div class="f-field"><label class="f-label">Coverage Area (approx.)</label><input class="f-input" placeholder="e.g. 3.5 km²"></div>
+        <div class="f-field"><label class="f-label">Coverage Area (approx.)</label><input id="sub-area" class="f-input" placeholder="e.g. 3.5 km²"></div>
         <div class="f-field">
           <label class="f-label">Urgency Level</label>
-          <select class="f-input"><option>Low</option><option selected>Medium</option><option>High</option><option>Critical</option></select>
+          <select id="sub-urgency" class="f-input">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
         </div>
       </div>
-      <div class="f-field" style="margin-bottom:0;"><label class="f-label">Issue Description (optional)</label><textarea class="f-input" rows="3" placeholder="Describe any existing drainage problems, flooding history, or specific concerns…" style="resize:vertical;"></textarea></div>
+      <div class="f-field" style="margin-bottom:0;"><label class="f-label">Issue Description (optional)</label><textarea id="sub-desc" class="f-input" rows="3" placeholder="Describe any existing drainage problems, flooding history, or specific concerns…" style="resize:vertical;"></textarea></div>
+      <div id="sub-error" class="hidden" style="margin-top:12px;padding:10px 13px;border-radius:var(--rs);font-size:.8rem;background:var(--err-bg,#fef2f2);border:1px solid rgba(220,38,38,.25);color:var(--err,#dc2626);"></div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('modal-submit')">Cancel</button>
-      <button class="btn btn-primary">
+      <button class="btn btn-primary" id="sub-btn" onclick="submitArea()">
         <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
         Submit Area
       </button>
