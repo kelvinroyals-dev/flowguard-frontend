@@ -145,7 +145,10 @@ const BillingTab = (function() {
     // SHARED RENDERING - Used by both real and demo
     // ============================================
     function renderBillingContent(container, property, billing) {
-        const nextBillingDays = Math.ceil((new Date(billing.subscription.next_billing_date) - new Date()) / (1000 * 60 * 60 * 24));
+        const nextBillingDate = billing.subscription.next_billing_date;
+        const nextBillingDays = nextBillingDate
+            ? Math.ceil((new Date(nextBillingDate) - new Date()) / (1000 * 60 * 60 * 24))
+            : null;
         const uptimeStatus = billing.sla.current_uptime >= billing.sla.uptime_guarantee ? 'success' : 'warning';
         const responseStatus = billing.sla.avg_response_hours <= billing.sla.response_time_hours ? 'success' : 'warning';
         
@@ -178,8 +181,8 @@ const BillingTab = (function() {
                         </div>
                         <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                             <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">Next Billing</p>
-                            <p class="text-2xl font-bold text-primary">${nextBillingDays} days</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">${new Date(billing.subscription.next_billing_date).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' })}</p>
+                            <p class="text-2xl font-bold text-primary">${nextBillingDays !== null ? nextBillingDays + ' days' : 'Not set'}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">${nextBillingDate ? new Date(nextBillingDate).toLocaleDateString('en-NG', { month: 'short', day: 'numeric' }) : 'No invoice raised yet'}</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                             <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">Member Since</p>
@@ -226,7 +229,7 @@ const BillingTab = (function() {
                         
                         <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                             <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">Resolution Rate</p>
-                            <p class="text-3xl font-bold text-green-600">${Math.round((billing.sla.incidents_resolved / billing.sla.incidents_total) * 100)}%</p>
+                            <p class="text-3xl font-bold text-green-600">${billing.sla.incidents_total > 0 ? Math.round((billing.sla.incidents_resolved / billing.sla.incidents_total) * 100) + '%' : '—'}</p>
                             <p class="text-xs text-gray-500 dark:text-gray-500 mt-1">This month</p>
                         </div>
                     </div>
