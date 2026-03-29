@@ -152,6 +152,9 @@ function _activateDashboardView() {
 function switchTab(tab) {
   var ALL = ['dashboard','assets','monitoring','alerts-incidents','documents','invoices','billing','account','support'];
 
+  // Persist tab so refresh restores it
+  try { localStorage.setItem('fg_active_tab', tab); } catch(e) {}
+
   ALL.forEach(function(t) {
     // sidebar nav buttons
     document.getElementById('tab-'+t)?.classList.toggle('active', t === tab);
@@ -784,14 +787,24 @@ window.addEventListener('load', function() {
   _syncThemeIcons();
   setTimeout(_fetchNotifCount, 2000);
 
+  // Restore last active tab after App.init has rendered the dashboard
+  // We wait for App.init to complete (it fires on 'load' too via app.js)
+  // Use a short delay so App.init runs first
+  setTimeout(function() {
+    try {
+      var saved = localStorage.getItem('fg_active_tab');
+      if (saved && saved !== 'dashboard') {
+        switchTab(saved);
+      }
+    } catch(e) {}
+  }, 400);
+
   // Mirror Auth.updateUserInfo() sidebar values to topbar avatar
-  // Auth sets #user-name and #user-initials (sidebar) — we mirror initials to topbar avatar
   var sbInit = document.getElementById('user-initials');
   if (sbInit) {
     new MutationObserver(function() {
       var tbInit = document.getElementById('tb-user-init');
       if (tbInit) tbInit.textContent = sbInit.textContent;
-      // Also mirror name to menu-user-name dropdown
       var sbName = document.getElementById('user-name');
       var mn = document.getElementById('menu-user-name');
       if (sbName && mn) mn.textContent = sbName.textContent;
