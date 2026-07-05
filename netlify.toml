@@ -1,20 +1,18 @@
 [build]
   publish = "."
 
-# Serve portal as the root on app.flowguard.ng
-[[redirects]]
-  from = "/"
-  to = "/flowguard-client-portal.html"
-  status = 200
+# app.flowguard.ng serves the client portal (index.html) at root.
+# index.html is served automatically at "/", so we only need the SPA
+# catch-all so deep links / refreshes resolve back to the portal.
 
 [[redirects]]
   from = "/app"
-  to = "/flowguard-client-portal.html"
+  to = "/index.html"
   status = 200
 
-# Catch-all for SPA — keeps URL clean on refresh
+# SPA catch-all — keeps URL clean on refresh, but never intercept real files or /js assets
 [[redirects]]
   from = "/*"
-  to = "/flowguard-client-portal.html"
+  to = "/index.html"
   status = 200
   conditions = {Host = ["app.flowguard.ng"]}

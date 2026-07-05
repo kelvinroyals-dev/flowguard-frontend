@@ -668,9 +668,10 @@
           showAlert('success', 'Login successful — redirecting…');
           setTimeout(() => {
             const role = data.data.user.role;
-            window.location.href = (role === 'admin' || role === 'operations')
+            const OPS_ROLES = ['admin','operations','super_admin','operations_manager','dispatcher','field_lead','analyst','finance'];
+            window.location.href = OPS_ROLES.includes(role)
               ? 'flowguard-operations-center.html'
-              : 'flowguard-client-portal.html';
+              : 'index.html';
           }, 800);
         } else {
           setLoading(false);
