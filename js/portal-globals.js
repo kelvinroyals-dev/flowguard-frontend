@@ -6,7 +6,8 @@
 ══════════════════════════════════════ */
 
 var PORTAL_API = 'https://api.flowguard.ng/api/v1';
-var _subView = false; // true when AccountSettings/Notifications overlays dashboard
+var _subView = false;
+var _dashboardDirty = false; // true when AccountSettings/Notifications overlays dashboard
 
 var TAB_TITLES = {
   dashboard:          'Dashboard',
@@ -170,8 +171,13 @@ function switchTab(tab) {
     container.classList.remove('hidden');
 
     if (tab === 'dashboard') {
-      if (_subView) {
+      // Always restore the real dashboard if the panel was hijacked by a sub-view
+      // (account/notifications render INTO content-dashboard). Relying on _subView
+      // alone breaks when the user visits other tabs in between, which clears the
+      // flag without restoring dashboard content.
+      if (_dashboardDirty || _subView) {
         _subView = false;
+        _dashboardDirty = false;
         if (typeof App !== 'undefined' && App.loadAndRender) App.loadAndRender();
       }
     } else {
@@ -204,6 +210,7 @@ function openAccountSettings() {
   document.getElementById('user-menu')?.classList.add('hidden');
   _activateDashboardView();
   _subView = true;
+  _dashboardDirty = true;
   var c = document.getElementById('content-dashboard');
   if (c && typeof AccountSettings !== 'undefined') AccountSettings.render(c);
 }
@@ -211,6 +218,7 @@ function openNotifications() {
   document.getElementById('user-menu')?.classList.add('hidden');
   _activateDashboardView();
   _subView = true;
+  _dashboardDirty = true;
   var c = document.getElementById('content-dashboard');
   if (c && typeof NotificationsPage !== 'undefined') NotificationsPage.render(c);
 }
