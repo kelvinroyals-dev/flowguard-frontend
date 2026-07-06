@@ -198,11 +198,9 @@ const Billing = (function() {
         const token = Auth.getToken();
         
         try {
-            const res = await apiRequest(`/properties/${property.property_id}/select-services`, { method: 'POST', body: { services: selectedServices } });
+            const data = await apiRequest(`/properties/${property.property_id}/select-services`, { method: 'POST', body: { services: selectedServices } });
             
-            const data = await res.json();
-            
-            if (data.success) {
+            if (data && data.success) {
                 showToast(`Invoice created — ₦${data.data.totalOneTime.toLocaleString()} + ₦${data.data.totalMonthly.toLocaleString()}/month`, 'success');
                 location.reload();
             }

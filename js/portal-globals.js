@@ -307,9 +307,9 @@ var SupportTab = (function() {
     tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px 0;"><div style="display:inline-flex;align-items:center;gap:8px;color:var(--ink-3);font-size:.8rem;"><div class="fg-spin" style="width:16px;height:16px;"></div>Loading…</div></td></tr>';
     try {
       var prop = typeof StateManager !== 'undefined' ? StateManager.getCurrentProperty() : null;
-      var url  = prop ? PORTAL_API + '/properties/' + prop.property_id + '/tickets' : PORTAL_API + '/tickets';
-      var res  = await fetch(url, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } });
-      tickets  = res.ok ? ((await res.json()).data || []) : [];
+      var path = prop ? '/properties/' + prop.property_id + '/tickets' : '/tickets';
+      var res  = await apiRequest(path).catch(function(){ return null; });
+      tickets  = (res && res.data) || [];
     } catch(e) { tickets = []; }
     _renderTable();
   }
@@ -449,9 +449,7 @@ var DocumentsTab = (function() {
       var prop  = typeof StateManager !== 'undefined' ? StateManager.getCurrentProperty() : null;
 
       // Primary: fetch field_reports for this client's properties
-      var url = PORTAL_API + '/field-reports?limit=100';
-      var res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
-      var data = res.ok ? await res.json() : { data: [] };
+      var data = await apiRequest('/field-reports?limit=100').catch(function(){ return { data: [] }; });
       _reports = (data.data || []).filter(function(r) {
         return r.status === 'sent_to_client';
       });

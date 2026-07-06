@@ -355,52 +355,23 @@ async function handleFormSubmit(e) {
     const token = localStorage.getItem('token');
     
     try {
-        const response = await fetch('https://api.flowguard.ng/api/v1/properties', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        });
-        
-        if (response.ok) {
-            // 201 Created - close modal and reload
-            if (typeof Onboarding !== 'undefined' && Onboarding.closeRegistrationModal) {
-                Onboarding.closeRegistrationModal();
-            }
-            
-            // Reload page to show new state
-            location.reload();
-        } else {
-            // Try to get error message from response
-            let errorMessage = 'Unknown error occurred';
-            try {
-                const result = await response.json();
-                errorMessage = result.error || result.message || errorMessage;
-            } catch (e) {
-                // Couldn't parse error response
-            }
-            
-            // Show error in modal
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'mt-4 p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl';
-            errorDiv.innerHTML = `
-                <p class="text-red-800 dark:text-red-200 font-semibold">Registration Failed</p>
-                <p class="text-red-600 dark:text-red-400 text-sm mt-1">${errorMessage}</p>
-            `;
-            document.getElementById('property-form').prepend(errorDiv);
+        await apiRequest('/properties', { method: 'POST', body: data });
+        // 201 Created - close modal and reload
+        if (typeof Onboarding !== 'undefined' && Onboarding.closeRegistrationModal) {
+            Onboarding.closeRegistrationModal();
         }
+        if (typeof App !== 'undefined' && App.loadAndRender) App.loadAndRender();
+        else location.reload();
     } catch (error) {
         console.error('Submission error:', error);
-        
-        // Show error in modal
+        const errorMessage = error.message || 'Failed to submit property. Please try again.';
         const errorDiv = document.createElement('div');
         errorDiv.className = 'mt-4 p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl';
         errorDiv.innerHTML = `
-            <p class="text-red-800 dark:text-red-200 font-semibold">Submission Error</p>
-            <p class="text-red-600 dark:text-red-400 text-sm mt-1">Failed to submit property. Please try again.</p>
+            <p class="text-red-800 dark:text-red-200 font-semibold">Registration Failed</p>
+            <p class="text-red-600 dark:text-red-400 text-sm mt-1">${errorMessage}</p>
         `;
-        document.getElementById('property-form').prepend(errorDiv);
+        const form = document.getElementById('property-form');
+        if (form) form.prepend(errorDiv);
     }
 }

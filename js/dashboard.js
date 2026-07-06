@@ -21,18 +21,13 @@ const Dashboard = (function() {
 
             // Fetch all user properties (always exists)
             const propRes = await apiRequest(`/properties`);
-            const properties = propRes.ok ? ((await propRes.json()).data || []) : [];
+            const properties = (propRes && propRes.data) || [];
 
             // Fetch alerts for current property (may return empty array)
             let alerts = [];
             if (property && property.property_id) {
-                const alertRes = await fetch(
-                    `${API_BASE}/properties/${property.property_id}/alerts`,
-                    { headers: { 'Authorization': `Bearer ${token}` } }
-                ).catch(() => null);
-                if (alertRes && alertRes.ok) {
-                    alerts = (await alertRes.json()).data || [];
-                }
+                const alertRes = await apiRequest(`/properties/${property.property_id}/alerts`).catch(() => null);
+                alerts = (alertRes && alertRes.data) || [];
             }
 
             _render(container, property, properties, alerts);
