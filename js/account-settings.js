@@ -419,6 +419,20 @@ const AccountSettings = (function() {
                     });
                     
                     if (response.ok) {
+                        // Refresh the cached user so a reload shows the new values
+                        // (the portal reads user from localStorage on load).
+                        try {
+                            const result = await response.json();
+                            const updated = result && result.data && result.data.user;
+                            if (updated) {
+                                const existing = JSON.parse(localStorage.getItem('user') || '{}');
+                                const merged = { ...existing, ...updated };
+                                // chrome reads fullName (camelCase); keep both in sync
+                                if (updated.full_name) merged.fullName = updated.full_name;
+                                localStorage.setItem('user', JSON.stringify(merged));
+                                if (typeof Auth !== 'undefined' && Auth.updateUserInfo) Auth.updateUserInfo();
+                            }
+                        } catch (_) { /* non-fatal: DB is updated regardless */ }
                         showSuccess('Profile updated successfully!');
                     } else {
                         showError('Failed to update profile');

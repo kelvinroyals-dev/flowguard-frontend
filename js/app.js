@@ -12,17 +12,41 @@ const App = (function() {
     // ============================================
     async function init() {
         console.log(' Initializing Flow Guard Client Portal...');
-        
-        // Update user info in header
+
+        // Paint immediately from cached user (fast first render)
         Auth.updateUserInfo();
-        
+
+        // Then refresh the user from the server so a stale login-time snapshot
+        // (e.g. after a profile edit on another device) is corrected. Non-blocking.
+        refreshCurrentUser();
+
         // Load user data and determine state
         await loadAndRender();
-        
+
         // Setup event listeners
         setupEventListeners();
-        
+
         console.log(' Portal initialized');
+    }
+
+    async function refreshCurrentUser() {
+        try {
+            const token = Auth.getToken();
+            if (!token) return;
+            const res = await fetch(`${API_BASE}/profile`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) return;
+            const body = await res.json();
+            const fresh = body && body.data && body.data.user;
+            if (fresh) {
+                const existing = JSON.parse(localStorage.getItem('user') || '{}');
+                const merged = { ...existing, ...fresh };
+                if (fresh.full_name) merged.fullName = fresh.full_name;
+                localStorage.setItem('user', JSON.stringify(merged));
+                Auth.updateUserInfo();
+            }
+        } catch (_) { /* offline or error — keep cached user */ }
     }
     
     // ============================================
