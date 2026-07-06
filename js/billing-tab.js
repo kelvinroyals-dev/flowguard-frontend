@@ -24,16 +24,8 @@ const BillingTab = (function() {
         
         try {
             const token = Auth.getToken();
-            const response = await fetch(`${API_BASE}/billing/${property.property_id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            if (!response.ok) {
-                throw new Error('Failed to load billing');
-            }
-            
-            const data = await response.json();
-            const billing = data.data;
+            const data = await apiRequest(`/billing/${property.property_id}`);
+            const billing = data && data.data;
             
             renderBillingContent(container, property, billing);
             

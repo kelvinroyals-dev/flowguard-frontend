@@ -299,14 +299,7 @@ async function disableDemoMode() {
 
     const token = localStorage.getItem('token');
     try {
-        await fetch(`${API_BASE}/preferences`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ showDemoData: false })
-        });
+        await apiRequest('/preferences', { method: 'PUT', body: { show_demo_data: isDemoMode } }).catch(()=>{});
     } catch(e) {
         console.error('Failed to save preference:', e);
     }

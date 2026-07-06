@@ -55,12 +55,8 @@ const AssetsTab = (function() {
 
         try {
             const token = Auth.getToken();
-            const res = await fetch(`${API_BASE}/properties`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!res.ok) throw new Error('Failed to load properties');
-            const data = await res.json();
-            const properties = data.data || [];
+            const data = await apiRequest(`/properties`);
+            const properties = (data && data.data) || [];
             _render(container, properties);
         } catch(e) {
             console.error('Areas load error:', e);

@@ -33,11 +33,7 @@ const App = (function() {
         try {
             const token = Auth.getToken();
             if (!token) return;
-            const res = await fetch(`${API_BASE}/profile`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!res.ok) return;
-            const body = await res.json();
+            const body = await apiRequest(`/profile`);
             const fresh = body && body.data && body.data.user;
             if (fresh) {
                 const existing = JSON.parse(localStorage.getItem('user') || '{}');
@@ -73,26 +69,19 @@ const App = (function() {
             isDemoMode = savedDemoMode === 'true';
             
             // Always load real data from API (demo mode only affects rendering)
-            const [prefRes, propRes] = await Promise.all([
-                fetch(`${API_BASE}/preferences`, { 
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }).catch(() => null),  // Ignore 404 if endpoint doesn't exist
-                fetch(`${API_BASE}/properties`, { 
-                    headers: { 'Authorization': `Bearer ${token}` }
-                })
+            const [prefData, propData] = await Promise.all([
+                apiRequest('/preferences').catch(() => null),   // optional
+                apiRequest('/properties').catch(() => null)
             ]);
-            
-            if (prefRes && prefRes.ok) {
-                const prefData = await prefRes.json();
+
+            if (prefData && prefData.data) {
                 preferences = prefData.data;
-                // Use API preference if available, otherwise use localStorage
                 if (preferences?.show_demo_data !== undefined) {
                     isDemoMode = preferences.show_demo_data;
                 }
             }
-            
-            if (propRes.ok) {
-                const propData = await propRes.json();
+
+            if (propData && propData.data) {
                 properties = propData.data || [];
             }
             
@@ -168,18 +157,14 @@ const App = (function() {
         const token = Auth.getToken();
         
         try {
-            const res = await fetch(`${API_BASE}/properties/${property.property_id}/inspection`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            // 404 means the inspection record hasn't been uploaded yet even though
-            // the property status was set to report_ready. Show a waiting state.
-            if (!res.ok) {
+            let data;
+            try {
+                data = await apiRequest(`/properties/${property.property_id}/inspection`);
+            } catch (_) {
+                // No inspection record yet — show waiting state
                 renderInspectionPending(container, property);
                 return;
             }
-            
-            const data = await res.json();
             const inspection = data.data;
             
             // Guard: if data shape is missing, fall back gracefully
@@ -606,11 +591,11 @@ const App = (function() {
                 return;
             }
 
-            const res = await fetch(`${API_BASE}/properties/${property.property_id}/invoices`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            const invoices = res.ok ? ((await res.json()).data || []) : [];
+            let invoices = [];
+            try {
+                const res = await apiRequest(`/properties/${property.property_id}/invoices`);
+                invoices = (res && res.data) || [];
+            } catch (_) { invoices = []; }
 
             if (invoices.length === 0) {
                 container.querySelector('.card').innerHTML = `

@@ -408,38 +408,20 @@ const AccountSettings = (function() {
                 const data = Object.fromEntries(formData);
                 
                 try {
-                    const token = Auth.getToken();
-                    const response = await fetch(`${API_BASE}/profile`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(data)
-                    });
-                    
-                    if (response.ok) {
-                        // Refresh the cached user so a reload shows the new values
-                        // (the portal reads user from localStorage on load).
-                        try {
-                            const result = await response.json();
-                            const updated = result && result.data && result.data.user;
-                            if (updated) {
-                                const existing = JSON.parse(localStorage.getItem('user') || '{}');
-                                const merged = { ...existing, ...updated };
-                                // chrome reads fullName (camelCase); keep both in sync
-                                if (updated.full_name) merged.fullName = updated.full_name;
-                                localStorage.setItem('user', JSON.stringify(merged));
-                                if (typeof Auth !== 'undefined' && Auth.updateUserInfo) Auth.updateUserInfo();
-                            }
-                        } catch (_) { /* non-fatal: DB is updated regardless */ }
-                        showSuccess('Profile updated successfully!');
-                    } else {
-                        showError('Failed to update profile');
+                    const result = await apiRequest('/profile', { method: 'PUT', body: data });
+                    // Refresh the cached user so a reload shows the new values
+                    const updated = result && result.data && result.data.user;
+                    if (updated) {
+                        const existing = JSON.parse(localStorage.getItem('user') || '{}');
+                        const merged = { ...existing, ...updated };
+                        if (updated.full_name) merged.fullName = updated.full_name;
+                        localStorage.setItem('user', JSON.stringify(merged));
+                        if (typeof Auth !== 'undefined' && Auth.updateUserInfo) Auth.updateUserInfo();
                     }
+                    showSuccess('Profile updated successfully!');
                 } catch (error) {
                     console.error('Profile update error:', error);
-                    showError('Failed to update profile');
+                    showError(error.message || 'Failed to update profile');
                 }
             });
         }
@@ -463,28 +445,16 @@ const AccountSettings = (function() {
                 }
                 
                 try {
-                    const token = Auth.getToken();
-                    const response = await fetch(`${API_BASE}/password`, {
+                    await apiRequest('/password', {
                         method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            currentPassword: data.currentPassword,
-                            newPassword: data.newPassword
-                        })
+                        body: { currentPassword: data.currentPassword, newPassword: data.newPassword }
                     });
-                    
-                    if (response.ok) {
-                        showSuccess('Password updated successfully!');
-                        passwordForm.reset();
-                    } else {
-                        showError('Failed to update password');
-                    }
+                    showSuccess('Password updated successfully!');
+                    passwordForm.reset();
                 } catch (error) {
                     console.error('Password update error:', error);
-                    showError('Failed to update password');
+                    // Now surfaces the server's real reason, e.g. "Current password is incorrect"
+                    showError(error.message || 'Failed to update password');
                 }
             });
         }
@@ -583,30 +553,18 @@ const AccountSettings = (function() {
             const data = Object.fromEntries(formData);
             
             try {
-                const token = Auth.getToken();
-                const response = await fetch(`${API_BASE}/properties/${propertyId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                });
-                
-                if (response.ok) {
-                    showSuccess('Property updated successfully!');
-                    closeEditModal();
-                    
-                    // Reload to refresh property list
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
+                await apiRequest(`/properties/${propertyId}`, { method: 'PUT', body: data });
+                showSuccess('Property updated successfully!');
+                closeEditModal();
+                // Re-render the property view in place if available, else fall back to reload
+                if (typeof App !== 'undefined' && App.loadAndRender) {
+                    App.loadAndRender();
                 } else {
-                    showError('Failed to update property');
+                    setTimeout(() => location.reload(), 800);
                 }
             } catch (error) {
                 console.error('Property update error:', error);
-                showError('Failed to update property');
+                showError(error.message || 'Failed to update property');
             }
         });
         
@@ -665,21 +623,11 @@ const AccountSettings = (function() {
                 const btn = document.getElementById('deactivate-account-btn');
                 if (btn) { btn.textContent = 'Deactivating...'; btn.disabled = true; }
                 try {
-                    const token = Auth.getToken();
-                    const res = await fetch(`${API_BASE}/account/deactivate`, {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        Modal.showAlert({ type: 'success', title: 'Account Deactivated', message: 'Your account has been suspended. You will now be signed out.' });
-                        setTimeout(() => Auth.logout(), 2000);
-                    } else {
-                        Modal.showAlert({ type: 'error', title: 'Failed', message: data.error || 'Could not deactivate account. Please try again.' });
-                        if (btn) { btn.textContent = 'Deactivate'; btn.disabled = false; }
-                    }
+                    await apiRequest('/account/deactivate', { method: 'POST' });
+                    Modal.showAlert({ type: 'success', title: 'Account Deactivated', message: 'Your account has been suspended. You will now be signed out.' });
+                    setTimeout(() => Auth.logout(), 2000);
                 } catch (err) {
-                    Modal.showAlert({ type: 'error', title: 'Connection Error', message: 'Could not reach the server. Please try again.' });
+                    Modal.showAlert({ type: 'error', title: 'Failed', message: err.message || 'Could not deactivate account. Please try again.' });
                     if (btn) { btn.textContent = 'Deactivate'; btn.disabled = false; }
                 }
             }
@@ -706,21 +654,11 @@ const AccountSettings = (function() {
                         const btn = document.getElementById('delete-account-btn');
                         if (btn) { btn.textContent = 'Deleting...'; btn.disabled = true; }
                         try {
-                            const token = Auth.getToken();
-                            const res = await fetch(`${API_BASE}/account`, {
-                                method: 'DELETE',
-                                headers: { 'Authorization': `Bearer ${token}` }
-                            });
-                            const data = await res.json();
-                            if (data.success) {
-                                localStorage.clear();
-                                window.location.href = 'login.html';
-                            } else {
-                                Modal.showAlert({ type: 'error', title: 'Failed', message: data.error || 'Could not delete account.' });
-                                if (btn) { btn.textContent = 'Delete Account'; btn.disabled = false; }
-                            }
+                            await apiRequest('/account', { method: 'DELETE' });
+                            localStorage.clear();
+                            window.location.href = 'login.html';
                         } catch (err) {
-                            Modal.showAlert({ type: 'error', title: 'Connection Error', message: 'Could not reach the server. Please try again.' });
+                            Modal.showAlert({ type: 'error', title: 'Failed', message: err.message || 'Could not delete account.' });
                             if (btn) { btn.textContent = 'Delete Account'; btn.disabled = false; }
                         }
                     }

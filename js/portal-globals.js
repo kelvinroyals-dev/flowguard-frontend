@@ -90,10 +90,9 @@ async function submitArea() {
 
   try {
     var token = localStorage.getItem('token');
-    var res = await fetch(PORTAL_API + '/properties', {
+    var data = await apiRequest('/properties', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      body: {
         propertyName:     name.trim(),
         propertyType:     type,
         city:             city.trim(),
@@ -102,10 +101,9 @@ async function submitArea() {
         coverageArea:     area.trim(),
         urgencyLevel:     urgency,
         issueDescription: desc.trim()
-      })
+      }
     });
-    var data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.error || 'Submission failed');
+    if (!data || !data.success) throw new Error((data && data.error) || 'Submission failed');
 
     ['sub-name','sub-type','sub-city','sub-state','sub-address','sub-area','sub-desc'].forEach(function(id) {
       var el = document.getElementById(id); if (el) el.value = '';
@@ -242,9 +240,8 @@ function previousStep(step) { nextStep(step); }
 /* ── Notification count ── */
 async function _fetchNotifCount() {
   try {
-    var res = await fetch(PORTAL_API + '/notifications', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } });
-    if (!res.ok) return;
-    var d = await res.json();
+    var d = await apiRequest('/notifications').catch(function(){ return null; });
+    if (!d) return;
     var count = (d.data || []).filter(function(n) { return !n.read; }).length;
     if (count > 0) {
       var b = document.getElementById('notif-count');
@@ -258,9 +255,9 @@ async function _fetchSLATime() {
   try {
     var prop = typeof StateManager !== 'undefined' ? StateManager.getCurrentProperty() : null;
     if (!prop) return;
-    var res = await fetch(PORTAL_API + '/billing/' + prop.property_id, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } });
-    if (!res.ok) return;
-    var d = await res.json(), hrs = d.data?.sla?.response_time_hours;
+    var d = await apiRequest('/billing/' + prop.property_id).catch(function(){ return null; });
+    if (!d) return;
+    var hrs = d.data?.sla?.response_time_hours;
     if (hrs) {
       var el = document.getElementById('support-response-time');
       if (el) el.textContent = hrs + ' hr';
@@ -383,11 +380,9 @@ var SupportTab = (function() {
       var prop = typeof StateManager !== 'undefined' ? StateManager.getCurrentProperty() : null;
       if (prop) payload.property_id = prop.property_id;
       try {
-        var res = await fetch(PORTAL_API + '/tickets', { method: 'POST', headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token'), 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        var data = await res.json();
-        if (data.success) { m.remove(); showToast(isDispatch ? 'Dispatch request submitted.' : 'Ticket submitted.', 'success'); await _load(); }
-        else { var errEl = document.getElementById('stk-err'); errEl.textContent = data.error || 'Submission failed.'; errEl.classList.remove('hidden'); btn.textContent = orig; btn.disabled = false; }
-      } catch(e) { var errEl = document.getElementById('stk-err'); errEl.textContent = 'Connection failed.'; errEl.classList.remove('hidden'); btn.textContent = orig; btn.disabled = false; }
+        await apiRequest('/tickets', { method: 'POST', body: payload });
+        m.remove(); showToast(isDispatch ? 'Dispatch request submitted.' : 'Ticket submitted.', 'success'); await _load();
+      } catch(e) { var errEl = document.getElementById('stk-err'); errEl.textContent = e.message || 'Submission failed.'; errEl.classList.remove('hidden'); btn.textContent = orig; btn.disabled = false; }
     });
   }
 
@@ -464,11 +459,8 @@ var DocumentsTab = (function() {
       // If property context, also check /properties/:id/inspection
       if (prop && _reports.length === 0) {
         try {
-          var r2 = await fetch(PORTAL_API + '/properties/' + prop.property_id + '/inspection', {
-            headers: { 'Authorization': 'Bearer ' + token }
-          });
-          if (r2.ok) {
-            var d2 = await r2.json();
+          var d2 = await apiRequest('/properties/' + prop.property_id + '/inspection').catch(function(){ return null; });
+          if (d2) {
             if (d2.data) _reports = [_normaliseInspection(d2.data, prop)];
           }
         } catch(e) {}

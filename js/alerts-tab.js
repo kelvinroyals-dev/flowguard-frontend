@@ -23,20 +23,9 @@ const AlertsTab = (function() {
         `;
         
         try {
-            const token = Auth.getToken();
-            const response = await fetch(`${API_BASE}/properties/${property.property_id}/alerts`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            if (!response.ok) {
-                throw new Error('Failed to load alerts');
-            }
-            
-            const data = await response.json();
-            const alerts = data.data || [];
-            
+            const data = await apiRequest(`/properties/${property.property_id}/alerts`);
+            const alerts = (data && data.data) || [];
             renderAlertsContent(container, property, alerts);
-            
         } catch (error) {
             console.error('Alerts load error:', error);
             renderError(container);

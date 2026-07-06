@@ -24,16 +24,8 @@ const NotificationsPage = (function() {
         
         try {
             const token = Auth.getToken();
-            const response = await fetch(`${API_BASE}/notifications`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                allNotifications = data.data || [];
-            } else {
-                allNotifications = [];
-            }
+            const data = await apiRequest(`/notifications`).catch(() => null);
+            allNotifications = (data && data.data) || [];
             
             renderNotifications(container);
             
@@ -238,10 +230,7 @@ const NotificationsPage = (function() {
             // Update via API
             try {
                 const token = Auth.getToken();
-                await fetch(`${API_BASE}/notifications/${notifId}/read`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                await apiRequest(`/notifications/${notifId}/read`, { method: 'PUT' });
             } catch (e) {
                 console.error('Failed to mark as read:', e);
             }
@@ -260,10 +249,7 @@ const NotificationsPage = (function() {
         // Update via API
         try {
             const token = Auth.getToken();
-            await fetch(`${API_BASE}/notifications/read-all`, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            await apiRequest('/notifications/read-all', { method: 'PUT' });
         } catch (e) {
             console.error('Failed to mark all as read:', e);
         }
@@ -283,10 +269,7 @@ const NotificationsPage = (function() {
             // Delete via API
             try {
                 const token = Auth.getToken();
-                await fetch(`${API_BASE}/notifications/${notifId}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                await apiRequest(`/notifications/${notifId}`, { method: 'DELETE' });
             } catch (e) {
                 console.error('Failed to delete notification:', e);
             }
@@ -309,10 +292,7 @@ const NotificationsPage = (function() {
                 // Delete via API
                 try {
                     const token = Auth.getToken();
-                    await fetch(`${API_BASE}/notifications`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
+                    await apiRequest('/notifications', { method: 'DELETE' });
                 } catch (e) {
                     console.error('Failed to clear notifications:', e);
                 }

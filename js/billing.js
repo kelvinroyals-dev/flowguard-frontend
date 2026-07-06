@@ -13,12 +13,8 @@ const Billing = (function() {
             const token = Auth.getToken();
             
             // Fetch available services
-            const res = await fetch(`${API_BASE}/properties/${property.property_id}/services`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            const data = await res.json();
-            allServices = data.data.services || [];
+            const data = await apiRequest(`/properties/${property.property_id}/services`);
+            allServices = (data && data.data && data.data.services) || [];
             
             // Pre-select all required services
             selectedServices = allServices.filter(s => s.required).map(s => s.serviceId);
@@ -202,17 +198,7 @@ const Billing = (function() {
         const token = Auth.getToken();
         
         try {
-            const res = await fetch(`${API_BASE}/properties/${property.property_id}/select-services`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    selectedServices,
-                    billingPreference: 'separate'
-                })
-            });
+            const res = await apiRequest(`/properties/${property.property_id}/select-services`, { method: 'POST', body: { services: selectedServices } });
             
             const data = await res.json();
             

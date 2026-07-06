@@ -20,9 +20,7 @@ const Dashboard = (function() {
             const token = Auth.getToken();
 
             // Fetch all user properties (always exists)
-            const propRes = await fetch(`${API_BASE}/properties`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const propRes = await apiRequest(`/properties`);
             const properties = propRes.ok ? ((await propRes.json()).data || []) : [];
 
             // Fetch alerts for current property (may return empty array)
