@@ -13,55 +13,40 @@ class FlowGuardAPI {
     
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
+        const token = localStorage.getItem('token');
         const config = {
             headers: {
                 'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 ...options.headers
             },
             ...options
         };
-        
+
+        let response;
         try {
-            const response = await fetch(url, config);
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.error || 'API request failed');
-            }
-            
-            return data;
-        } catch (error) {
-            console.error('API Error:', error);
-            // Return placeholder data for now
-            return this.getPlaceholderData(endpoint);
+            response = await fetch(url, config);
+        } catch (networkErr) {
+            // Genuine network failure (offline, DNS, CORS) — surface it, never fake it
+            console.error('API network error:', endpoint, networkErr);
+            throw new Error('Network error — please check your connection and try again.');
         }
-    }
-    
-    // Placeholder data when API is not available
-    getPlaceholderData(endpoint) {
-        console.log('Using placeholder data for:', endpoint);
-        
-        if (endpoint === '/clients') {
-            return {
-                success: true,
-                data: [
-                    { id: 1, name: 'Banana Island Estates', location: 'Ikoyi', tier: 'premium', health: 95, mrr: 850000 },
-                    { id: 2, name: 'Lekki Gardens Phase 2', location: 'Lekki', tier: 'standard', health: 88, mrr: 450000 }
-                ]
-            };
+
+        let data = null;
+        try { data = await response.json(); } catch (_) { /* non-JSON response */ }
+
+        if (response.status === 401) {
+            // Token expired/invalid — clear session so the app can redirect to login
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            throw new Error('Your session has expired. Please sign in again.');
         }
-        
-        if (endpoint === '/sensors') {
-            return {
-                success: true,
-                data: [
-                    { sensorId: 'LK-A-047', name: 'Lekki Phase 1', waterLevel: 85, status: 'critical' },
-                    { sensorId: 'BI-C-012', name: 'Banana Island', waterLevel: 65, status: 'rising' }
-                ]
-            };
+
+        if (!response.ok) {
+            throw new Error((data && data.error) || `Request failed (${response.status})`);
         }
-        
-        return { success: false, data: [] };
+
+        return data;
     }
     
     // Client endpoints

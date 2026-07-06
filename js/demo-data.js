@@ -315,7 +315,7 @@ async function disableDemoMode() {
 }
 
 function viewAllSensors() {
-    alert('Full sensor map view - Coming soon!');
+    showToast('Full sensor map is coming soon.', 'info');
 }
 
 // ============================================

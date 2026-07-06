@@ -217,13 +217,13 @@ const Billing = (function() {
             const data = await res.json();
             
             if (data.success) {
-                alert(`Invoice created! Total: ₦${data.data.totalOneTime.toLocaleString()} + ₦${data.data.totalMonthly.toLocaleString()}/month`);
+                showToast(`Invoice created — ₦${data.data.totalOneTime.toLocaleString()} + ₦${data.data.totalMonthly.toLocaleString()}/month`, 'success');
                 location.reload();
             }
             
         } catch (error) {
             console.error('Service selection failed:', error);
-            alert('Failed to submit service selection. Please try again.');
+            showToast('Couldn\'t submit service selection. Please try again.', 'error');
         }
     }
     

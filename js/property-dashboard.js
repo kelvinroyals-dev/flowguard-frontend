@@ -326,9 +326,9 @@ function addAnotherProperty() {
 }
 
 function viewFullPropertyDetails(propertyId) {
-    alert('Full property details modal - Coming soon!');
+    showToast('Detailed property view is coming soon.', 'info');
 }
 
 function editProperty(propertyId) {
-    alert('Edit property form - Coming soon!');
+    showToast('Property editing is coming soon.', 'info');
 }

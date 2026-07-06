@@ -224,9 +224,9 @@ function disableDemoMode() {
   var t = document.getElementById('demo-toggle');
   if (t && t.checked) { t.checked = false; t.dispatchEvent(new Event('change')); }
 }
-function viewAllSensors()             { showToast('Full sensor map coming in next release', 'success'); }
+function viewAllSensors()             { showToast('Full sensor map is coming soon.', 'info'); }
 function addAnotherProperty()         { if (typeof Onboarding !== 'undefined') Onboarding.showRegistrationModal(); }
-function viewFullPropertyDetails(id)  { showToast('Full property details — coming soon', 'success'); }
+function viewFullPropertyDetails(id)  { showToast('Detailed property view is coming soon.', 'info'); }
 function editProperty(id)             { openAccountSettings(); }
 function nextStep(step)     { document.querySelectorAll('.form-step').forEach(function(el,i){ el.classList.toggle('hidden', i !== step-1); }); }
 function previousStep(step) { nextStep(step); }
