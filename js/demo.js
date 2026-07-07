@@ -70,6 +70,30 @@ const Demo = (function () {
     { key: 'dispatch', name: 'Heavy-Plant Dispatch', desc: 'Clearing & maintenance crews', status: 'scheduled', detail: 'Next visit 18 Jul', icon: 'truck' }
   ];
 
-  return { isOn, set, data: { floodRisk, sensors, properties, invoices, alerts, timeline, reports, services } };
+  const tickets = [
+    { ticket_id: 'TKT-1042', subject: 'East Channel silt buildup', category: 'dispatch', priority: 'high', status: 'in_progress', created_at: '2026-07-06', description: 'Silt level reading high, requesting crew.' },
+    { ticket_id: 'TKT-1038', subject: 'Sensor S-02 intermittent', category: 'sensor', priority: 'normal', status: 'resolved', created_at: '2026-07-02', description: 'North Culvert sensor dropped offline twice.' },
+    { ticket_id: 'TKT-1031', subject: 'June invoice query', category: 'billing', priority: 'low', status: 'resolved', created_at: '2026-06-28', description: 'Question about pro-rating.' }
+  ];
+
+  // hourly average water level for the last 24h (chart series) + a reading log
+  const history = (() => {
+    const now = Date.now();
+    const series = Array.from({ length: 24 }, (_, i) => {
+      const base = 25 + Math.sin(i / 3) * 12 + (i > 16 ? (i - 16) * 2 : 0);
+      return { t: new Date(now - (23 - i) * 3600e3).toISOString(), avg: Math.round(base), peak: Math.round(base + 8) };
+    });
+    const names = ['Main Gate', 'North Culvert', 'East Channel', 'South Drain'];
+    const log = Array.from({ length: 20 }, (_, i) => ({
+      time: new Date(now - i * 22 * 60e3).toISOString(),
+      sensor: names[i % 4],
+      level: 18 + Math.round(Math.random() * 30),
+      flow: +(6 + Math.random() * 14).toFixed(1),
+      debris: Math.random() > 0.85
+    }));
+    return { series, log, has_data: true };
+  })();
+
+  return { isOn, set, data: { floodRisk, sensors, properties, invoices, alerts, timeline, reports, services, tickets, history } };
 })();
 window.Demo = Demo;

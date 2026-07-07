@@ -252,19 +252,65 @@ const Screens = (function () {
     } catch (_) { return []; }
   }
 
-  // ---------------- MONITORING ----------------
+  // ---------------- MONITORING (sensors + history charts + logs) ----------------
   async function monitoring(view) {
     view.innerHTML = `
-      <div class="top"><div><h1>Monitoring</h1><div class="sub">All sensors across your properties</div></div>
+      <div class="top"><div><h1>Monitoring</h1><div class="sub">Live readings, trends, and history across your sensors</div></div>
       <button class="btn ghost" onclick="App.go('overview')">← Overview</button></div>
       ${demoBanner()}
-      <div id="mon-sensors" class="sensors">${UI.loading(1)}</div>`;
-    let sensors;
-    if (Demo.isOn()) sensors = Demo.data.sensors;
-    else { try { const r = await apiRequest('/monitoring/sensors'); sensors = (r && r.data) || []; } catch (_) { sensors = []; } }
-    const el = document.getElementById('mon-sensors');
-    if (sensors && sensors.length) el.innerHTML = sensors.map(UI.sensorCard).join('');
-    else { el.className = ''; el.innerHTML = UI.state('awaiting', 'No sensor data yet', 'Live water-level readings will appear here once your sensors are online.', Demo.isOn() ? null : 'Explore with demo data', 'onclick="App.toggleDemo(true)"'); }
+      <div id="mon-sensors" class="sensors">${UI.loading(1)}</div>
+      <div class="section-t" style="margin-top:26px">Water level trend <span style="font-weight:400;color:var(--ink-3);font-size:13px">last 24 hours</span></div>
+      <div class="panel panel-pad" id="mon-chart">${UI.loading(2)}</div>
+      <div class="section-t" style="margin-top:26px">Reading history</div>
+      <div class="panel panel-pad" id="mon-log"></div>`;
+
+    let sensors, hist;
+    if (Demo.isOn()) { sensors = Demo.data.sensors; hist = Demo.data.history; }
+    else {
+      try { const r = await apiRequest('/monitoring/sensors'); sensors = (r && r.data) || []; } catch (_) { sensors = []; }
+      try { const r = await apiRequest('/monitoring/history?hours=24'); hist = (r && r.data) || { series: [], log: [] }; } catch (_) { hist = { series: [], log: [] }; }
+    }
+
+    // Sensors
+    const sc = document.getElementById('mon-sensors');
+    if (sensors && sensors.length) sc.innerHTML = sensors.map(UI.sensorCard).join('');
+    else { sc.className = ''; sc.innerHTML = UI.state('awaiting', 'No sensor data yet', 'Live readings appear here once your sensors are online.', Demo.isOn() ? null : 'Explore with demo data', 'onclick="App.toggleDemo(true)"'); }
+
+    // Chart
+    const ch = document.getElementById('mon-chart');
+    if (hist.series && hist.series.length > 1) {
+      ch.innerHTML = `${UI.lineChart(hist.series)}
+        <div style="display:flex;gap:18px;margin-top:10px;font-size:12px;color:var(--ink-3)">
+          <span><span style="display:inline-block;width:14px;height:3px;background:var(--brand);vertical-align:middle;margin-right:5px"></span>Average level</span>
+          <span><span style="display:inline-block;width:14px;height:0;border-top:2px dashed var(--warn);vertical-align:middle;margin-right:5px"></span>Peak level</span>
+        </div>`;
+    } else {
+      ch.innerHTML = `<div style="color:var(--ink-3);font-size:13px">Trend charts appear here once sensors have recorded a few hours of readings.</div>`;
+    }
+
+    // History log
+    const lg = document.getElementById('mon-log');
+    if (hist.log && hist.log.length) {
+      lg.innerHTML = `<div style="max-height:320px;overflow:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="text-align:left;color:var(--ink-3);font-size:11px;text-transform:uppercase;letter-spacing:.04em">
+            <th style="padding:8px 4px;position:sticky;top:0;background:var(--surface)">Time</th>
+            <th style="padding:8px 4px;position:sticky;top:0;background:var(--surface)">Sensor</th>
+            <th style="padding:8px 4px;position:sticky;top:0;background:var(--surface)">Level</th>
+            <th style="padding:8px 4px;position:sticky;top:0;background:var(--surface)">Flow</th>
+            <th style="padding:8px 4px;position:sticky;top:0;background:var(--surface)">Debris</th>
+          </tr></thead>
+          <tbody>${hist.log.map(r => `<tr style="border-top:1px solid var(--line)">
+            <td style="padding:9px 4px;color:var(--ink-2)">${UI.fmtTime(r.time)}</td>
+            <td style="padding:9px 4px;font-weight:500">${UI.esc(r.sensor)}</td>
+            <td style="padding:9px 4px;font-family:var(--ff-d)">${r.level != null ? r.level + '%' : '—'}</td>
+            <td style="padding:9px 4px;font-family:var(--ff-d)">${r.flow != null ? r.flow + ' L/s' : '—'}</td>
+            <td style="padding:9px 4px">${r.debris ? UI.chip('warn', 'Detected') : UI.chip('ok', 'Clear')}</td>
+          </tr>`).join('')}</tbody>
+        </table></div>`;
+    } else {
+      lg.innerHTML = `<div style="color:var(--ink-3);font-size:13px">No readings logged yet. Historical sensor data will appear here as your devices report.</div>`;
+    }
   }
 
   // ---------------- PROPERTIES (richer cards, clickable → detail) ----------------
@@ -570,6 +616,57 @@ const Screens = (function () {
     }
   }
 
-  return { overview, monitoring, properties, propertyDetail, billing, alerts, notifications, reports, account, setNotifFilter };
+  // ---------------- SUPPORT / TICKETS ----------------
+  const TICKET_CATS = {
+    sensor: 'Sentinel Network', treatment: 'Bio-Treatment', dispatch: 'Heavy-Plant Dispatch',
+    emergency: 'Emergency', billing: 'Billing & Contract', general: 'General enquiry'
+  };
+  let _ticketFilter = 'all';
+
+  async function support(view) {
+    view.innerHTML = `
+      <div class="top"><div><h1>Support</h1><div class="sub">Raise a request or track your existing tickets</div></div>
+        <button class="btn" onclick="App.openTicket()">+ New ticket</button></div>
+      ${demoBanner()}
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <button class="chip ${_ticketFilter === 'all' ? 'ok' : ''}" style="cursor:pointer;border:1px solid var(--line-2)" onclick="App.setTicketFilter('all')">All</button>
+        <button class="chip ${_ticketFilter === 'open' ? 'ok' : ''}" style="cursor:pointer;border:1px solid var(--line-2)" onclick="App.setTicketFilter('open')">Open</button>
+        <button class="chip ${_ticketFilter === 'resolved' ? 'ok' : ''}" style="cursor:pointer;border:1px solid var(--line-2)" onclick="App.setTicketFilter('resolved')">Resolved</button>
+      </div>
+      <div class="card panel-pad" id="tk-list">${UI.loading(3)}</div>`;
+
+    let items;
+    if (Demo.isOn()) items = Demo.data.tickets;
+    else { try { const r = await apiRequest('/tickets'); items = (r && r.data) || []; } catch (_) { items = []; } }
+
+    if (_ticketFilter === 'open') items = items.filter(t => !['resolved', 'closed'].includes(t.status));
+    if (_ticketFilter === 'resolved') items = items.filter(t => ['resolved', 'closed'].includes(t.status));
+
+    const el = document.getElementById('tk-list');
+    if (items && items.length) {
+      el.innerHTML = `<div class="rows">${items.map(ticketRow).join('')}</div>`;
+    } else {
+      el.className = '';
+      el.innerHTML = UI.state('ok', _ticketFilter === 'all' ? 'No tickets yet' : `No ${_ticketFilter} tickets`,
+        'Need help or want to request a service visit? Raise a ticket and our team will respond.',
+        'Raise a ticket', 'onclick="App.openTicket()"');
+    }
+  }
+
+  function ticketRow(t) {
+    const statusMap = { new: ['warn', 'New'], open: ['warn', 'Open'], in_progress: ['warn', 'In progress'], resolved: ['ok', 'Resolved'], closed: ['ok', 'Closed'] };
+    const [sk, sl] = statusMap[t.status] || ['warn', cap(t.status || 'Open')];
+    const prio = t.priority === 'high' || t.priority === 'urgent' ? UI.chip('alert', cap(t.priority)) : '';
+    return `<div class="row">
+      <div class="rmain">
+        <b>${UI.esc(t.subject || t.title || 'Support request')}</b>
+        <small>${UI.esc(TICKET_CATS[t.category] || t.category || 'General')} · ${UI.esc(t.ticket_id || '')} · ${UI.fmtDate(t.created_at)}</small>
+      </div>
+      <div class="rright" style="display:flex;gap:8px;align-items:center">${prio}${UI.chip(sk, sl)}</div>
+    </div>`;
+  }
+  function setTicketFilter(f) { _ticketFilter = f; }
+
+  return { overview, monitoring, properties, propertyDetail, billing, alerts, notifications, reports, support, account, setNotifFilter, setTicketFilter, TICKET_CATS };
 })();
 window.Screens = Screens;

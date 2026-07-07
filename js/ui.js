@@ -125,6 +125,37 @@ const UI = (function () {
     catch (_) { return d; }
   }
 
-  return { esc, toast, loading, state, chip, gauge, sensorCard, stat, fmtNaira, fmtDate };
+  // Simple self-contained SVG area+line chart. series: [{t, avg, peak}]
+  function lineChart(series, opts = {}) {
+    if (!series || series.length < 2) return '<div style="color:var(--ink-3);font-size:13px;padding:20px 0">Not enough data to chart yet.</div>';
+    const w = 640, h = 180, pad = 24;
+    const vals = series.map(d => d.avg);
+    const peaks = series.map(d => d.peak != null ? d.peak : d.avg);
+    const max = Math.max(...peaks, 50), min = 0;
+    const x = i => pad + (i * (w - pad * 2)) / (series.length - 1);
+    const y = v => h - pad - ((v - min) / (max - min)) * (h - pad * 2);
+    const line = vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+    const area = `${line} L${x(series.length - 1).toFixed(1)} ${h - pad} L${x(0).toFixed(1)} ${h - pad} Z`;
+    const peakLine = peaks.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+    // gridlines at 0/25/50
+    const grid = [0, 25, 50].map(g => `<line x1="${pad}" y1="${y(g)}" x2="${w - pad}" y2="${y(g)}" stroke="var(--line)" stroke-width="1"/><text x="4" y="${y(g) + 3}" fill="var(--ink-3)" font-size="10">${g}%</text>`).join('');
+    return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto" preserveAspectRatio="none">
+      <defs><linearGradient id="ch" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="var(--brand)" stop-opacity="0.25"/><stop offset="1" stop-color="var(--brand)" stop-opacity="0"/>
+      </linearGradient></defs>
+      ${grid}
+      <path d="${area}" fill="url(#ch)"/>
+      <path d="${peakLine}" fill="none" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.7"/>
+      <path d="${line}" fill="none" stroke="var(--brand)" stroke-width="2.5" stroke-linejoin="round"/>
+    </svg>`;
+  }
+
+  function fmtTime(d) {
+    if (!d) return '—';
+    try { return new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+    catch (_) { return d; }
+  }
+
+  return { esc, toast, loading, state, chip, gauge, sensorCard, stat, fmtNaira, fmtDate, lineChart, fmtTime };
 })();
 window.UI = UI;

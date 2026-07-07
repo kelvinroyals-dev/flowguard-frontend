@@ -26,6 +26,54 @@ const App = (function () {
 
   // ---- Notifications actions ----
   function setNotifFilter(f) { Screens.setNotifFilter(f); go('notifications'); }
+
+  // ---- Support tickets ----
+  function setTicketFilter(f) { Screens.setTicketFilter(f); go('support'); }
+  function openTicket() {
+    const cats = Screens.TICKET_CATS;
+    const opts = Object.keys(cats).map(k => `<option value="${k}">${cats[k]}</option>`).join('');
+    const bg = document.createElement('div');
+    bg.className = 'modal-bg';
+    bg.innerHTML = `
+      <div class="modal">
+        <div class="modal-h"><h2>New support ticket</h2><button onclick="this.closest('.modal-bg').remove()">×</button></div>
+        <div class="modal-b">
+          <div class="field"><label>Subject</label><input id="tk-subj" placeholder="Brief summary of your request"></div>
+          <div class="field"><label>Category</label><select id="tk-cat">${opts}</select></div>
+          <div class="field"><label>Priority</label>
+            <select id="tk-prio"><option value="low">Low</option><option value="normal" selected>Normal</option><option value="high">High</option><option value="urgent">Urgent — flooding now</option></select></div>
+          <div class="field"><label>Details</label><textarea id="tk-desc" rows="4" placeholder="Describe the issue or request…"></textarea></div>
+          <div id="tk-err" class="hint hidden" style="color:var(--alert)"></div>
+        </div>
+        <div class="modal-f">
+          <button class="btn ghost" onclick="this.closest('.modal-bg').remove()">Cancel</button>
+          <button class="btn" onclick="App.submitTicket(this)">Submit ticket</button>
+        </div>
+      </div>`;
+    document.body.appendChild(bg);
+    bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
+  }
+  async function submitTicket(btn) {
+    const g = id => document.getElementById(id);
+    const subject = g('tk-subj').value.trim();
+    const description = g('tk-desc').value.trim();
+    const err = g('tk-err');
+    if (!subject || !description) {
+      err.textContent = 'Please add a subject and some details.'; err.classList.remove('hidden'); return;
+    }
+    btn.disabled = true; btn.textContent = 'Submitting…';
+    try {
+      await apiRequest('/tickets', { method: 'POST', body: {
+        subject, description, category: g('tk-cat').value, priority: g('tk-prio').value
+      }});
+      document.querySelector('.modal-bg').remove();
+      UI.toast('Ticket submitted — our team will respond soon', 'success');
+      go('support');
+    } catch (e) {
+      err.textContent = e.message || 'Could not submit. Please try again.';
+      err.classList.remove('hidden'); btn.disabled = false; btn.textContent = 'Submit ticket';
+    }
+  }
   async function markRead(id) {
     try { await apiRequest(`/notifications/${id}/read`, { method: 'PUT' }); } catch (_) {}
     go('notifications');
@@ -181,7 +229,7 @@ const App = (function () {
   }
 
   return { go, openProperty, viewReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile,
-           setNotifFilter, markRead, markAllRead, deleteNotif, init };
+           setNotifFilter, markRead, markAllRead, deleteNotif, setTicketFilter, openTicket, submitTicket, init };
 })();
 window.App = App;
 document.addEventListener('DOMContentLoaded', App.init);
