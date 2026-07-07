@@ -27,10 +27,10 @@ const Demo = (function () {
   };
 
   const sensors = [
-    { sensor_id: 'S-01', name: 'Main Gate', zone: 'entrance', status: 'active', level: 28, has_data: true, trend: [40, 55, 35, 60, 45, 50, 28] },
-    { sensor_id: 'S-02', name: 'North Culvert', zone: 'north', status: 'active', level: 19, has_data: true, trend: [30, 25, 40, 20, 35, 28, 19] },
-    { sensor_id: 'S-03', name: 'East Channel', zone: 'east', status: 'active', level: 41, has_data: true, trend: [50, 60, 70, 55, 65, 72, 41] },
-    { sensor_id: 'S-04', name: 'South Drain', zone: 'south', status: 'active', level: 23, has_data: true, trend: [35, 30, 45, 38, 33, 40, 23] }
+    { sensor_id: 'S-01', name: 'Main Gate', zone: 'entrance', status: 'active', level: 28, flow_rate: 12.4, silt_level: 18, has_data: true, trend: [40, 55, 35, 60, 45, 50, 28] },
+    { sensor_id: 'S-02', name: 'North Culvert', zone: 'north', status: 'active', level: 19, flow_rate: 8.1, silt_level: 42, has_data: true, trend: [30, 25, 40, 20, 35, 28, 19] },
+    { sensor_id: 'S-03', name: 'East Channel', zone: 'east', status: 'active', level: 41, flow_rate: 18.7, silt_level: 71, has_data: true, trend: [50, 60, 70, 55, 65, 72, 41] },
+    { sensor_id: 'S-04', name: 'South Drain', zone: 'south', status: 'active', level: 23, flow_rate: 9.6, silt_level: 25, has_data: true, trend: [35, 30, 45, 38, 33, 40, 23] }
   ];
 
   const properties = [

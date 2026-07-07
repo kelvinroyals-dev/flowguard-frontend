@@ -49,36 +49,45 @@ const UI = (function () {
   // The signature: circular flood-risk gauge (SVG). value 0-100 or null (awaiting).
   function gauge(value, level) {
     const has = value != null;
-    const circ = 590;
+    const r = 94;
+    const circ = 2 * Math.PI * r;              // full circumference
     const pct = has ? Math.max(0, Math.min(100, value)) : 0;
-    const offset = circ - (circ * pct / 100) * 0.75 - circ * 0.25; // arc uses ~75% sweep
-    const dash = has ? (circ * pct / 100) : 0;
+    const filled = circ * (pct / 100);          // length of coloured arc
+    const gap = circ - filled;
     const levelColor = level === 'high' ? 'var(--alert)' : level === 'moderate' ? 'var(--warn)' : 'var(--ok)';
-    const levelText = has ? (level === 'high' ? '● High risk' : level === 'moderate' ? '● Moderate' : '● Low risk') : 'Awaiting data';
+    const levelText = has ? (level === 'high' ? 'High risk' : level === 'moderate' ? 'Moderate' : 'Low risk') : 'Awaiting data';
     return `
       <div class="gauge">
         <svg width="220" height="220" viewBox="0 0 220 220">
-          <circle cx="110" cy="110" r="94" fill="none" stroke="var(--line)" stroke-width="16"/>
-          ${has ? `<circle cx="110" cy="110" r="94" fill="none" stroke="url(#gg)" stroke-width="16" stroke-linecap="round"
-             stroke-dasharray="${dash} ${circ}" transform="rotate(-90 110 110)"/>` : ''}
-          <defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1">
+          <circle cx="110" cy="110" r="${r}" fill="none" stroke="var(--line)" stroke-width="14"/>
+          ${has ? `<circle cx="110" cy="110" r="${r}" fill="none" stroke="url(#gg)" stroke-width="14" stroke-linecap="round"
+             stroke-dasharray="${filled.toFixed(1)} ${gap.toFixed(1)}"
+             transform="rotate(-90 110 110)"/>` : ''}
+          <defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1" gradientUnits="userSpaceOnUse">
             <stop offset="0" stop-color="var(--ok)"/><stop offset="1" stop-color="var(--brand-2)"/>
           </linearGradient></defs>
         </svg>
         <div class="gauge-center">
           <b>${has ? pct : '—'}</b>
           <small>Risk index</small>
-          <div class="lvl" style="color:${levelColor}">${levelText}</div>
+          <div class="lvl" style="color:${levelColor}">${has ? '<span class="lvl-dot" style="background:' + levelColor + '"></span>' : ''}${levelText}</div>
         </div>
       </div>`;
   }
 
-  // A live sensor card with sparkline. sensor: {name, level, trend[], status, has_data}
+  // A live sensor card showing ALL metrics the Sentinel device captures:
+  // water level, flow rate, and silt/debris — not just water level.
   function sensorCard(s) {
     const spark = (s.trend && s.trend.length)
       ? s.trend.map(v => `<i style="height:${Math.max(8, Math.min(100, v))}%"></i>`).join('')
       : '<i style="height:8%"></i>'.repeat(7);
     const live = s.status === 'active';
+    const flow = s.flow_rate != null ? `${s.flow_rate} L/s` : '—';
+    const siltPct = s.silt_level != null ? s.silt_level : null;
+    const siltLabel = siltPct == null ? '—'
+      : siltPct >= 70 ? 'High' : siltPct >= 40 ? 'Moderate' : 'Low';
+    const siltColor = siltPct == null ? 'var(--ink-3)'
+      : siltPct >= 70 ? 'var(--alert)' : siltPct >= 40 ? 'var(--warn)' : 'var(--ok)';
     return `
       <div class="sensor">
         <div class="sh">
@@ -86,8 +95,12 @@ const UI = (function () {
           ${live ? '<span class="live"><span class="d"></span>Live</span>' : '<span class="live off">Offline</span>'}
         </div>
         <div class="v">${s.level != null ? Math.round(s.level) : '—'}<span class="u2">${s.level != null ? '%' : ''}</span></div>
-        <div class="u">${s.has_data ? 'water level' : 'awaiting reading'}</div>
+        <div class="u">water level</div>
         <div class="spark">${spark}</div>
+        <div class="sensor-metrics">
+          <div class="sm"><span class="sm-l">Flow</span><span class="sm-v">${flow}</span></div>
+          <div class="sm"><span class="sm-l">Silt</span><span class="sm-v" style="color:${siltColor}">${siltLabel}</span></div>
+        </div>
       </div>`;
   }
 
