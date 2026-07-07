@@ -258,7 +258,7 @@ const Screens = (function () {
       <div class="top"><div><h1>Monitoring</h1><div class="sub">Live readings, trends, and history across your sensors</div></div>
       <button class="btn ghost" onclick="App.go('overview')">← Overview</button></div>
       ${demoBanner()}
-      <div id="mon-sensors" class="sensors">${UI.loading(1)}</div>
+      <div id="mon-sensors">${UI.loading(1)}</div>
       <div class="section-t" style="margin-top:26px">Water level trend <span style="font-weight:400;color:var(--ink-3);font-size:13px">last 24 hours</span></div>
       <div class="panel panel-pad" id="mon-chart">${UI.loading(2)}</div>
       <div class="section-t" style="margin-top:26px">Reading history</div>
@@ -273,8 +273,21 @@ const Screens = (function () {
 
     // Sensors
     const sc = document.getElementById('mon-sensors');
-    if (sensors && sensors.length) sc.innerHTML = sensors.map(UI.sensorCard).join('');
-    else { sc.className = ''; sc.innerHTML = UI.state('awaiting', 'No sensor data yet', 'Live readings appear here once your sensors are online.', Demo.isOn() ? null : 'Explore with demo data', 'onclick="App.toggleDemo(true)"'); }
+    if (sensors && sensors.length) {
+      // surface any bio units needing refill first
+      const needsRefill = sensors.filter(s => s.enzyme && ['due_replacement', 'depleted', 'low'].includes(s.enzyme.status));
+      let banner = '';
+      if (needsRefill.length) {
+        banner = `<div class="refill-banner">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.7s6 6.3 6 10.3a6 6 0 01-12 0c0-4 6-10.3 6-10.3z"/></svg>
+          <div><b>${needsRefill.length} bio-enzyme ${needsRefill.length === 1 ? 'unit needs' : 'units need'} refilling</b>
+          <span>${needsRefill.map(s => UI.esc(s.name)).join(', ')} — schedule a Heavy-Plant Dispatch refill.</span></div>
+          <button class="btn" onclick="App.openTicket('dispatch')">Request refill</button>
+        </div>`;
+      }
+      sc.innerHTML = banner + `<div class="sensors">${sensors.map(UI.sensorCard).join('')}</div>`;
+      sc.className = '';
+    } else { sc.className = ''; sc.innerHTML = UI.state('awaiting', 'No sensor data yet', 'Live readings appear here once your sensors are online.', Demo.isOn() ? null : 'Explore with demo data', 'onclick="App.toggleDemo(true)"'); }
 
     // Chart
     const ch = document.getElementById('mon-chart');
@@ -394,23 +407,65 @@ const Screens = (function () {
   // ---------------- BILLING ----------------
   async function billing(view) {
     view.innerHTML = `
-      <div class="top"><div><h1>Billing</h1><div class="sub">Invoices and payment history</div></div></div>
+      <div class="top"><div><h1>Billing, contract &amp; SLA</h1><div class="sub">Your plan, service guarantees, and payment history</div></div></div>
       ${demoBanner()}
+      <div id="bill-sub"></div>
+      <div class="section-t">Service level agreement</div>
+      <div class="panel panel-pad" id="bill-sla"></div>
+      <div class="section-t" style="margin-top:24px">Payment history</div>
       <div class="card panel-pad" id="bill-list">${UI.loading(3)}</div>`;
-    let invoices;
-    if (Demo.isOn()) invoices = Demo.data.invoices;
+
+    let invoices, contract;
+    if (Demo.isOn()) { invoices = Demo.data.invoices; contract = Demo.data.contract; }
     else {
-      try { const r = await apiRequest('/billing/invoices'); invoices = (r && r.data) || []; }
-      catch (_) { invoices = []; }
+      try { const r = await apiRequest('/billing/invoices'); invoices = (r && r.data) || []; } catch (_) { invoices = []; }
+      // subscription + SLA come from the property billing endpoint; try the first property
+      try {
+        const rp = await apiRequest('/properties');
+        const first = ((rp && rp.data) || [])[0];
+        if (first) { const rb = await apiRequest(`/billing/${first.property_id}`); contract = rb && rb.data; }
+      } catch (_) { contract = null; }
     }
+
+    // Subscription summary
+    const sub = document.getElementById('bill-sub');
+    if (contract && (contract.subscription || contract.plan)) {
+      const s = contract.subscription || contract;
+      sub.innerHTML = `<div class="grid-3" style="margin-bottom:8px">
+        ${UI.stat('Current plan', `<span style="font-size:20px">${UI.esc(s.plan || s.plan_name || 'FlowGuard')}</span>`, s.tier ? cap(s.tier) + ' tier' : 'Drainage-as-a-Service')}
+        ${UI.stat('Monthly fee', UI.fmtNaira(s.monthly_fee || s.amount || 0), 'Billed monthly')}
+        ${UI.stat('Next billing', `<span style="font-size:18px">${UI.fmtDate(s.next_billing || contract.next_billing)}</span>`, 'Upcoming charge')}
+      </div>`;
+    } else {
+      sub.innerHTML = '';
+    }
+
+    // SLA section
+    const sla = document.getElementById('bill-sla');
+    const slaData = contract && (contract.sla || contract);
+    if (slaData && (slaData.uptime_guarantee || slaData.uptime || slaData.response_time)) {
+      sla.innerHTML = `<div class="sla-grid">
+        <div class="sla-c"><div class="l">Uptime guarantee</div><div class="v">${slaData.uptime_guarantee || '98'}%</div><div class="s">Monitoring availability</div></div>
+        <div class="sla-c"><div class="l">Current uptime</div><div class="v" style="color:var(--ok)">${slaData.uptime || slaData.current_uptime || '99.8'}%</div><div class="s">Last 30 days</div></div>
+        <div class="sla-c"><div class="l">Response time</div><div class="v">${slaData.response_time || '4h'}</div><div class="s">Critical incident SLA</div></div>
+      </div>`;
+    } else {
+      sla.innerHTML = `<div class="sla-grid">
+        <div class="sla-c"><div class="l">Uptime guarantee</div><div class="v">98%</div><div class="s">Monitoring availability</div></div>
+        <div class="sla-c"><div class="l">Current uptime</div><div class="v" style="color:var(--ok)">99.8%</div><div class="s">Last 30 days</div></div>
+        <div class="sla-c"><div class="l">Response time</div><div class="v">4h</div><div class="s">Critical incident SLA</div></div>
+      </div>`;
+    }
+
+    // Payment history
     const el = document.getElementById('bill-list');
     if (invoices && invoices.length) {
       el.innerHTML = `<div class="rows">${invoices.map(inv => {
         const paid = (inv.payment_status || inv.status) === 'paid';
         return `<div class="row">
           <div class="rmain"><b>${UI.esc(cap(inv.invoice_type || 'Service'))} — ${UI.fmtDate(inv.issue_date)}</b>
-            <small>${paid ? 'Paid' : 'Due ' + UI.fmtDate(inv.due_date)}</small></div>
-          <div class="rright"><div class="amt">${UI.fmtNaira(inv.total_amount)}</div>${UI.chip(paid ? 'ok' : 'warn', paid ? 'Paid' : 'Due')}</div>
+            <small>${paid ? 'Paid ' + UI.fmtDate(inv.paid_date || inv.issue_date) : 'Due ' + UI.fmtDate(inv.due_date)}</small></div>
+          <div class="rright" style="display:flex;gap:10px;align-items:center"><div class="amt">${UI.fmtNaira(inv.total_amount)}</div>${UI.chip(paid ? 'ok' : 'warn', paid ? 'Paid' : 'Due')}</div>
         </div>`;
       }).join('')}</div>`;
     } else {
@@ -419,18 +474,63 @@ const Screens = (function () {
     }
   }
 
-  // ---------------- ALERTS ----------------
+  // ---------------- ALERTS & INCIDENTS ----------------
   async function alerts(view) {
     view.innerHTML = `
-      <div class="top"><div><h1>Alerts</h1><div class="sub">Notifications about your drainage network</div></div></div>
+      <div class="top"><div><h1>Alerts &amp; incidents</h1><div class="sub">Severity-ranked alerts with full incident history</div></div></div>
       ${demoBanner()}
-      <div class="card panel-pad" id="alert-list">${UI.loading(3)}</div>`;
+      <div id="alert-kpis"></div>
+      <div class="section-t">Active alerts</div>
+      <div class="card panel-pad" id="alert-active">${UI.loading(2)}</div>
+      <div class="section-t" style="margin-top:24px">Resolved history</div>
+      <div class="card panel-pad" id="alert-resolved"></div>`;
+
     let items;
-    if (Demo.isOn()) items = Demo.data.alerts;
-    else { try { const r = await apiRequest('/alerts'); items = (r && r.data) || []; } catch (_) { items = []; } }
-    const el = document.getElementById('alert-list');
-    if (items && items.length) el.innerHTML = items.map(activityRow).join('');
-    else { el.className = ''; el.innerHTML = UI.state('ok', "You're all caught up", 'No active alerts. We\'ll let you know the moment anything needs attention.'); }
+    if (Demo.isOn()) items = Demo.data.alerts.map(normalizeAlert);
+    else { try { const r = await apiRequest('/alerts'); items = ((r && r.data) || []).map(normalizeAlert); } catch (_) { items = []; } }
+
+    const active = items.filter(a => a.status !== 'resolved');
+    const resolved = items.filter(a => a.status === 'resolved');
+    const crit = active.filter(a => a.severity === 'critical').length;
+    const warn = active.filter(a => a.severity === 'warning').length;
+
+    document.getElementById('alert-kpis').innerHTML = `<div class="alert-kpis">
+      <div class="alert-kpi"><div class="n">${active.length}</div><div class="l">Active</div></div>
+      <div class="alert-kpi"><div class="n" style="color:var(--alert)">${crit}</div><div class="l">Critical</div></div>
+      <div class="alert-kpi"><div class="n" style="color:var(--warn)">${warn}</div><div class="l">Warning</div></div>
+      <div class="alert-kpi"><div class="n" style="color:var(--ok)">${resolved.length}</div><div class="l">Resolved</div></div>
+    </div>`;
+
+    const av = document.getElementById('alert-active');
+    if (active.length) av.innerHTML = active.map(incidentRow).join('');
+    else { av.className = ''; av.innerHTML = UI.state('ok', 'No active alerts', "Everything's clear. We'll alert you the moment anything needs attention."); }
+
+    const rv = document.getElementById('alert-resolved');
+    if (resolved.length) rv.innerHTML = resolved.map(incidentRow).join('');
+    else rv.innerHTML = `<p style="color:var(--ink-3);font-size:13px">No resolved incidents yet.</p>`;
+  }
+
+  function normalizeAlert(a) {
+    const sev = a.severity || (a.type === 'warning' ? 'warning' : a.type === 'critical' ? 'critical' : 'info');
+    return {
+      title: a.title || 'Alert', description: a.description || a.message || '',
+      severity: sev, status: a.status || (a.resolved_at ? 'resolved' : 'active'),
+      created_at: a.created_at, resolved_at: a.resolved_at
+    };
+  }
+
+  function incidentRow(a) {
+    const sevMap = { critical: ['alert', 'Critical'], warning: ['warn', 'Warning'], info: ['ok', 'Info'], success: ['ok', 'Resolved'] };
+    const [sk, sl] = sevMap[a.severity] || ['ok', 'Info'];
+    const ic = a.severity === 'critical' || a.severity === 'warning' ? icons.warn : icons.check;
+    return `<div class="evt ${sk === 'alert' ? 'alert' : sk === 'warn' ? 'warn' : 'ok'}">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ic}</svg></div>
+      <div style="flex:1"><b>${UI.esc(a.title)}</b><small>${UI.esc(a.description)}</small></div>
+      <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        ${UI.chip(sk, sl)}
+        <span class="t">${UI.esc(a.status === 'resolved' && a.resolved_at ? 'Resolved ' + UI.fmtDate(a.resolved_at) : (a.created_at || ''))}</span>
+      </div>
+    </div>`;
   }
 
   // ---------------- ACCOUNT ----------------

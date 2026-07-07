@@ -27,10 +27,12 @@ const Demo = (function () {
   };
 
   const sensors = [
-    { sensor_id: 'S-01', name: 'Main Gate', zone: 'entrance', status: 'active', level: 28, flow_rate: 12.4, silt_level: 18, has_data: true, trend: [40, 55, 35, 60, 45, 50, 28] },
-    { sensor_id: 'S-02', name: 'North Culvert', zone: 'north', status: 'active', level: 19, flow_rate: 8.1, silt_level: 42, has_data: true, trend: [30, 25, 40, 20, 35, 28, 19] },
-    { sensor_id: 'S-03', name: 'East Channel', zone: 'east', status: 'active', level: 41, flow_rate: 18.7, silt_level: 71, has_data: true, trend: [50, 60, 70, 55, 65, 72, 41] },
-    { sensor_id: 'S-04', name: 'South Drain', zone: 'south', status: 'active', level: 23, flow_rate: 9.6, silt_level: 25, has_data: true, trend: [35, 30, 45, 38, 33, 40, 23] }
+    { sensor_id: 'S-01', name: 'Main Gate', zone: 'entrance', status: 'active', device_variant: 'basic', level: 28, flow_rate: 12.4, silt_level: 18, has_data: true, trend: [40, 55, 35, 60, 45, 50, 28], enzyme: null },
+    { sensor_id: 'S-02', name: 'North Culvert', zone: 'north', status: 'active', device_variant: 'bio_dispenser', level: 19, flow_rate: 8.1, silt_level: 42, has_data: true, trend: [30, 25, 40, 20, 35, 28, 19],
+      enzyme: { level_percent: 64, status: 'dispensing', capacity_ml: 5000, days_left: 21 } },
+    { sensor_id: 'S-03', name: 'East Channel', zone: 'east', status: 'active', device_variant: 'bio_dispenser', level: 41, flow_rate: 18.7, silt_level: 71, has_data: true, trend: [50, 60, 70, 55, 65, 72, 41],
+      enzyme: { level_percent: 11, status: 'due_replacement', capacity_ml: 5000, days_left: 3 } },
+    { sensor_id: 'S-04', name: 'South Drain', zone: 'south', status: 'active', device_variant: 'basic', level: 23, flow_rate: 9.6, silt_level: 25, has_data: true, trend: [35, 30, 45, 38, 33, 40, 23], enzyme: null }
   ];
 
   const properties = [
@@ -46,9 +48,11 @@ const Demo = (function () {
   ];
 
   const alerts = [
-    { type: 'info', title: 'Sensor check passed', description: 'All 12 sensors reporting normally', created_at: '2 min ago' },
-    { type: 'warning', title: 'Light rain expected', description: 'Tomorrow, 14:00–18:00 · drainage clear', created_at: '1 hour ago' },
-    { type: 'info', title: 'East Channel cleared', description: 'Scheduled maintenance completed', created_at: 'Yesterday' }
+    { type: 'critical', severity: 'critical', status: 'active', title: 'East Channel silt high', description: 'Silt at 71% — clearing recommended', created_at: '12 min ago' },
+    { type: 'warning', severity: 'warning', status: 'active', title: 'Bio-enzyme low — East Channel', description: 'Cartridge at 11%, refill due in ~3 days', created_at: '40 min ago' },
+    { type: 'warning', severity: 'warning', status: 'active', title: 'Light rain expected', description: 'Tomorrow, 14:00–18:00 · drainage clear', created_at: '1 hour ago' },
+    { type: 'info', severity: 'info', status: 'resolved', title: 'Sensor check passed', description: 'All 12 sensors reporting normally', created_at: '2 hours ago', resolved_at: '2026-07-07' },
+    { type: 'info', severity: 'info', status: 'resolved', title: 'East Channel cleared', description: 'Scheduled maintenance completed', created_at: 'Yesterday', resolved_at: '2026-07-06' }
   ];
 
   const timeline = [
@@ -94,6 +98,11 @@ const Demo = (function () {
     return { series, log, has_data: true };
   })();
 
-  return { isOn, set, data: { floodRisk, sensors, properties, invoices, alerts, timeline, reports, services, tickets, history } };
+  const contract = {
+    subscription: { plan: 'FlowGuard', tier: 'flowguard', monthly_fee: 185000, next_billing: '2026-08-01' },
+    sla: { uptime_guarantee: 98, uptime: 99.8, response_time: '4h' }
+  };
+
+  return { isOn, set, data: { floodRisk, sensors, properties, invoices, alerts, timeline, reports, services, tickets, history, contract } };
 })();
 window.Demo = Demo;

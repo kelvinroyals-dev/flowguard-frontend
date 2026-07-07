@@ -31,16 +31,17 @@ const App = (function () {
 
   // ---- Support tickets ----
   function setTicketFilter(f) { Screens.setTicketFilter(f); go('support'); }
-  function openTicket() {
+  function openTicket(presetCat) {
     const cats = Screens.TICKET_CATS;
-    const opts = Object.keys(cats).map(k => `<option value="${k}">${cats[k]}</option>`).join('');
+    const opts = Object.keys(cats).map(k => `<option value="${k}" ${k === presetCat ? 'selected' : ''}>${cats[k]}</option>`).join('');
+    const presetSubj = presetCat === 'dispatch' ? 'Bio-enzyme cartridge refill request' : '';
     const bg = document.createElement('div');
     bg.className = 'modal-bg';
     bg.innerHTML = `
       <div class="modal">
         <div class="modal-h"><h2>New support ticket</h2><button onclick="this.closest('.modal-bg').remove()">×</button></div>
         <div class="modal-b">
-          <div class="field"><label>Subject</label><input id="tk-subj" placeholder="Brief summary of your request"></div>
+          <div class="field"><label>Subject</label><input id="tk-subj" value="${presetSubj}" placeholder="Brief summary of your request"></div>
           <div class="field"><label>Category</label><select id="tk-cat">${opts}</select></div>
           <div class="field"><label>Priority</label>
             <select id="tk-prio"><option value="low">Low</option><option value="normal" selected>Normal</option><option value="high">High</option><option value="urgent">Urgent — flooding now</option></select></div>

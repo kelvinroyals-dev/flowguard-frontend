@@ -75,8 +75,8 @@ const UI = (function () {
       </div>`;
   }
 
-  // A live sensor card showing ALL metrics the Sentinel device captures:
-  // water level, flow rate, and silt/debris — not just water level.
+  // A live sensor card showing ALL metrics the Sentinel device captures.
+  // Bio-dispenser variants also show the enzyme cartridge status.
   function sensorCard(s) {
     const spark = (s.trend && s.trend.length)
       ? s.trend.map(v => `<i style="height:${Math.max(8, Math.min(100, v))}%"></i>`).join('')
@@ -84,14 +84,13 @@ const UI = (function () {
     const live = s.status === 'active';
     const flow = s.flow_rate != null ? `${s.flow_rate} L/s` : '—';
     const siltPct = s.silt_level != null ? s.silt_level : null;
-    const siltLabel = siltPct == null ? '—'
-      : siltPct >= 70 ? 'High' : siltPct >= 40 ? 'Moderate' : 'Low';
-    const siltColor = siltPct == null ? 'var(--ink-3)'
-      : siltPct >= 70 ? 'var(--alert)' : siltPct >= 40 ? 'var(--warn)' : 'var(--ok)';
+    const siltLabel = siltPct == null ? '—' : siltPct >= 70 ? 'High' : siltPct >= 40 ? 'Moderate' : 'Low';
+    const siltColor = siltPct == null ? 'var(--ink-3)' : siltPct >= 70 ? 'var(--alert)' : siltPct >= 40 ? 'var(--warn)' : 'var(--ok)';
+    const isBio = s.device_variant === 'bio_dispenser';
     return `
       <div class="sensor">
         <div class="sh">
-          <span class="nm">${esc(s.name || s.sensor_id)}</span>
+          <span class="nm">${esc(s.name || s.sensor_id)}${isBio ? '<span class="bio-badge">Bio</span>' : ''}</span>
           ${live ? '<span class="live"><span class="d"></span>Live</span>' : '<span class="live off">Offline</span>'}
         </div>
         <div class="v">${s.level != null ? Math.round(s.level) : '—'}<span class="u2">${s.level != null ? '%' : ''}</span></div>
@@ -101,6 +100,28 @@ const UI = (function () {
           <div class="sm"><span class="sm-l">Flow</span><span class="sm-v">${flow}</span></div>
           <div class="sm"><span class="sm-l">Silt</span><span class="sm-v" style="color:${siltColor}">${siltLabel}</span></div>
         </div>
+        ${isBio ? enzymeBlock(s.enzyme) : ''}
+      </div>`;
+  }
+
+  // Bio-enzyme cartridge status block
+  function enzymeBlock(e) {
+    if (!e) return '';
+    const lvl = e.level_percent != null ? Math.round(e.level_percent) : null;
+    const statusMap = {
+      loaded: ['ok', 'Loaded'], dispensing: ['ok', 'Dispensing'], low: ['warn', 'Running low'],
+      depleted: ['alert', 'Depleted'], due_replacement: ['alert', 'Due for refill']
+    };
+    const [sk, sl] = statusMap[e.status] || ['ok', 'Loaded'];
+    const barColor = lvl == null ? 'var(--ink-3)' : lvl < 15 ? 'var(--alert)' : lvl < 30 ? 'var(--warn)' : 'var(--ok)';
+    const daysNote = e.days_left != null
+      ? (e.days_left <= 0 ? 'Refill overdue' : e.days_left <= 7 ? `~${e.days_left} days left` : `~${e.days_left} days left`)
+      : '';
+    return `
+      <div class="enzyme">
+        <div class="enzyme-h"><span class="enzyme-t">Bio-enzyme cartridge</span>${chip(sk, sl)}</div>
+        <div class="enzyme-bar"><span style="width:${lvl != null ? lvl : 0}%;background:${barColor}"></span></div>
+        <div class="enzyme-f"><span>${lvl != null ? lvl + '% remaining' : 'No reading'}</span><span style="color:${e.days_left != null && e.days_left <= 7 ? 'var(--alert)' : 'var(--ink-3)'}">${daysNote}</span></div>
       </div>`;
   }
 
