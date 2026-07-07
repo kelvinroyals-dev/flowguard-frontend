@@ -9,17 +9,20 @@ const App = (function () {
     const railEl = document.getElementById('rail');
     if (railEl) railEl.classList.remove('open');
     // nav active state (property/notifications map to their parent nav where relevant)
-    const navTab = tab === 'propertyDetail' ? 'properties' : tab === 'notifications' ? 'alerts' : tab;
+    const navTab = tab === 'propertyDetail' ? 'properties' : tab === 'sensorDetail' ? 'monitoring' : tab === 'notifications' ? 'alerts' : tab;
     document.querySelectorAll('.rail .navbtn').forEach(b =>
       b.classList.toggle('on', b.dataset.tab === navTab));
     const view = document.getElementById('view');
     view.scrollTop = 0;
     if (tab === 'propertyDetail') { Screens.propertyDetail(view, arg); return; }
+    if (tab === 'sensorDetail') { Screens.sensorDetail(view, arg); return; }
     const fn = Screens[tab];
     if (fn) fn(view);
   }
 
   function openProperty(id) { go('propertyDetail', id); }
+  function openSensor(id) { go('sensorDetail', id); }
+  function setSensorRange(h, sensorId) { Screens.setSensorRange(h, sensorId); go('sensorDetail', sensorId); }
 
   function viewReport(id) {
     // Reports open in a modal (placeholder until a report-detail endpoint exists)
@@ -253,7 +256,7 @@ const App = (function () {
     } catch (_) { /* keep cached */ }
   }
 
-  return { go, openProperty, viewReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings,
+  return { go, openProperty, openSensor, setSensorRange, viewReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings,
            setNotifFilter, markRead, markAllRead, deleteNotif, setTicketFilter, openTicket, submitTicket, init };
 })();
 window.App = App;

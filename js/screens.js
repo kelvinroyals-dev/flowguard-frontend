@@ -83,14 +83,23 @@ const Screens = (function () {
       document.getElementById('ov-sub').textContent = `${risk.sensors_online}/${risk.sensors_total} sensors online · updated just now`;
       const msg = risk.level === 'low' ? "Everything's flowing normally"
         : risk.level === 'moderate' ? 'Levels slightly elevated — watching closely' : 'Elevated flood risk — team responding';
+      const shown = (sensors || []).slice(0, 3);
+      const remaining = (sensors || []).length - shown.length;
+      const moreCard = remaining > 0
+        ? `<div class="sensor sensor-more" onclick="App.go('monitoring')">
+             <div class="more-n">+${remaining}</div><div class="more-l">more sensor${remaining > 1 ? 's' : ''}</div>
+             <div class="more-cta">View all →</div>
+           </div>`
+        : '';
       mon.innerHTML = `
         <div class="mon-wrap">
           ${UI.gauge(risk.risk_index, risk.level)}
           <div>
             <h3 style="font-family:var(--ff-d);font-size:18px;font-weight:600;margin-bottom:6px">${msg}</h3>
-            <p style="color:var(--ink-2);font-size:14px;margin-bottom:16px;max-width:440px">Peak level today ${risk.peak_level}% · ${risk.reading_count} sensors reporting. We'll alert you the moment anything changes.</p>
-            <div class="sensors" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
-              ${(sensors || []).slice(0, 4).map(UI.sensorCard).join('')}
+            <p style="color:var(--ink-2);font-size:14px;margin-bottom:16px;max-width:440px">Peak level today ${risk.peak_level}% · ${risk.sensors_online} of ${risk.sensors_total} sensors reporting. We'll alert you the moment anything changes.</p>
+            <div class="mon-sensor-grid">
+              ${shown.map(UI.sensorCard).join('')}
+              ${moreCard}
             </div>
           </div>
         </div>`;
@@ -716,6 +725,55 @@ const Screens = (function () {
     }
   }
 
+  // ---------------- SENSOR DETAIL (drill-down + time range) ----------------
+  let _sensorRange = 24;
+  async function sensorDetail(view, sensorId) {
+    view.innerHTML = `
+      <div class="top"><div>
+        <div class="crumb" style="color:var(--ink-3);font-size:12.5px;margin-bottom:6px;cursor:pointer" onclick="App.go('monitoring')">← Monitoring</div>
+        <h1 id="sd-name">Loading…</h1><div class="sub" id="sd-sub"></div>
+      </div>
+      <div style="display:flex;gap:6px">
+        ${[['24h', 24], ['7d', 168], ['30d', 720]].map(([lbl, h]) =>
+          `<button class="chip ${_sensorRange === h ? 'ok' : ''}" style="cursor:pointer;border:1px solid var(--line-2)" onclick="App.setSensorRange(${h},'${UI.esc(sensorId)}')">${lbl}</button>`).join('')}
+      </div></div>
+      ${demoBanner()}
+      <div id="sd-body">${UI.loading(3)}</div>`;
+
+    let d;
+    if (Demo.isOn()) {
+      const s = Demo.data.sensors.find(x => x.sensor_id === sensorId) || Demo.data.sensors[0];
+      const pts = _sensorRange <= 24 ? 24 : _sensorRange <= 168 ? 28 : 30;
+      const now = Date.now(), span = _sensorRange * 3600e3;
+      d = { ...s, series: Array.from({ length: pts }, (_, i) => {
+        const base = (s.level || 30) + Math.sin(i / 3) * 12;
+        return { t: new Date(now - (pts - 1 - i) * (span / pts)).toISOString(), avg: Math.max(5, Math.round(base)), peak: Math.round(base + 8), flow: +(8 + Math.random() * 10).toFixed(1) };
+      }) };
+    } else {
+      try { const r = await apiRequest(`/monitoring/sensor/${sensorId}?hours=${_sensorRange}`); d = r && r.data; }
+      catch (e) { document.getElementById('sd-body').innerHTML = UI.state('error', 'Could not load sensor', e.message || 'Please try again.'); return; }
+    }
+    if (!d) { document.getElementById('sd-body').innerHTML = UI.state('error', 'Sensor not found', ''); return; }
+
+    document.getElementById('sd-name').textContent = d.name || d.sensor_id;
+    document.getElementById('sd-sub').textContent = `${d.zone ? cap(d.zone) + ' zone' : ''}${d.device_variant === 'bio_dispenser' ? ' · Bio-enzyme dispenser' : ' · Standard sensor'} · ${d.status === 'active' ? 'Live' : 'Offline'}`;
+
+    const rangeLabel = _sensorRange === 24 ? 'last 24 hours' : _sensorRange === 168 ? 'last 7 days' : 'last 30 days';
+    document.getElementById('sd-body').innerHTML = `
+      <div class="grid-3" style="margin-bottom:20px">
+        ${UI.stat('Current level', (d.level != null ? Math.round(d.level) : '—') + '%', 'Water level')}
+        ${UI.stat('Flow rate', d.flow_rate != null ? d.flow_rate + ' L/s' : '—', 'Current')}
+        ${UI.stat('Status', `<span style="font-size:18px">${d.status === 'active' ? 'Online' : 'Offline'}</span>`, d.device_variant === 'bio_dispenser' ? 'Bio-dispenser' : 'Standard')}
+      </div>
+      ${d.enzyme ? `<div class="panel panel-pad" style="margin-bottom:20px"><h3 style="font-family:var(--ff-d);font-size:15px;margin-bottom:14px">Bio-enzyme cartridge</h3>${UI.enzymeDetail(d.enzyme)}</div>` : ''}
+      <div class="panel panel-pad">
+        <h3 style="font-family:var(--ff-d);font-size:15px;margin-bottom:4px">Water level trend</h3>
+        <p style="color:var(--ink-3);font-size:12.5px;margin-bottom:16px">${rangeLabel}</p>
+        ${UI.lineChart(d.series || [])}
+      </div>`;
+  }
+  function setSensorRange(h, sensorId) { _sensorRange = h; }
+
   // ---------------- SUPPORT / TICKETS ----------------
   const TICKET_CATS = {
     sensor: 'Sentinel Network', treatment: 'Bio-Treatment', dispatch: 'Heavy-Plant Dispatch',
@@ -800,6 +858,6 @@ const Screens = (function () {
       </div>`;
   }
 
-  return { overview, monitoring, properties, propertyDetail, billing, alerts, notifications, reports, support, settings, account, setNotifFilter, setTicketFilter, TICKET_CATS };
+  return { overview, monitoring, sensorDetail, properties, propertyDetail, billing, alerts, notifications, reports, support, settings, account, setNotifFilter, setTicketFilter, setSensorRange, TICKET_CATS };
 })();
 window.Screens = Screens;

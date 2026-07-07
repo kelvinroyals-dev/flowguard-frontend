@@ -88,7 +88,7 @@ const UI = (function () {
     const siltColor = siltPct == null ? 'var(--ink-3)' : siltPct >= 70 ? 'var(--alert)' : siltPct >= 40 ? 'var(--warn)' : 'var(--ok)';
     const isBio = s.device_variant === 'bio_dispenser';
     return `
-      <div class="sensor">
+      <div class="sensor sensor-clickable" onclick="App.openSensor('${esc(s.sensor_id)}')">
         <div class="sh">
           <span class="nm">${esc(s.name || s.sensor_id)}${isBio ? '<span class="bio-badge">Bio</span>' : ''}</span>
           ${live ? '<span class="live"><span class="d"></span>Live</span>' : '<span class="live off">Offline</span>'}
@@ -109,19 +109,19 @@ const UI = (function () {
     if (!e) return '';
     const lvl = e.level_percent != null ? Math.round(e.level_percent) : null;
     const statusMap = {
-      loaded: ['ok', 'Loaded'], dispensing: ['ok', 'Dispensing'], low: ['warn', 'Running low'],
-      depleted: ['alert', 'Depleted'], due_replacement: ['alert', 'Due for refill']
+      loaded: ['ok', 'Loaded'], dispensing: ['ok', 'Dispensing'], low: ['warn', 'Low'],
+      depleted: ['alert', 'Depleted'], due_replacement: ['alert', 'Refill due']
     };
     const [sk, sl] = statusMap[e.status] || ['ok', 'Loaded'];
     const barColor = lvl == null ? 'var(--ink-3)' : lvl < 15 ? 'var(--alert)' : lvl < 30 ? 'var(--warn)' : 'var(--ok)';
     const daysNote = e.days_left != null
-      ? (e.days_left <= 0 ? 'Refill overdue' : e.days_left <= 7 ? `~${e.days_left} days left` : `~${e.days_left} days left`)
+      ? (e.days_left <= 0 ? 'Overdue' : `~${e.days_left}d left`)
       : '';
     return `
       <div class="enzyme">
-        <div class="enzyme-h"><span class="enzyme-t">Bio-enzyme cartridge</span>${chip(sk, sl)}</div>
+        <div class="enzyme-h"><span class="enzyme-t">Bio-enzyme</span>${chip(sk, sl)}</div>
         <div class="enzyme-bar"><span style="width:${lvl != null ? lvl : 0}%;background:${barColor}"></span></div>
-        <div class="enzyme-f"><span>${lvl != null ? lvl + '% remaining' : 'No reading'}</span><span style="color:${e.days_left != null && e.days_left <= 7 ? 'var(--alert)' : 'var(--ink-3)'}">${daysNote}</span></div>
+        <div class="enzyme-f"><span>${lvl != null ? lvl + '% left' : 'No reading'}</span><span style="color:${e.days_left != null && e.days_left <= 7 ? 'var(--alert)' : 'var(--ink-3)'}">${daysNote}</span></div>
       </div>`;
   }
 
@@ -172,11 +172,25 @@ const UI = (function () {
   }
 
   function fmtTime(d) {
-    if (!d) return '—';
     try { return new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
     catch (_) { return d; }
   }
 
-  return { esc, toast, loading, state, chip, gauge, sensorCard, stat, fmtNaira, fmtDate, lineChart, fmtTime };
+  // Larger bio-enzyme block for the sensor detail page
+  function enzymeDetail(e) {
+    if (!e) return '';
+    const lvl = e.level_percent != null ? Math.round(e.level_percent) : null;
+    const barColor = lvl == null ? 'var(--ink-3)' : lvl < 15 ? 'var(--alert)' : lvl < 30 ? 'var(--warn)' : 'var(--ok)';
+    const statusMap = { loaded: ['ok', 'Loaded'], dispensing: ['ok', 'Dispensing'], low: ['warn', 'Running low'], depleted: ['alert', 'Depleted'], due_replacement: ['alert', 'Due for refill'] };
+    const [sk, sl] = statusMap[e.status] || ['ok', 'Loaded'];
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-family:var(--ff-d);font-size:24px;font-weight:700">${lvl != null ? lvl + '%' : '—'}</span>${chip(sk, sl)}
+      </div>
+      <div class="enzyme-bar" style="height:10px"><span style="width:${lvl != null ? lvl : 0}%;background:${barColor}"></span></div>
+      ${e.depletion_date ? `<p style="color:var(--ink-3);font-size:12.5px;margin-top:10px">Estimated depletion: ${fmtDate(e.depletion_date)}</p>` : ''}`;
+  }
+
+  return { esc, toast, loading, state, chip, gauge, sensorCard, enzymeDetail, stat, fmtNaira, fmtDate, lineChart, fmtTime };
 })();
 window.UI = UI;
