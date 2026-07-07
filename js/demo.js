@@ -58,6 +58,18 @@ const Demo = (function () {
     { status: 'pending', title: 'First maintenance', sub: 'Bio-treatment + channel clearing', when: '18 Jul' }
   ];
 
-  return { isOn, set, data: { floodRisk, sensors, properties, invoices, alerts, timeline } };
+  const reports = [
+    { report_id: 'RPT-1', title: 'Initial drainage inspection', property_name: 'Sunrise Court Estate', status: 'completed', created_at: '2026-07-08' },
+    { report_id: 'RPT-2', title: 'Channel capacity assessment', property_name: 'Sunrise Court Estate', status: 'completed', created_at: '2026-07-08' },
+    { report_id: 'RPT-3', title: 'Monthly monitoring summary — June', property_name: 'Palm Gardens', status: 'sent', created_at: '2026-06-30' }
+  ];
+
+  const services = [
+    { key: 'sentinel', name: 'Sentinel Network', desc: 'IoT drainage monitoring', status: 'active', detail: '12 sensors online', icon: 'sensor' },
+    { key: 'biotreatment', name: 'Bio-Treatment', desc: 'Biological drainage prevention', status: 'active', detail: 'Last applied 2 Jul', icon: 'drop' },
+    { key: 'dispatch', name: 'Heavy-Plant Dispatch', desc: 'Clearing & maintenance crews', status: 'scheduled', detail: 'Next visit 18 Jul', icon: 'truck' }
+  ];
+
+  return { isOn, set, data: { floodRisk, sensors, properties, invoices, alerts, timeline, reports, services } };
 })();
 window.Demo = Demo;
