@@ -182,6 +182,27 @@ a{color:inherit}
 /* ---------- Sensor cards ---------- */
 .sensor-clickable{cursor:pointer;transition:.15s}
 .sensor-clickable:hover{border-color:var(--brand);box-shadow:0 4px 16px rgba(8,145,178,.12)}
+/* horizontal carousel for overview */
+.sensor-carousel{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+.sensor-carousel::-webkit-scrollbar{height:6px}
+.sensor-carousel::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:100px}
+.sensor-carousel .sensor{flex:0 0 220px;scroll-snap-align:start}
+.carousel-hint{font-size:11.5px;color:var(--ink-3);margin-top:2px}
+/* monitoring controls */
+.mon-controls{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+.search-box{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line-2);border-radius:100px;padding:8px 16px;min-width:240px;flex:1;max-width:320px}
+.search-box svg{width:16px;height:16px;color:var(--ink-3);flex-shrink:0}
+.search-box input{border:none;background:none;outline:none;color:var(--ink);font-family:inherit;font-size:13.5px;width:100%}
+.mon-filters{display:flex;gap:6px;flex-wrap:wrap}
+/* data table */
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table thead th{text-align:left;color:var(--ink-3);font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:8px 6px;position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line)}
+.data-table tbody td{padding:10px 6px;border-top:1px solid var(--line)}
+.data-table tbody tr:hover{background:var(--surface-2)}
+/* all sensor cards equal height regardless of enzyme */
+.sensor{display:flex;flex-direction:column;min-height:300px}
+.sensor .sensor-metrics{margin-top:12px}
+.enzyme-none{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-3);font-weight:500}
 .sensors{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
 /* overview compact sensor grid (3 across + more card) */
 .mon-sensor-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}

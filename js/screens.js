@@ -83,24 +83,18 @@ const Screens = (function () {
       document.getElementById('ov-sub').textContent = `${risk.sensors_online}/${risk.sensors_total} sensors online · updated just now`;
       const msg = risk.level === 'low' ? "Everything's flowing normally"
         : risk.level === 'moderate' ? 'Levels slightly elevated — watching closely' : 'Elevated flood risk — team responding';
-      const shown = (sensors || []).slice(0, 3);
-      const remaining = (sensors || []).length - shown.length;
-      const moreCard = remaining > 0
-        ? `<div class="sensor sensor-more" onclick="App.go('monitoring')">
-             <div class="more-n">+${remaining}</div><div class="more-l">more sensor${remaining > 1 ? 's' : ''}</div>
-             <div class="more-cta">View all →</div>
-           </div>`
-        : '';
+      const shown = (sensors || []);
+      const moreCard = '';
       mon.innerHTML = `
         <div class="mon-wrap">
           ${UI.gauge(risk.risk_index, risk.level)}
-          <div>
+          <div style="min-width:0">
             <h3 style="font-family:var(--ff-d);font-size:18px;font-weight:600;margin-bottom:6px">${msg}</h3>
             <p style="color:var(--ink-2);font-size:14px;margin-bottom:16px;max-width:440px">Peak level today ${risk.peak_level}% · ${risk.sensors_online} of ${risk.sensors_total} sensors reporting. We'll alert you the moment anything changes.</p>
-            <div class="mon-sensor-grid">
+            <div class="sensor-carousel">
               ${shown.map(UI.sensorCard).join('')}
-              ${moreCard}
             </div>
+            <div class="carousel-hint">Scroll for more →</div>
           </div>
         </div>`;
     } else {
@@ -262,77 +256,127 @@ const Screens = (function () {
   }
 
   // ---------------- MONITORING (sensors + history charts + logs) ----------------
+  let _monSearch = '', _monFilter = 'all', _monMetric = 'level';
+  let _monSensors = [], _monHist = { series: [], log: [] };
+
   async function monitoring(view) {
     view.innerHTML = `
       <div class="top"><div><h1>Monitoring</h1><div class="sub">Live readings, trends, and history across your sensors</div></div>
       <button class="btn ghost" onclick="App.go('overview')">← Overview</button></div>
       ${demoBanner()}
-      <div id="mon-sensors">${UI.loading(1)}</div>
-      <div class="section-t" style="margin-top:26px">Water level trend <span style="font-weight:400;color:var(--ink-3);font-size:13px">last 24 hours</span></div>
+      <div id="mon-refill"></div>
+      <div class="mon-controls">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+          <input id="mon-search" placeholder="Search sensors…" value="${UI.esc(_monSearch)}" oninput="App.monSearch(this.value)">
+        </div>
+        <div class="mon-filters" id="mon-filters"></div>
+      </div>
+      <div id="mon-grid">${UI.loading(1)}</div>
+      <div class="section-t" style="margin-top:26px">Network trend
+        <span style="display:flex;gap:6px">
+          <button class="chip ${_monMetric === 'level' ? 'ok' : ''}" style="cursor:pointer;border:1px solid var(--line-2)" onclick="App.monMetric('level')">Water level</button>
+          <button class="chip ${_monMetric === 'flow' ? 'ok' : ''}" style="cursor:pointer;border:1px solid var(--line-2)" onclick="App.monMetric('flow')">Flow rate</button>
+        </span>
+      </div>
       <div class="panel panel-pad" id="mon-chart">${UI.loading(2)}</div>
       <div class="section-t" style="margin-top:26px">Reading history</div>
       <div class="panel panel-pad" id="mon-log"></div>`;
 
-    let sensors, hist;
-    if (Demo.isOn()) { sensors = Demo.data.sensors; hist = Demo.data.history; }
+    if (Demo.isOn()) { _monSensors = Demo.data.sensors; _monHist = Demo.data.history; }
     else {
-      try { const r = await apiRequest('/monitoring/sensors'); sensors = (r && r.data) || []; } catch (_) { sensors = []; }
-      try { const r = await apiRequest('/monitoring/history?hours=24'); hist = (r && r.data) || { series: [], log: [] }; } catch (_) { hist = { series: [], log: [] }; }
+      try { const r = await apiRequest('/monitoring/sensors'); _monSensors = (r && r.data) || []; } catch (_) { _monSensors = []; }
+      try { const r = await apiRequest('/monitoring/history?hours=24'); _monHist = (r && r.data) || { series: [], log: [] }; } catch (_) { _monHist = { series: [], log: [] }; }
     }
 
-    // Sensors
-    const sc = document.getElementById('mon-sensors');
-    if (sensors && sensors.length) {
-      // surface any bio units needing refill first
-      const needsRefill = sensors.filter(s => s.enzyme && ['due_replacement', 'depleted', 'low'].includes(s.enzyme.status));
-      let banner = '';
-      if (needsRefill.length) {
-        banner = `<div class="refill-banner">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.7s6 6.3 6 10.3a6 6 0 01-12 0c0-4 6-10.3 6-10.3z"/></svg>
-          <div><b>${needsRefill.length} bio-enzyme ${needsRefill.length === 1 ? 'unit needs' : 'units need'} refilling</b>
-          <span>${needsRefill.map(s => UI.esc(s.name)).join(', ')} — schedule a Heavy-Plant Dispatch refill.</span></div>
-          <button class="btn" onclick="App.openTicket('dispatch')">Request refill</button>
-        </div>`;
-      }
-      sc.innerHTML = banner + `<div class="sensors">${sensors.map(UI.sensorCard).join('')}</div>`;
-      sc.className = '';
-    } else { sc.className = ''; sc.innerHTML = UI.state('awaiting', 'No sensor data yet', 'Live readings appear here once your sensors are online.', Demo.isOn() ? null : 'Explore with demo data', 'onclick="App.toggleDemo(true)"'); }
+    // refill banner
+    const needsRefill = _monSensors.filter(s => s.enzyme && ['due_replacement', 'depleted', 'low'].includes(s.enzyme.status));
+    if (needsRefill.length) {
+      document.getElementById('mon-refill').innerHTML = `<div class="refill-banner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.7s6 6.3 6 10.3a6 6 0 01-12 0c0-4 6-10.3 6-10.3z"/></svg>
+        <div><b>${needsRefill.length} bio-enzyme ${needsRefill.length === 1 ? 'unit needs' : 'units need'} refilling</b>
+        <span>${needsRefill.map(s => UI.esc(s.name)).join(', ')} — schedule a Heavy-Plant Dispatch refill.</span></div>
+        <button class="btn" onclick="App.openTicket('dispatch')">Request refill</button>
+      </div>`;
+    }
 
-    // Chart
+    // filter chips (counts)
+    const zones = [...new Set(_monSensors.map(s => s.zone).filter(Boolean))];
+    const bioCount = _monSensors.filter(s => s.device_variant === 'bio_dispenser').length;
+    const offCount = _monSensors.filter(s => s.status !== 'active').length;
+    document.getElementById('mon-filters').innerHTML = [
+      ['all', `All (${_monSensors.length})`],
+      ['bio', `Bio-dispensers (${bioCount})`],
+      ['offline', `Offline (${offCount})`]
+    ].map(([k, l]) => `<button class="chip ${_monFilter === k ? 'ok' : ''}" style="cursor:pointer;border:1px solid var(--line-2)" onclick="App.monFilter('${k}')">${l}</button>`).join('');
+
+    renderMonGrid();
+    renderMonChart();
+    renderMonLog();
+  }
+
+  function renderMonGrid() {
+    const grid = document.getElementById('mon-grid');
+    if (!grid) return;
+    let list = _monSensors;
+    if (_monFilter === 'bio') list = list.filter(s => s.device_variant === 'bio_dispenser');
+    if (_monFilter === 'offline') list = list.filter(s => s.status !== 'active');
+    if (_monSearch) { const q = _monSearch.toLowerCase(); list = list.filter(s => (s.name || s.sensor_id || '').toLowerCase().includes(q) || (s.zone || '').toLowerCase().includes(q)); }
+    if (!_monSensors.length) { grid.className = ''; grid.innerHTML = UI.state('awaiting', 'No sensor data yet', 'Live readings appear here once your sensors are online.', Demo.isOn() ? null : 'Explore with demo data', 'onclick="App.toggleDemo(true)"'); return; }
+    if (!list.length) { grid.innerHTML = `<div style="color:var(--ink-3);font-size:13px;padding:20px 0">No sensors match your search.</div>`; return; }
+    grid.innerHTML = `<div class="sensors">${list.map(UI.sensorCard).join('')}</div>`;
+  }
+
+  function renderMonChart() {
     const ch = document.getElementById('mon-chart');
-    if (hist.series && hist.series.length > 1) {
-      ch.innerHTML = `${UI.lineChart(hist.series)}
+    if (!ch) return;
+    if (_monHist.series && _monHist.series.length > 1) {
+      const isFlow = _monMetric === 'flow';
+      ch.innerHTML = `${UI.lineChart(_monHist.series, { metric: _monMetric })}
         <div style="display:flex;gap:18px;margin-top:10px;font-size:12px;color:var(--ink-3)">
-          <span><span style="display:inline-block;width:14px;height:3px;background:var(--brand);vertical-align:middle;margin-right:5px"></span>Average level</span>
-          <span><span style="display:inline-block;width:14px;height:0;border-top:2px dashed var(--warn);vertical-align:middle;margin-right:5px"></span>Peak level</span>
+          <span><span style="display:inline-block;width:14px;height:3px;background:var(--brand);vertical-align:middle;margin-right:5px"></span>${isFlow ? 'Flow rate (L/s)' : 'Average level'}</span>
+          ${isFlow ? '' : '<span><span style="display:inline-block;width:14px;height:0;border-top:2px dashed var(--warn);vertical-align:middle;margin-right:5px"></span>Peak level</span>'}
         </div>`;
     } else {
       ch.innerHTML = `<div style="color:var(--ink-3);font-size:13px">Trend charts appear here once sensors have recorded a few hours of readings.</div>`;
     }
+  }
 
-    // History log
+  function renderMonLog() {
     const lg = document.getElementById('mon-log');
-    if (hist.log && hist.log.length) {
-      lg.innerHTML = `<div style="max-height:320px;overflow:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead><tr style="text-align:left;color:var(--ink-3);font-size:11px;text-transform:uppercase;letter-spacing:.04em">
-            <th style="padding:8px 4px;position:sticky;top:0;background:var(--surface)">Time</th>
-            <th style="padding:8px 4px;position:sticky;top:0;background:var(--surface)">Sensor</th>
-            <th style="padding:8px 4px;position:sticky;top:0;background:var(--surface)">Level</th>
-            <th style="padding:8px 4px;position:sticky;top:0;background:var(--surface)">Flow</th>
-            <th style="padding:8px 4px;position:sticky;top:0;background:var(--surface)">Debris</th>
-          </tr></thead>
-          <tbody>${hist.log.map(r => `<tr style="border-top:1px solid var(--line)">
-            <td style="padding:9px 4px;color:var(--ink-2)">${UI.fmtTime(r.time)}</td>
-            <td style="padding:9px 4px;font-weight:500">${UI.esc(r.sensor)}</td>
-            <td style="padding:9px 4px;font-family:var(--ff-d)">${r.level != null ? r.level + '%' : '—'}</td>
-            <td style="padding:9px 4px;font-family:var(--ff-d)">${r.flow != null ? r.flow + ' L/s' : '—'}</td>
-            <td style="padding:9px 4px">${r.debris ? UI.chip('warn', 'Detected') : UI.chip('ok', 'Clear')}</td>
+    if (!lg) return;
+    if (_monHist.log && _monHist.log.length) {
+      lg.innerHTML = `<div style="max-height:340px;overflow:auto">
+        <table class="data-table">
+          <thead><tr><th>Time</th><th>Sensor</th><th>Level</th><th>Flow</th><th>Debris</th></tr></thead>
+          <tbody>${_monHist.log.map(r => `<tr>
+            <td style="color:var(--ink-2)">${UI.fmtTime(r.time)}</td>
+            <td style="font-weight:500">${UI.esc(r.sensor)}</td>
+            <td style="font-family:var(--ff-d)">${r.level != null ? r.level + '%' : '—'}</td>
+            <td style="font-family:var(--ff-d)">${r.flow != null ? r.flow + ' L/s' : '—'}</td>
+            <td>${r.debris ? UI.chip('warn', 'Detected') : UI.chip('ok', 'Clear')}</td>
           </tr>`).join('')}</tbody>
         </table></div>`;
     } else {
       lg.innerHTML = `<div style="color:var(--ink-3);font-size:13px">No readings logged yet. Historical sensor data will appear here as your devices report.</div>`;
     }
+  }
+
+  function monSearch(v) { _monSearch = v; renderMonGrid(); }
+  function monFilter(f) {
+    _monFilter = f;
+    document.querySelectorAll('#mon-filters .chip').forEach((c, i) => {
+      const keys = ['all', 'bio', 'offline'];
+      c.classList.toggle('ok', keys[i] === f);
+    });
+    renderMonGrid();
+  }
+  function monMetric(m) {
+    _monMetric = m;
+    document.querySelectorAll('.section-t .chip').forEach(c => {
+      c.classList.toggle('ok', c.textContent.toLowerCase().includes(m === 'level' ? 'water' : 'flow'));
+    });
+    renderMonChart();
   }
 
   // ---------------- PROPERTIES (richer cards, clickable → detail) ----------------
@@ -556,17 +600,15 @@ const Screens = (function () {
           <button class="btn" onclick="App.saveProfile()">Save changes</button>
         </div>
         <div class="panel panel-pad">
-          <h3>Preferences</h3>
-          <div class="field" style="display:flex;justify-content:space-between;align-items:center">
-            <div><label style="margin:0">Demo mode</label><div class="hint">Show sample data to explore the portal</div></div>
-            <button class="btn ghost" id="demo-toggle" onclick="App.toggleDemo(!Demo.isOn())">${Demo.isOn() ? 'On' : 'Off'}</button>
-          </div>
-          <div class="field" style="display:flex;justify-content:space-between;align-items:center">
-            <div><label style="margin:0">Theme</label><div class="hint">Light or dark appearance</div></div>
-            <button class="btn ghost" onclick="App.toggleTheme()">Switch</button>
-          </div>
-          <hr style="border:none;border-top:1px solid var(--line);margin:18px 0">
-          <button class="btn ghost" onclick="Auth.logout()">Sign out</button>
+          <h3>Change password</h3>
+          <div class="field"><label>Current password</label><input id="ac-curpw" type="password" placeholder="••••••••"></div>
+          <div class="field"><label>New password</label><input id="ac-newpw" type="password" placeholder="At least 8 characters"></div>
+          <div class="field"><label>Confirm new password</label><input id="ac-confpw" type="password" placeholder="Re-enter new password"></div>
+          <div id="ac-pw-err" class="hint hidden" style="color:var(--alert)"></div>
+          <button class="btn" onclick="App.changePassword()">Update password</button>
+          <hr style="border:none;border-top:1px solid var(--line);margin:20px 0">
+          <button class="btn ghost" onclick="App.go('settings')">Platform settings →</button>
+          <button class="btn ghost" style="margin-top:8px;color:var(--alert)" onclick="Auth.logout()">Sign out</button>
         </div>
       </div>`;
   }
@@ -858,6 +900,6 @@ const Screens = (function () {
       </div>`;
   }
 
-  return { overview, monitoring, sensorDetail, properties, propertyDetail, billing, alerts, notifications, reports, support, settings, account, setNotifFilter, setTicketFilter, setSensorRange, TICKET_CATS };
+  return { overview, monitoring, sensorDetail, properties, propertyDetail, billing, alerts, notifications, reports, support, settings, account, setNotifFilter, setTicketFilter, setSensorRange, monSearch, monFilter, monMetric, TICKET_CATS };
 })();
 window.Screens = Screens;

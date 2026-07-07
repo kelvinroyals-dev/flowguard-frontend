@@ -23,6 +23,9 @@ const App = (function () {
   function openProperty(id) { go('propertyDetail', id); }
   function openSensor(id) { go('sensorDetail', id); }
   function setSensorRange(h, sensorId) { Screens.setSensorRange(h, sensorId); go('sensorDetail', sensorId); }
+  function monSearch(v) { Screens.monSearch(v); }
+  function monFilter(f) { Screens.monFilter(f); }
+  function monMetric(m) { Screens.monMetric(m); }
 
   function viewReport(id) {
     // Reports open in a modal (placeholder until a report-detail endpoint exists)
@@ -192,6 +195,23 @@ const App = (function () {
   }
 
   // ---- Save platform settings ----
+  async function changePassword() {
+    const g = id => document.getElementById(id);
+    const cur = g('ac-curpw').value, nw = g('ac-newpw').value, conf = g('ac-confpw').value;
+    const err = g('ac-pw-err');
+    err.classList.add('hidden');
+    if (!cur || !nw) { err.textContent = 'Please fill in all fields.'; err.classList.remove('hidden'); return; }
+    if (nw.length < 8) { err.textContent = 'New password must be at least 8 characters.'; err.classList.remove('hidden'); return; }
+    if (nw !== conf) { err.textContent = 'New passwords do not match.'; err.classList.remove('hidden'); return; }
+    try {
+      await apiRequest('/password', { method: 'PUT', body: { current_password: cur, new_password: nw } });
+      UI.toast('Password updated', 'success');
+      g('ac-curpw').value = ''; g('ac-newpw').value = ''; g('ac-confpw').value = '';
+    } catch (e) {
+      err.textContent = e.message || 'Could not update password.'; err.classList.remove('hidden');
+    }
+  }
+
   async function saveSettings() {
     const g = id => document.getElementById(id);
     try {
@@ -256,7 +276,7 @@ const App = (function () {
     } catch (_) { /* keep cached */ }
   }
 
-  return { go, openProperty, openSensor, setSensorRange, viewReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings,
+  return { go, openProperty, openSensor, setSensorRange, monSearch, monFilter, monMetric, viewReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings, changePassword,
            setNotifFilter, markRead, markAllRead, deleteNotif, setTicketFilter, openTicket, submitTicket, init };
 })();
 window.App = App;
