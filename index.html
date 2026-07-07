@@ -199,6 +199,29 @@ a{color:inherit}
 .data-table thead th{text-align:left;color:var(--ink-3);font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:8px 6px;position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line)}
 .data-table tbody td{padding:10px 6px;border-top:1px solid var(--line)}
 .data-table tbody tr:hover{background:var(--surface-2)}
+/* ticket thread */
+.thread{display:flex;flex-direction:column;gap:12px;margin-bottom:18px}
+.thread-msg{max-width:80%;padding:12px 15px;border-radius:14px}
+.thread-msg.mine{align-self:flex-end;background:var(--brand-soft);border-bottom-right-radius:4px}
+.thread-msg.them{align-self:flex-start;background:var(--bg);border-bottom-left-radius:4px}
+.thread-h{display:flex;justify-content:space-between;gap:12px;margin-bottom:4px;font-size:11.5px}
+.thread-h b{font-weight:600}.thread-h span{color:var(--ink-3)}
+.thread-b{font-size:13.5px;color:var(--ink);line-height:1.5}
+.thread-sys{text-align:center;font-size:12px;color:var(--ink-3);padding:4px}
+.reply-box{border-top:1px solid var(--line);padding-top:16px}
+.reply-box textarea{width:100%;padding:11px 14px;border:1px solid var(--line-2);border-radius:var(--rx);background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:14px;margin-bottom:10px;resize:vertical}
+.reply-box textarea:focus{outline:none;border-color:var(--brand)}
+/* invoice detail */
+.inv-line{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.inv-line:last-child{border:none}.inv-line span{color:var(--ink-3)}
+/* service tiers */
+.tier-list{display:flex;flex-direction:column;gap:10px}
+.tier-opt{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--line-2);border-radius:var(--rs);cursor:pointer;transition:.15s}
+.tier-opt:hover{border-color:var(--brand)}
+.tier-opt:has(input:checked){border-color:var(--brand);background:var(--brand-soft)}
+.tier-opt input{width:18px;height:18px;accent-color:var(--brand)}
+.tier-info{flex:1}.tier-info b{display:block;font-size:14px;font-weight:600}.tier-info small{color:var(--ink-3);font-size:12.5px}
+.tier-price{font-family:var(--ff-d);font-weight:600;font-size:14px;white-space:nowrap}
 /* all sensor cards equal height regardless of enzyme */
 .sensor{display:flex;flex-direction:column;min-height:300px}
 .sensor .sensor-metrics{margin-top:12px}

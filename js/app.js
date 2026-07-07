@@ -9,13 +9,14 @@ const App = (function () {
     const railEl = document.getElementById('rail');
     if (railEl) railEl.classList.remove('open');
     // nav active state (property/notifications map to their parent nav where relevant)
-    const navTab = tab === 'propertyDetail' ? 'properties' : tab === 'sensorDetail' ? 'monitoring' : tab === 'notifications' ? 'alerts' : tab;
+    const navTab = tab === 'propertyDetail' ? 'properties' : tab === 'sensorDetail' ? 'monitoring' : tab === 'ticketDetail' ? 'support' : tab === 'notifications' ? 'alerts' : tab;
     document.querySelectorAll('.rail .navbtn').forEach(b =>
       b.classList.toggle('on', b.dataset.tab === navTab));
     const view = document.getElementById('view');
     view.scrollTop = 0;
     if (tab === 'propertyDetail') { Screens.propertyDetail(view, arg); return; }
     if (tab === 'sensorDetail') { Screens.sensorDetail(view, arg); return; }
+    if (tab === 'ticketDetail') { Screens.ticketDetail(view, arg); return; }
     const fn = Screens[tab];
     if (fn) fn(view);
   }
@@ -25,7 +26,151 @@ const App = (function () {
   function setSensorRange(h, sensorId) { Screens.setSensorRange(h, sensorId); go('sensorDetail', sensorId); }
   function monSearch(v) { Screens.monSearch(v); }
   function monFilter(f) { Screens.monFilter(f); }
+  // ---- Invoice detail + pay ----
+  async function openInvoice(id) {
+    let inv;
+    if (Demo.isOn()) {
+      inv = Demo.data.invoices.find(x => x.invoice_id === id) || Demo.data.invoices[0];
+    } else {
+      try { const r = await apiRequest(`/billing/invoices/${id}`); inv = r && r.data; }
+      catch (e) { UI.toast(e.message || 'Could not load invoice', 'error'); return; }
+    }
+    if (!inv) { UI.toast('Invoice not found', 'error'); return; }
+    const paid = (inv.payment_status || inv.status) === 'paid';
+    const bg = document.createElement('div');
+    bg.className = 'modal-bg';
+    bg.innerHTML = `
+      <div class="modal">
+        <div class="modal-h"><h2>Invoice ${UI.esc(inv.invoice_id || '')}</h2><button onclick="this.closest('.modal-bg').remove()">×</button></div>
+        <div class="modal-b">
+          <div style="display:flex;justify-content:space-between;margin-bottom:20px">
+            <div><div class="hint">Amount due</div><div style="font-family:var(--ff-d);font-size:30px;font-weight:700">${UI.fmtNaira(inv.total_amount)}</div></div>
+            <div style="text-align:right">${paid ? UI.chip('ok', 'Paid') : UI.chip('warn', 'Due')}</div>
+          </div>
+          <div class="inv-line"><span>Type</span><b>${UI.esc((inv.invoice_type || 'Service'))}</b></div>
+          <div class="inv-line"><span>Issued</span><b>${UI.fmtDate(inv.issue_date)}</b></div>
+          <div class="inv-line"><span>Due date</span><b>${UI.fmtDate(inv.due_date)}</b></div>
+          ${paid ? `<div class="inv-line"><span>Paid on</span><b>${UI.fmtDate(inv.paid_date || inv.issue_date)}</b></div>` : ''}
+          ${inv.description ? `<div class="inv-line"><span>Notes</span><b>${UI.esc(inv.description)}</b></div>` : ''}
+        </div>
+        <div class="modal-f">
+          <button class="btn ghost" onclick="this.closest('.modal-bg').remove()">Close</button>
+          ${paid ? '' : `<button class="btn" onclick="App.payInvoice('${UI.esc(inv.invoice_id)}', this)">Pay now</button>`}
+        </div>
+      </div>`;
+    document.body.appendChild(bg);
+    bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
+  }
+
+  async function payInvoice(id, btn) {
+    btn.disabled = true; btn.textContent = 'Processing…';
+    try {
+      if (!Demo.isOn()) await apiRequest(`/billing/invoices/${id}/mark-paid`, { method: 'POST' });
+      document.querySelector('.modal-bg').remove();
+      UI.toast('Payment recorded', 'success');
+      go('billing');
+    } catch (e) {
+      UI.toast(e.message || 'Payment failed', 'error');
+      btn.disabled = false; btn.textContent = 'Pay now';
+    }
+  }
+
+  // ---- Service tier selection ----
+  async function selectServices(propertyId) {
+    const tiers = [
+      { key: 'sentinel', name: 'Sentinel', desc: 'IoT monitoring only — sensors + alerts', price: '₦85,000/mo' },
+      { key: 'flowguard', name: 'FlowGuard', desc: 'Monitoring + bio-treatment + scheduled clearing', price: '₦185,000/mo' },
+      { key: 'flood_zero', name: 'Flood-Zero', desc: 'Full service + priority dispatch + SLA guarantee', price: '₦320,000/mo' }
+    ];
+    const bg = document.createElement('div');
+    bg.className = 'modal-bg';
+    bg.innerHTML = `
+      <div class="modal">
+        <div class="modal-h"><h2>Choose a service tier</h2><button onclick="this.closest('.modal-bg').remove()">×</button></div>
+        <div class="modal-b">
+          <p style="color:var(--ink-2);font-size:13.5px;margin-bottom:16px">Select the level of drainage service for this property.</p>
+          <div class="tier-list">
+            ${tiers.map(t => `<label class="tier-opt">
+              <input type="radio" name="tier" value="${t.key}">
+              <div class="tier-info"><b>${t.name}</b><small>${t.desc}</small></div>
+              <div class="tier-price">${t.price}</div>
+            </label>`).join('')}
+          </div>
+          <div id="tier-err" class="hint hidden" style="color:var(--alert);margin-top:10px"></div>
+        </div>
+        <div class="modal-f">
+          <button class="btn ghost" onclick="this.closest('.modal-bg').remove()">Cancel</button>
+          <button class="btn" onclick="App.confirmServices('${propertyId}', this)">Confirm selection</button>
+        </div>
+      </div>`;
+    document.body.appendChild(bg);
+    bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
+  }
+
+  async function confirmServices(propertyId, btn) {
+    const sel = document.querySelector('input[name="tier"]:checked');
+    const err = document.getElementById('tier-err');
+    if (!sel) { err.textContent = 'Please choose a tier.'; err.classList.remove('hidden'); return; }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      if (!Demo.isOn()) await apiRequest(`/properties/${propertyId}/select-services`, { method: 'POST', body: { tier: sel.value } });
+      document.querySelector('.modal-bg').remove();
+      UI.toast('Service tier updated', 'success');
+      go('propertyDetail', propertyId);
+    } catch (e) {
+      err.textContent = e.message || 'Could not save.'; err.classList.remove('hidden');
+      btn.disabled = false; btn.textContent = 'Confirm selection';
+    }
+  }
+
+  // ---- Account deactivation ----
+  function deactivateAccount() {
+    const bg = document.createElement('div');
+    bg.className = 'modal-bg';
+    bg.innerHTML = `
+      <div class="modal">
+        <div class="modal-h"><h2>Deactivate account</h2><button onclick="this.closest('.modal-bg').remove()">×</button></div>
+        <div class="modal-b">
+          <p style="color:var(--ink-2);font-size:14px">This will deactivate your account and pause monitoring notifications. Your data is retained and our team can reactivate you on request. This won't cancel active service contracts — contact support for that.</p>
+        </div>
+        <div class="modal-f">
+          <button class="btn ghost" onclick="this.closest('.modal-bg').remove()">Cancel</button>
+          <button class="btn" style="background:var(--alert)" onclick="App.confirmDeactivate(this)">Deactivate</button>
+        </div>
+      </div>`;
+    document.body.appendChild(bg);
+    bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
+  }
+  async function confirmDeactivate(btn) {
+    btn.disabled = true; btn.textContent = 'Processing…';
+    try {
+      await apiRequest('/account/deactivate', { method: 'POST' });
+      UI.toast('Account deactivated', 'info');
+      setTimeout(() => Auth.logout(), 1200);
+    } catch (e) {
+      UI.toast(e.message || 'Could not deactivate', 'error');
+      btn.disabled = false; btn.textContent = 'Deactivate';
+    }
+  }
+
   function monMetric(m) { Screens.monMetric(m); }
+
+  // ---- Ticket detail ----
+  function openTicketDetail(id) { go('ticketDetail', id); }
+  async function sendReply(ticketId, btn) {
+    const ta = document.getElementById('td-reply');
+    const msg = ta.value.trim();
+    if (!msg) { ta.focus(); return; }
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      await apiRequest(`/tickets/${ticketId}/reply`, { method: 'POST', body: { message: msg } });
+      UI.toast('Reply sent', 'success');
+      go('ticketDetail', ticketId);
+    } catch (e) {
+      UI.toast(e.message || 'Could not send reply', 'error');
+      btn.disabled = false; btn.textContent = 'Send reply';
+    }
+  }
 
   function viewReport(id) {
     // Reports open in a modal (placeholder until a report-detail endpoint exists)
@@ -277,6 +422,7 @@ const App = (function () {
   }
 
   return { go, openProperty, openSensor, setSensorRange, monSearch, monFilter, monMetric, viewReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings, changePassword,
+           openTicketDetail, sendReply, openInvoice, payInvoice, selectServices, confirmServices, deactivateAccount, confirmDeactivate,
            setNotifFilter, markRead, markAllRead, deleteNotif, setTicketFilter, openTicket, submitTicket, init };
 })();
 window.App = App;

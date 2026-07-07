@@ -515,10 +515,10 @@ const Screens = (function () {
     if (invoices && invoices.length) {
       el.innerHTML = `<div class="rows">${invoices.map(inv => {
         const paid = (inv.payment_status || inv.status) === 'paid';
-        return `<div class="row">
+        return `<div class="row" style="cursor:pointer" onclick="App.openInvoice('${UI.esc(inv.invoice_id || '')}')">
           <div class="rmain"><b>${UI.esc(cap(inv.invoice_type || 'Service'))} — ${UI.fmtDate(inv.issue_date)}</b>
             <small>${paid ? 'Paid ' + UI.fmtDate(inv.paid_date || inv.issue_date) : 'Due ' + UI.fmtDate(inv.due_date)}</small></div>
-          <div class="rright" style="display:flex;gap:10px;align-items:center"><div class="amt">${UI.fmtNaira(inv.total_amount)}</div>${UI.chip(paid ? 'ok' : 'warn', paid ? 'Paid' : 'Due')}</div>
+          <div class="rright" style="display:flex;gap:10px;align-items:center"><div class="amt">${UI.fmtNaira(inv.total_amount)}</div>${UI.chip(paid ? 'ok' : 'warn', paid ? 'Paid' : 'Due')}<span style="color:var(--brand);font-size:13px;font-weight:600">View →</span></div>
         </div>`;
       }).join('')}</div>`;
     } else {
@@ -689,7 +689,8 @@ const Screens = (function () {
             : `<p style="color:var(--ink-3);font-size:13px">No invoices yet.</p>`}
         </div>
       </div>
-      <div style="margin-top:18px;display:flex;gap:10px">
+      <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" onclick="App.selectServices('${UI.esc(propertyId)}')">Choose service tier</button>
         <button class="btn ghost" onclick="App.go('billing')">View billing</button>
         <button class="btn ghost" onclick="App.openRegister()">Register another area</button>
       </div>`;
@@ -807,7 +808,14 @@ const Screens = (function () {
         ${UI.stat('Flow rate', d.flow_rate != null ? d.flow_rate + ' L/s' : '—', 'Current')}
         ${UI.stat('Status', `<span style="font-size:18px">${d.status === 'active' ? 'Online' : 'Offline'}</span>`, d.device_variant === 'bio_dispenser' ? 'Bio-dispenser' : 'Standard')}
       </div>
-      ${d.enzyme ? `<div class="panel panel-pad" style="margin-bottom:20px"><h3 style="font-family:var(--ff-d);font-size:15px;margin-bottom:14px">Bio-enzyme cartridge</h3>${UI.enzymeDetail(d.enzyme)}</div>` : ''}
+      ${d.enzyme ? `<div class="panel panel-pad" style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <h3 style="font-family:var(--ff-d);font-size:15px;margin:0">Bio-enzyme cartridge</h3>
+          ${['due_replacement', 'depleted', 'low'].includes(d.enzyme.status)
+            ? `<button class="btn" onclick="App.openTicket('dispatch')">Request refill</button>` : ''}
+        </div>
+        ${UI.enzymeDetail(d.enzyme)}
+      </div>` : ''}
       <div class="panel panel-pad">
         <h3 style="font-family:var(--ff-d);font-size:15px;margin-bottom:4px">Water level trend</h3>
         <p style="color:var(--ink-3);font-size:12.5px;margin-bottom:16px">${rangeLabel}</p>
@@ -857,15 +865,73 @@ const Screens = (function () {
     const statusMap = { new: ['warn', 'New'], open: ['warn', 'Open'], in_progress: ['warn', 'In progress'], resolved: ['ok', 'Resolved'], closed: ['ok', 'Closed'] };
     const [sk, sl] = statusMap[t.status] || ['warn', cap(t.status || 'Open')];
     const prio = t.priority === 'high' || t.priority === 'urgent' ? UI.chip('alert', cap(t.priority)) : '';
-    return `<div class="row">
+    return `<div class="row" style="cursor:pointer" onclick="App.openTicketDetail('${UI.esc(t.ticket_id)}')">
       <div class="rmain">
         <b>${UI.esc(t.subject || t.title || 'Support request')}</b>
         <small>${UI.esc(TICKET_CATS[t.category] || t.category || 'General')} · ${UI.esc(t.ticket_id || '')} · ${UI.fmtDate(t.created_at)}</small>
       </div>
-      <div class="rright" style="display:flex;gap:8px;align-items:center">${prio}${UI.chip(sk, sl)}</div>
+      <div class="rright" style="display:flex;gap:8px;align-items:center">${prio}${UI.chip(sk, sl)}<span style="color:var(--brand);font-size:13px;font-weight:600">View →</span></div>
     </div>`;
   }
   function setTicketFilter(f) { _ticketFilter = f; }
+
+  // ---------------- TICKET DETAIL ----------------
+  async function ticketDetail(view, ticketId) {
+    view.innerHTML = `
+      <div class="top"><div>
+        <div class="crumb" style="color:var(--ink-3);font-size:12.5px;margin-bottom:6px;cursor:pointer" onclick="App.go('support')">← Support</div>
+        <h1 id="td-subj">Loading…</h1><div class="sub" id="td-meta"></div>
+      </div><button class="btn ghost" onclick="App.go('support')">Back</button></div>
+      ${demoBanner()}
+      <div id="td-body">${UI.loading(3)}</div>`;
+
+    let t;
+    if (Demo.isOn()) {
+      t = Demo.data.tickets.find(x => x.ticket_id === ticketId) || Demo.data.tickets[0];
+      t = { ...t, messages: t.messages || [
+        { author_type: 'client', author_name: 'You', message: t.description || 'Initial request.', created_at: t.created_at },
+        { author_type: 'support', author_name: 'FlowGuard Support', message: 'Thanks for reaching out — our team is reviewing this and will update you shortly.', created_at: t.created_at }
+      ] };
+    } else {
+      try { const r = await apiRequest(`/tickets/${ticketId}`); t = r && r.data; }
+      catch (e) { document.getElementById('td-body').innerHTML = UI.state('error', 'Could not load ticket', e.message || ''); return; }
+    }
+    if (!t) { document.getElementById('td-body').innerHTML = UI.state('error', 'Ticket not found', ''); return; }
+
+    const statusMap = { new: ['warn', 'New'], open: ['warn', 'Open'], in_progress: ['warn', 'In progress'], resolved: ['ok', 'Resolved'], closed: ['ok', 'Closed'] };
+    const [sk, sl] = statusMap[t.status] || ['warn', cap(t.status || 'Open')];
+    document.getElementById('td-subj').textContent = t.subject || t.title || 'Support request';
+    document.getElementById('td-meta').innerHTML = `${UI.esc(t.ticket_id || '')} · ${UI.esc(TICKET_CATS[t.category] || t.category || 'General')} · opened ${UI.fmtDate(t.created_at)}`;
+
+    const msgs = t.messages || [];
+    document.getElementById('td-body').innerHTML = `
+      <div class="grid-3" style="margin-bottom:20px">
+        ${UI.stat('Status', `<span style="font-size:16px">${sl}</span>`, 'Current')}
+        ${UI.stat('Priority', `<span style="font-size:16px">${cap(t.priority || 'Normal')}</span>`, '')}
+        ${UI.stat('Category', `<span style="font-size:15px">${UI.esc(TICKET_CATS[t.category] || t.category || 'General')}</span>`, '')}
+      </div>
+      <div class="panel panel-pad">
+        <h3 style="font-family:var(--ff-d);font-size:15px;margin-bottom:16px">Conversation</h3>
+        <div class="thread" id="td-thread">
+          ${msgs.length ? msgs.map(threadMsg).join('') : `<p style="color:var(--ink-3);font-size:13px">No messages yet.</p>`}
+        </div>
+        ${['resolved', 'closed'].includes(t.status) ? '' : `
+        <div class="reply-box">
+          <textarea id="td-reply" rows="3" placeholder="Add a reply…"></textarea>
+          <button class="btn" onclick="App.sendReply('${UI.esc(t.ticket_id)}', this)">Send reply</button>
+        </div>`}
+      </div>`;
+  }
+
+  function threadMsg(m) {
+    const mine = m.author_type === 'client';
+    const sys = m.author_type === 'system';
+    if (sys) return `<div class="thread-sys">${UI.esc(m.message)} · ${UI.fmtDate(m.created_at)}</div>`;
+    return `<div class="thread-msg ${mine ? 'mine' : 'them'}">
+      <div class="thread-h"><b>${UI.esc(m.author_name || (mine ? 'You' : 'Support'))}</b><span>${UI.fmtTime(m.created_at)}</span></div>
+      <div class="thread-b">${UI.esc(m.message)}</div>
+    </div>`;
+  }
 
   // ---------------- SETTINGS (platform) ----------------
   async function settings(view) {
@@ -895,11 +961,12 @@ const Screens = (function () {
           <hr style="border:none;border-top:1px solid var(--line);margin:18px 0">
           <h3>Account</h3>
           <button class="btn ghost" style="width:100%;margin-bottom:8px;justify-content:flex-start" onclick="App.go('account')">Profile & password →</button>
-          <button class="btn ghost" style="width:100%;justify-content:flex-start" onclick="Auth.logout()">Sign out</button>
+          <button class="btn ghost" style="width:100%;margin-bottom:8px;justify-content:flex-start" onclick="Auth.logout()">Sign out</button>
+          <button class="btn ghost" style="width:100%;justify-content:flex-start;color:var(--alert)" onclick="App.deactivateAccount()">Deactivate account</button>
         </div>
       </div>`;
   }
 
-  return { overview, monitoring, sensorDetail, properties, propertyDetail, billing, alerts, notifications, reports, support, settings, account, setNotifFilter, setTicketFilter, setSensorRange, monSearch, monFilter, monMetric, TICKET_CATS };
+  return { overview, monitoring, sensorDetail, properties, propertyDetail, billing, alerts, notifications, reports, support, ticketDetail, settings, account, setNotifFilter, setTicketFilter, setSensorRange, monSearch, monFilter, monMetric, TICKET_CATS };
 })();
 window.Screens = Screens;
