@@ -19,6 +19,11 @@ const App = (function () {
 
   function openProperty(id) { go('propertyDetail', id); }
 
+  function viewReport(id) {
+    // Reports open in a modal (placeholder until a report-detail endpoint exists)
+    UI.toast('Report viewing opens the full document — coming with the reports backend.', 'info');
+  }
+
   // ---- Notifications actions ----
   function setNotifFilter(f) { Screens.setNotifFilter(f); go('notifications'); }
   async function markRead(id) {
@@ -35,9 +40,16 @@ const App = (function () {
   }
 
   // ---- Theme (persisted, remembers last choice) ----
+  const MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></svg>';
+  const SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
   function applyTheme(t) {
     document.documentElement.setAttribute('data-theme', t);
     localStorage.setItem('flowguard_theme', t);
+    // In dark mode show a SUN (tap → light); in light mode show a MOON (tap → dark)
+    const icon = document.getElementById('themeIcon');
+    if (icon) icon.innerHTML = t === 'dark' ? SUN : MOON;
+    const tip = document.querySelector('#themeBtn .tip');
+    if (tip) tip.textContent = t === 'dark' ? 'Light mode' : 'Dark mode';
   }
   function toggleTheme() {
     const cur = document.documentElement.getAttribute('data-theme') || 'light';
@@ -168,7 +180,7 @@ const App = (function () {
     } catch (_) { /* keep cached */ }
   }
 
-  return { go, openProperty, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile,
+  return { go, openProperty, viewReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile,
            setNotifFilter, markRead, markAllRead, deleteNotif, init };
 })();
 window.App = App;
