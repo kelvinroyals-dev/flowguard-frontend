@@ -6,6 +6,8 @@ const App = (function () {
 
   function go(tab, arg) {
     current = tab;
+    const railEl = document.getElementById('rail');
+    if (railEl) railEl.classList.remove('open');
     // nav active state (property/notifications map to their parent nav where relevant)
     const navTab = tab === 'propertyDetail' ? 'properties' : tab === 'notifications' ? 'alerts' : tab;
     document.querySelectorAll('.rail .navbtn').forEach(b =>
@@ -96,7 +98,7 @@ const App = (function () {
     // In dark mode show a SUN (tap → light); in light mode show a MOON (tap → dark)
     const icon = document.getElementById('themeIcon');
     if (icon) icon.innerHTML = t === 'dark' ? SUN : MOON;
-    const tip = document.querySelector('#themeBtn .tip');
+    const tip = document.getElementById('themeLabel');
     if (tip) tip.textContent = t === 'dark' ? 'Light mode' : 'Dark mode';
   }
   function toggleTheme() {
@@ -185,12 +187,30 @@ const App = (function () {
     }
   }
 
+  // ---- Save platform settings ----
+  async function saveSettings() {
+    const g = id => document.getElementById(id);
+    try {
+      await apiRequest('/preferences', { method: 'PUT', body: {
+        email_alerts: g('set-email').checked,
+        sms_alerts: g('set-sms').checked,
+        weekly_digest: g('set-digest').checked
+      }});
+      UI.toast('Preferences saved', 'success');
+    } catch (e) {
+      UI.toast(e.message || 'Could not save preferences', 'error');
+    }
+  }
+
+  // ---- Save platform settings (end) ----
   function setMe() {
     const u = Auth.getUser() || {};
     const nm = (u.fullName || u.full_name || 'U').trim();
     const initials = nm.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase() || 'U';
-    const me = document.getElementById('meBtn');
-    if (me) me.textContent = initials;
+    const av = document.getElementById('meAv');
+    const name = document.getElementById('meName');
+    if (av) av.textContent = initials;
+    if (name) name.textContent = (u.fullName || u.full_name || 'Account').split(' ')[0];
   }
 
   // ---- Boot ----
@@ -203,12 +223,16 @@ const App = (function () {
     applyTheme(localStorage.getItem('flowguard_theme') || 'light');
     setMe();
 
-    // nav wiring
-    document.querySelectorAll('.rail .navbtn, .icon-btn[data-tab], .me[data-tab]').forEach(b => {
-      if (b.dataset.tab) b.addEventListener('click', () => go(b.dataset.tab));
+    // nav wiring (labeled sidebar buttons + any [data-tab] elsewhere)
+    document.querySelectorAll('[data-tab]').forEach(b => {
+      b.addEventListener('click', () => go(b.dataset.tab));
     });
     document.getElementById('themeBtn').addEventListener('click', toggleTheme);
-    document.getElementById('meBtn').addEventListener('click', () => go('account'));
+
+    // mobile drawer toggle
+    const mob = document.getElementById('mobToggle');
+    const rail = document.getElementById('rail');
+    if (mob && rail) mob.addEventListener('click', () => rail.classList.toggle('open'));
 
     // refresh cached user from server (non-blocking), then render
     refreshUser().finally(() => go('overview'));
@@ -228,7 +252,7 @@ const App = (function () {
     } catch (_) { /* keep cached */ }
   }
 
-  return { go, openProperty, viewReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile,
+  return { go, openProperty, viewReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings,
            setNotifFilter, markRead, markAllRead, deleteNotif, setTicketFilter, openTicket, submitTicket, init };
 })();
 window.App = App;

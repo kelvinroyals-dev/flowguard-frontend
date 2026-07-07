@@ -667,6 +667,39 @@ const Screens = (function () {
   }
   function setTicketFilter(f) { _ticketFilter = f; }
 
-  return { overview, monitoring, properties, propertyDetail, billing, alerts, notifications, reports, support, account, setNotifFilter, setTicketFilter, TICKET_CATS };
+  // ---------------- SETTINGS (platform) ----------------
+  async function settings(view) {
+    const dark = (document.documentElement.getAttribute('data-theme') || 'light') === 'dark';
+    let prefs = {};
+    if (!Demo.isOn()) { try { const r = await apiRequest('/preferences'); prefs = (r && r.data) || {}; } catch (_) {} }
+    const on = v => v ? 'checked' : '';
+    view.innerHTML = `
+      <div class="top"><div><h1>Settings</h1><div class="sub">Manage how the portal works for you</div></div></div>
+      <div class="cols">
+        <div class="panel panel-pad">
+          <h3>Notifications</h3>
+          <div class="set-row"><div><b>Email alerts</b><small>Flood-risk and incident emails</small></div>
+            <label class="switch"><input type="checkbox" id="set-email" ${on(prefs.email_alerts !== false)}><span class="slider"></span></label></div>
+          <div class="set-row"><div><b>SMS alerts</b><small>Urgent alerts by text message</small></div>
+            <label class="switch"><input type="checkbox" id="set-sms" ${on(prefs.sms_alerts)}><span class="slider"></span></label></div>
+          <div class="set-row"><div><b>Weekly summary</b><small>A digest of your network each week</small></div>
+            <label class="switch"><input type="checkbox" id="set-digest" ${on(prefs.weekly_digest !== false)}><span class="slider"></span></label></div>
+          <button class="btn" style="margin-top:16px" onclick="App.saveSettings()">Save preferences</button>
+        </div>
+        <div class="panel panel-pad">
+          <h3>Appearance & data</h3>
+          <div class="set-row"><div><b>Dark mode</b><small>Easier on the eyes at night</small></div>
+            <label class="switch"><input type="checkbox" id="set-theme" ${on(dark)} onchange="App.toggleTheme()"><span class="slider"></span></label></div>
+          <div class="set-row"><div><b>Demo mode</b><small>Show sample data to explore the portal</small></div>
+            <label class="switch"><input type="checkbox" id="set-demo" ${on(Demo.isOn())} onchange="App.toggleDemo(this.checked)"><span class="slider"></span></label></div>
+          <hr style="border:none;border-top:1px solid var(--line);margin:18px 0">
+          <h3>Account</h3>
+          <button class="btn ghost" style="width:100%;margin-bottom:8px;justify-content:flex-start" onclick="App.go('account')">Profile & password →</button>
+          <button class="btn ghost" style="width:100%;justify-content:flex-start" onclick="Auth.logout()">Sign out</button>
+        </div>
+      </div>`;
+  }
+
+  return { overview, monitoring, properties, propertyDetail, billing, alerts, notifications, reports, support, settings, account, setNotifFilter, setTicketFilter, TICKET_CATS };
 })();
 window.Screens = Screens;
