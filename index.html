@@ -75,18 +75,19 @@ a{color:inherit}
 .switch input:checked + .slider::before{transform:translateX(20px)}
 
 .main{padding:0 40px 60px;max-width:1180px;width:100%}
-.top{position:sticky;top:0;z-index:20;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px 40px;margin:0 -40px 26px;background:var(--surface);border-bottom:1px solid var(--line)}
+.top{position:sticky;top:0;z-index:20;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:11px 40px;margin:0 -40px 22px;background:var(--surface);border-bottom:1px solid var(--line);min-height:60px}
 
 /* ---------- Top bar ---------- */
-.top h1{font-family:var(--ff-d);font-size:26px;font-weight:600;letter-spacing:-.02em}
-.top .sub{color:var(--ink-3);font-size:13.5px;margin-top:3px}
-.top-actions{display:flex;align-items:center;gap:10px}
+.top h1{font-family:var(--ff-d);font-size:18px;font-weight:600;letter-spacing:-.01em;line-height:1.2}
+.top .sub{color:var(--ink-3);font-size:12px;margin-top:1px}
+.top-actions{display:flex;align-items:center;gap:8px}
+.top-actions .btn{padding:8px 16px;font-size:13px}
 .btn{padding:11px 20px;border-radius:100px;background:var(--brand);color:#fff;border:none;font-family:var(--ff-d);font-size:14px;font-weight:600;cursor:pointer;transition:.15s}
 .btn:hover{background:var(--brand-deep)}
 .btn.ghost{background:var(--surface);color:var(--ink-2);border:1px solid var(--line-2)}
 .btn.ghost:hover{background:var(--bg)}
-.icon-btn{width:42px;height:42px;border-radius:50%;background:var(--surface);border:1px solid var(--line-2);display:grid;place-items:center;color:var(--ink-2);cursor:pointer;position:relative}
-.icon-btn svg{width:19px;height:19px}
+.icon-btn{width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--line-2);display:grid;place-items:center;color:var(--ink-2);cursor:pointer;position:relative}
+.icon-btn svg{width:17px;height:17px}
 .icon-btn .badge{position:absolute;top:-2px;right:-2px;min-width:17px;height:17px;border-radius:100px;background:var(--alert);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;padding:0 4px}
 
 /* ---------- Cards / panels ---------- */
@@ -349,7 +350,7 @@ a{color:inherit}
   .mob-toggle{display:grid;place-items:center;position:fixed;top:14px;right:14px;z-index:50;width:42px;height:42px;border-radius:12px;background:var(--surface);border:1px solid var(--line-2);color:var(--ink);cursor:pointer}
   .mob-toggle svg{width:20px;height:20px}
   .main{padding:0 18px 40px}
-  .top{padding:16px 18px;margin:0 -18px 22px}
+  .top{padding:10px 18px;margin:0 -18px 18px;min-height:54px}
 }
 </style>
 </head>
