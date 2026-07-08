@@ -63,10 +63,14 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff);-webkit-font-sm
 .btn-primary{width:100%;padding:12px;border-radius:100px;background:#fff;color:var(--brand-deep);border:none;font-family:var(--ff-d);font-size:14px;font-weight:700;cursor:pointer;transition:.15s}
 .btn-primary:hover:not(:disabled){background:#eaf9fc}
 .btn-primary:disabled{opacity:.6;cursor:default}
-.btn-secondary{padding:12px 20px;border-radius:100px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);font-family:var(--ff-d);font-size:14px;font-weight:600;cursor:pointer}
+.btn-secondary{padding:12px 20px;border-radius:100px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);font-family:var(--ff-d);font-size:14px;font-weight:600;cursor:pointer;transition:.15s}
 .btn-secondary:hover{background:rgba(255,255,255,.25)}
-.btn-row{display:flex;gap:10px;margin-top:22px}
-.btn-row.single .btn-primary{width:100%}
+.btn-ghost{padding:12px 22px;border-radius:100px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);font-family:var(--ff-d);font-size:14px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.btn-ghost:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.7)}
+.btn-row{display:flex;gap:10px;margin-top:22px;align-items:stretch}
+.btn-row .btn-primary{flex:1;width:auto}
+.btn-row .btn-ghost{flex:0 0 auto}
+.btn-row.single .btn-primary{width:100%;flex:1}
 .btn-inner{display:flex;align-items:center;justify-content:center;gap:8px}
 .spinner{width:16px;height:16px;border:2px solid rgba(14,91,110,.3);border-top-color:var(--brand-deep);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
