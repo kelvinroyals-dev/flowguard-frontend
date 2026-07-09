@@ -1,359 +1,122 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Verify Email — FlowGuard</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify Email — FlowGuard</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="favicon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
+<style>
+/* Portal design system — matches index.html */
+:root{
+  --bg:#eef2f4; --surface:#ffffff; --surface-2:#f7fafb; --line:#e2e9ed; --line-2:#d3dde2;
+  --ink:#12222b; --ink-2:#4a626d; --ink-3:#8399a4;
+  --brand:#0891b2; --brand-2:#06b6d4; --brand-deep:#0e5b6e; --brand-soft:#e0f5fa;
+  --ok:#10b981; --ok-bg:#e6f7f1; --warn:#f59e0b; --warn-bg:#fef4e2; --alert:#ef4444; --alert-bg:#fdeceb;
+  --r:20px; --rs:13px; --rx:9px;
+  --sh:0 2px 4px rgba(18,34,43,.03), 0 12px 32px rgba(18,34,43,.06);
+  --sh-sm:0 1px 2px rgba(18,34,43,.05);
+  --ff:'Inter',sans-serif; --ff-d:'Space Grotesk',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--ff);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;position:relative;overflow-x:hidden}
+/* subtle brand wash behind everything */
+body::before{content:"";position:fixed;inset:0;background:radial-gradient(1000px 500px at 50% -10%, var(--brand-soft), transparent 70%);pointer-events:none;z-index:0}
 
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg width='64' height='64' viewBox='232 74 216 216' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='340' cy='182' r='108' fill='%230a2a3d'/%3E%3Ccircle cx='340' cy='182' r='108' fill='none' stroke='%231cb8e8' stroke-width='3' opacity='0.5'/%3E%3Crect x='232' y='214' width='216' height='90' fill='%230d7fa0' clip-path='url(%23c)'/%3E%3CclipPath id='c'%3E%3Ccircle cx='340' cy='182' r='108'/%3E%3C/clipPath%3E%3Cpath d='M340 110 C358 132 374 148 374 166 C374 186 358 202 340 202 C322 202 306 186 306 166 C306 148 322 132 340 110Z' fill='%2316a8d3'/%3E%3Cpath d='M340 128 C352 144 361 156 361 166 C361 180 352 191 340 191 C328 191 319 180 319 166 C319 156 328 144 340 128Z' fill='%230d7fa0'/%3E%3Ccircle cx='340' cy='110' r='6' fill='%23f5a623'/%3E%3C/svg%3E">
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
-
-  <style>
-    :root {
-      --navy:        #0a2a3d;
-      --navy-mid:    #0d3550;
-      --cyan:        #16a8d3;
-      --cyan-bright: #1cb8e8;
-      --teal:        #0d7fa0;
-      --amber:       #f5a623;
-      --amber-dim:   #d4901e;
-      --pale:        #cceeff;
-      --text-main:   #e8f4f8;
-      --text-muted:  #6fa8c0;
-      --border:      rgba(22, 168, 211, 0.18);
-    }
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background-color: var(--navy);
-      color: var(--text-main);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px 16px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background:
-        radial-gradient(ellipse 70% 55% at 15% 20%, rgba(22,168,211,0.09) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 40% at 85% 75%, rgba(13,127,160,0.08) 0%, transparent 60%),
-        radial-gradient(ellipse 30% 25% at 50% 0%,  rgba(245,166,35,0.04) 0%, transparent 60%);
-      pointer-events: none; z-index: 0;
-    }
-    body::after {
-      content: '';
-      position: fixed; inset: 0;
-      background-image:
-        linear-gradient(rgba(22,168,211,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(22,168,211,0.03) 1px, transparent 1px);
-      background-size: 48px 48px;
-      pointer-events: none; z-index: 0;
-    }
-
-    .wave-strip {
+/* flowing water design at bottom — original, untouched */
+.wave-strip {
       position: fixed;
       bottom: 0; left: 0; right: 0;
-      height: 80px; overflow: hidden;
-      z-index: 0; opacity: 0.3;
+      height: 80px;
+      overflow: hidden;
+      z-index: 0;
+      opacity: 0.7;
     }
-    .wave-strip svg { width: 200%; height: 100%; animation: wave-scroll 14s linear infinite; }
-    @keyframes wave-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-
-    .signal-rings {
-      position: fixed;
-      top: -120px; right: -120px;
-      width: 420px; height: 420px;
-      opacity: 0.06; z-index: 0; pointer-events: none;
+    .wave-strip svg {
+      width: 200%; height: 100%;
+      animation: wave-scroll 14s linear infinite;
     }
-
-    /* ── LAYOUT ── */
-    .page-wrap {
-      position: relative; z-index: 1;
-      width: 100%; max-width: 420px;
+    @keyframes wave-scroll {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
     }
 
-    /* ── BRAND HEADER ── */
-    .brand-header {
-      text-align: center; margin-bottom: 32px;
-      animation: fade-down 0.6s ease both;
-    }
-    .logo-mark {
-      width: 68px; height: 68px;
-      margin: 0 auto 14px; display: block;
-      filter: drop-shadow(0 0 18px rgba(22,168,211,0.35));
-      animation: pulse-glow 4s ease-in-out infinite;
-    }
-    @keyframes pulse-glow {
-      0%, 100% { filter: drop-shadow(0 0 14px rgba(22,168,211,0.28)); }
-      50%       { filter: drop-shadow(0 0 26px rgba(22,168,211,0.52)); }
-    }
-    .brand-name {
-      font-family: 'Outfit', sans-serif;
-      font-size: 24px; font-weight: 700;
-      letter-spacing: -0.5px; color: var(--text-main); margin-bottom: 4px;
-    }
-    .brand-tagline {
-      font-size: 13px; color: var(--text-muted);
-      letter-spacing: 0.04em; text-transform: uppercase;
-    }
+.page-wrap{position:relative;z-index:1;width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center}
+.brand-header{text-align:center;margin-bottom:26px}
+.brand-header .logo{height:44px;width:auto;margin:0 auto 14px;display:block}
+.brand-name{font-family:var(--ff-d);font-size:24px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+.brand-tagline{font-size:12.5px;font-weight:500;text-transform:uppercase;letter-spacing:.09em;color:var(--brand);margin-top:4px}
+/* corner logo — top-left on desktop */
+.corner-logo{position:fixed;top:28px;left:32px;z-index:2;display:block}
+.corner-logo img{height:38px;width:auto;display:block}
+@media(max-width:640px){
+  .corner-logo{position:static;text-align:center;margin:0 auto 20px}
+  .corner-logo img{height:40px;margin:0 auto}
+}
 
-    /* ── CARD ── */
-    .card {
-      background: rgba(13, 53, 80, 0.55);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 48px 36px;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      text-align: center;
-      animation: fade-up 0.7s ease 0.1s both;
-      min-height: 280px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+.card{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:32px 30px}
+.card-title{font-family:var(--ff-d);font-size:22px;font-weight:600;letter-spacing:-.01em}
+.card-sub{color:var(--ink-2);font-size:14px;margin:6px 0 24px}
 
-    /* ── STATES ── */
-    .state { display: none; width: 100%; }
-    .state.active { display: block; animation: fade-up 0.4s ease; }
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;font-weight:500;margin-bottom:6px;color:var(--ink-2)}
+.field input{width:100%;padding:12px 14px;border:1px solid var(--line-2);border-radius:var(--rx);background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:14px;transition:.15s}
+.field input:focus{outline:none;border-color:var(--brand);background:var(--surface);box-shadow:0 0 0 3px var(--brand-soft)}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:44px}
+.pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--ink-3);cursor:pointer;padding:8px;display:grid;place-items:center}
+.pw-toggle:hover{color:var(--brand)}
+.pw-toggle svg{width:20px;height:20px}
 
-    /* ── LOADING STATE ── */
-    .loading-ring {
-      width: 64px; height: 64px;
-      margin: 0 auto 24px;
-      position: relative;
-    }
-    .loading-ring svg {
-      width: 100%; height: 100%;
-      animation: spin 1.2s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+.form-footer-row{display:flex;justify-content:space-between;align-items:center;margin:6px 0 20px}
+.remember-label{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink-2);cursor:pointer}
+.remember-label input{width:16px;height:16px;accent-color:var(--brand)}
+.forgot-link{color:var(--brand);font-size:13.5px;font-weight:500;text-decoration:none}
+.forgot-link:hover{text-decoration:underline}
 
-    /* Ripple pulse rings */
-    .ripple-wrap {
-      position: relative;
-      width: 72px; height: 72px;
-      margin: 0 auto 28px;
-    }
-    .ripple {
-      position: absolute; inset: 0;
-      border-radius: 50%;
-      border: 2px solid var(--cyan);
-      opacity: 0;
-      animation: ripple-out 2s ease-out infinite;
-    }
-    .ripple:nth-child(2) { animation-delay: 0.6s; }
-    .ripple:nth-child(3) { animation-delay: 1.2s; }
-    @keyframes ripple-out {
-      0%   { transform: scale(0.6); opacity: 0.7; }
-      100% { transform: scale(1.8); opacity: 0; }
-    }
-    .ripple-core {
-      position: absolute; inset: 12px;
-      background: rgba(22,168,211,0.12);
-      border: 2px solid rgba(22,168,211,0.5);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .ripple-core svg { width: 22px; height: 22px; color: var(--cyan); }
+.btn-primary{width:100%;padding:13px;border-radius:100px;background:var(--brand);color:#fff;border:none;font-family:var(--ff-d);font-size:15px;font-weight:600;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary:hover:not(:disabled){background:var(--brand-deep)}
+.btn-primary:disabled{opacity:.7;cursor:default}
+.btn-inner{display:flex;align-items:center;justify-content:center;gap:8px}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-    .loading-title {
-      font-family: 'Outfit', sans-serif;
-      font-size: 20px; font-weight: 700;
-      margin-bottom: 8px;
-    }
-    .loading-sub { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+#alert-area{margin-top:14px}
+.alert{display:flex;align-items:flex-start;gap:9px;padding:11px 14px;border-radius:var(--rx);font-size:13.5px;line-height:1.4}
+.alert svg{width:16px;height:16px;flex-shrink:0;margin-top:1px}
+.alert-error{background:var(--alert-bg);color:#b42318}
+.alert-success{background:var(--ok-bg);color:#087443}
 
-    /* loading dots */
-    .dots { display: inline-flex; gap: 5px; margin-top: 20px; }
-    .dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--cyan);
-      opacity: 0.3;
-      animation: dot-pulse 1.4s ease-in-out infinite;
-    }
-    .dot:nth-child(2) { animation-delay: 0.2s; }
-    .dot:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes dot-pulse {
-      0%, 100% { opacity: 0.2; transform: scale(0.8); }
-      50%       { opacity: 1;   transform: scale(1.2); }
-    }
+.divider{display:flex;align-items:center;gap:12px;margin:22px 0;color:var(--ink-3);font-size:12.5px}
+.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
+.social-row{display:flex;gap:10px}
+.social-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border:1px solid var(--line-2);border-radius:var(--rx);background:var(--surface);color:var(--ink-2);font-size:13.5px;font-weight:500;cursor:pointer;transition:.15s;text-decoration:none}
+.social-btn:hover{background:var(--bg);border-color:var(--brand)}
+.social-btn svg,.social-btn img{width:18px;height:18px}
 
-    /* ── SUCCESS STATE ── */
-    .success-icon-wrap {
-      width: 72px; height: 72px;
-      margin: 0 auto 24px;
-      position: relative;
-    }
-    .success-ring {
-      position: absolute; inset: -8px;
-      border-radius: 50%;
-      border: 1.5px solid rgba(34,197,94,0.3);
-      animation: success-ring-in 0.5s ease 0.2s both;
-    }
-    @keyframes success-ring-in {
-      from { transform: scale(0.7); opacity: 0; }
-      to   { transform: scale(1);   opacity: 1; }
-    }
-    .success-circle {
-      width: 100%; height: 100%;
-      background: rgba(16,185,129,0.12);
-      border: 1.5px solid rgba(34,197,94,0.4);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      animation: pop-in 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
-    }
-    @keyframes pop-in {
-      from { transform: scale(0.5); opacity: 0; }
-      to   { transform: scale(1);   opacity: 1; }
-    }
-    .success-circle svg { width: 32px; height: 32px; color: #6ee7b7; }
+.signup-row{text-align:center;margin-top:22px;font-size:14px;color:var(--ink-2)}
+.signup-row a{color:var(--brand);font-weight:600;text-decoration:none}
+.signup-row a:hover{text-decoration:underline}
 
-    .success-title {
-      font-family: 'Outfit', sans-serif;
-      font-size: 22px; font-weight: 700;
-      margin-bottom: 10px;
-    }
-    .success-body {
-      font-size: 14px; color: var(--text-muted);
-      line-height: 1.6; margin-bottom: 32px;
-    }
-
-    /* ── ERROR STATE ── */
-    .error-icon-wrap {
-      width: 72px; height: 72px;
-      margin: 0 auto 24px;
-    }
-    .error-circle {
-      width: 100%; height: 100%;
-      background: rgba(220,38,38,0.1);
-      border: 1.5px solid rgba(220,38,38,0.35);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      animation: pop-in 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
-    }
-    .error-circle svg { width: 30px; height: 30px; color: #fca5a5; }
-
-    .error-title {
-      font-family: 'Outfit', sans-serif;
-      font-size: 22px; font-weight: 700;
-      margin-bottom: 10px;
-    }
-    .error-body {
-      font-size: 14px; color: var(--text-muted);
-      line-height: 1.6; margin-bottom: 28px;
-    }
-
-    /* ── RESEND BLOCK ── */
-    .resend-wrap {
-      padding-top: 20px;
-      border-top: 1px solid var(--border);
-      margin-top: 4px;
-    }
-    .resend-label { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
-    .btn-resend {
-      background: transparent;
-      border: 1px solid rgba(22,168,211,0.35);
-      border-radius: 10px;
-      padding: 10px 24px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px; font-weight: 500;
-      color: var(--cyan);
-      cursor: pointer;
-      transition: border-color 0.2s, background 0.2s, color 0.2s;
-    }
-    .btn-resend:hover {
-      border-color: var(--cyan);
-      background: rgba(22,168,211,0.08);
-      color: var(--pale);
-    }
-    .btn-resend:disabled {
-      opacity: 0.5; cursor: not-allowed;
-    }
-    .resend-timer {
-      font-size: 12px; color: var(--text-muted);
-      margin-top: 10px; min-height: 18px;
-    }
-
-    /* ── BUTTONS ── */
-    .btn-primary {
-      display: inline-block;
-      padding: 13px 36px;
-      background: linear-gradient(135deg, var(--amber) 0%, var(--amber-dim) 100%);
-      color: var(--navy);
-      border: none; border-radius: 10px;
-      font-family: 'Outfit', sans-serif;
-      font-size: 15px; font-weight: 700;
-      cursor: pointer; text-decoration: none;
-      transition: transform 0.2s, box-shadow 0.2s;
-      position: relative; overflow: hidden;
-    }
-    .btn-primary::after {
-      content: '';
-      position: absolute; inset: 0;
-      background: linear-gradient(rgba(255,255,255,0.12), transparent);
-      pointer-events: none;
-    }
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(245,166,35,0.3);
-    }
-
-    .btn-ghost-link {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: 13.5px; color: var(--text-muted);
-      text-decoration: none; margin-top: 20px;
-      transition: color 0.2s;
-    }
-    .btn-ghost-link:hover { color: var(--cyan); }
-    .btn-ghost-link svg { width: 15px; height: 15px; }
-
-    /* ── FOOTER ── */
-    .page-footer {
-      text-align: center; margin-top: 24px;
-      display: flex; align-items: center;
-      justify-content: center; gap: 20px;
-      animation: fade-up 0.8s ease 0.25s both;
-    }
-    .page-footer a {
-      font-size: 12px; color: var(--text-muted);
-      text-decoration: none; transition: color 0.2s;
-    }
-    .page-footer a:hover { color: var(--cyan); }
-    .page-footer span { color: var(--border); }
-
-    @keyframes fade-down {
-      from { opacity: 0; transform: translateY(-14px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes fade-up {
-      from { opacity: 0; transform: translateY(14px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-  </style>
+.state{display:none;text-align:center;padding:8px 0}
+.state.active{display:block}
+.v-icon{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;margin:0 auto 18px}
+.v-icon.load{background:var(--brand-soft)}
+.v-icon.ok{background:var(--ok-bg)}
+.v-icon.err{background:var(--alert-bg)}
+.v-icon svg{width:28px;height:28px}
+.v-icon.ok svg{color:var(--ok)}
+.v-icon.err svg{color:var(--alert)}
+.v-spin{width:30px;height:30px;border:3px solid var(--brand-soft);border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
 </head>
 <body>
-
-  <svg class="signal-rings" viewBox="0 0 420 420" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="210" cy="210" r="200" stroke="#16a8d3" stroke-width="1"/>
-    <circle cx="210" cy="210" r="163" stroke="#16a8d3" stroke-width="1"/>
-    <circle cx="210" cy="210" r="126" stroke="#1cb8e8" stroke-width="1.5"/>
-    <circle cx="210" cy="210" r="89"  stroke="#1cb8e8" stroke-width="2"/>
-    <line x1="210" y1="10"  x2="210" y2="0"   stroke="#f5a623" stroke-width="3" stroke-linecap="round"/>
-    <line x1="410" y1="210" x2="420" y2="210"  stroke="#f5a623" stroke-width="3" stroke-linecap="round"/>
-    <line x1="10"  y1="210" x2="0"   y2="210"  stroke="#f5a623" stroke-width="3" stroke-linecap="round"/>
-    <line x1="210" y1="410" x2="210" y2="420"  stroke="#f5a623" stroke-width="3" stroke-linecap="round"/>
-  </svg>
 
   <div class="wave-strip" aria-hidden="true">
     <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
@@ -362,207 +125,52 @@
     </svg>
   </div>
 
+  <a href="login.html" class="corner-logo"><img src="fg-logo-light.png" alt="FlowGuard"></a>
+
+  <a href="login.html" class="corner-logo"><img src="fg-logo-light.png" alt="FlowGuard"></a>
+
   <main class="page-wrap">
-
-    <div class="brand-header">
-      <svg class="logo-mark" viewBox="200 60 280 270" xmlns="http://www.w3.org/2000/svg">
-        <defs><clipPath id="mb-clip"><circle cx="340" cy="182" r="108"/></clipPath></defs>
-        <circle cx="340" cy="182" r="148" fill="none" stroke="#16a8d3" stroke-width="1.2" opacity="0.15"/>
-        <circle cx="340" cy="182" r="132" fill="none" stroke="#16a8d3" stroke-width="1.4" opacity="0.25"/>
-        <circle cx="340" cy="182" r="118" fill="none" stroke="#1cb8e8" stroke-width="1.8" opacity="0.35"/>
-        <circle cx="340" cy="182" r="108" fill="#0a2a3d"/>
-        <g clip-path="url(#mb-clip)">
-          <rect x="232" y="214" width="216" height="90" fill="#0d7fa0"/>
-          <path d="M232 214 Q254 200 276 214 Q298 228 320 214 Q342 200 364 214 Q386 228 408 214 Q430 200 448 210 L448 216 Q430 202 408 216 Q386 230 364 216 Q342 202 320 216 Q298 230 276 216 Q254 202 232 216 Z" fill="#16a8d3"/>
-          <ellipse cx="284" cy="250" rx="12" ry="3" fill="#cceeff" opacity="0.35"/>
-        </g>
-        <circle cx="340" cy="182" r="108" fill="none" stroke="#1cb8e8" stroke-width="2.5" opacity="0.4"/>
-        <path d="M340 110 C358 132 374 148 374 166 C374 186 358 202 340 202 C322 202 306 186 306 166 C306 148 322 132 340 110 Z" fill="#16a8d3"/>
-        <path d="M340 120 C355 139 367 153 367 166 C367 183 355 196 340 196 C325 196 313 183 313 166 C313 153 325 139 340 120 Z" fill="#0a2a3d"/>
-        <path d="M340 128 C352 144 361 156 361 166 C361 180 352 191 340 191 C328 191 319 180 319 166 C319 156 328 144 340 128 Z" fill="#0d7fa0"/>
-        <ellipse cx="331" cy="146" rx="5" ry="8" fill="#cceeff" opacity="0.55" transform="rotate(-18 331 146)"/>
-        <circle cx="340" cy="110" r="6" fill="#f5a623"/>
-        <circle cx="340" cy="110" r="10" fill="none" stroke="#f5a623" stroke-width="1.5" opacity="0.5"/>
-        <path d="M318 105 Q340 93 362 105" fill="none" stroke="#1cb8e8" stroke-width="2" stroke-linecap="round" opacity="0.75"/>
-        <path d="M307 93 Q340 77 373 93" fill="none" stroke="#1cb8e8" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
-        <line x1="340" y1="72" x2="340" y2="62" stroke="#f5a623" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="448" y1="182" x2="458" y2="182" stroke="#f5a623" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="232" y1="182" x2="222" y2="182" stroke="#f5a623" stroke-width="2.5" stroke-linecap="round"/>
-        <line x1="340" y1="292" x2="340" y2="302" stroke="#f5a623" stroke-width="2.5" stroke-linecap="round"/>
-      </svg>
-      <div class="brand-name">FlowGuard</div>
-      <div class="brand-tagline">Drainage-as-a-Service Platform</div>
+    <div class="card">
+      <!-- verifying -->
+      <div class="state active" id="s-load">
+        <div class="v-icon load"><div class="v-spin"></div></div>
+        <div class="card-title">Verifying your email…</div>
+        <div class="card-sub">Just a moment while we confirm your address.</div>
+      </div>
+      <!-- success -->
+      <div class="state" id="s-ok">
+        <div class="v-icon ok"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>
+        <div class="card-title">Email verified</div>
+        <div class="card-sub">Your email address has been confirmed. You're all set.</div>
+        <a href="login.html" class="btn-primary" style="text-decoration:none;margin-top:8px">Continue to sign in</a>
+      </div>
+      <!-- error -->
+      <div class="state" id="s-err">
+        <div class="v-icon err"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></div>
+        <div class="card-title">Verification failed</div>
+        <div class="card-sub" id="err-msg">This verification link is invalid or has expired.</div>
+        <a href="login.html" class="btn-primary" style="text-decoration:none;margin-top:8px">Back to sign in</a>
+      </div>
     </div>
-
-    <div class="card" id="card">
-
-      <!-- Loading state -->
-      <div class="state active" id="state-loading">
-        <div class="ripple-wrap">
-          <div class="ripple"></div>
-          <div class="ripple"></div>
-          <div class="ripple"></div>
-          <div class="ripple-core">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-            </svg>
-          </div>
-        </div>
-        <div class="loading-title">Verifying your email</div>
-        <div class="loading-sub">Hold on while we confirm your account…</div>
-        <div class="dots">
-          <div class="dot"></div>
-          <div class="dot"></div>
-          <div class="dot"></div>
-        </div>
-      </div>
-
-      <!-- Success state -->
-      <div class="state" id="state-success">
-        <div class="success-icon-wrap">
-          <div class="success-ring"></div>
-          <div class="success-circle">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-            </svg>
-          </div>
-        </div>
-        <div class="success-title">Email Verified</div>
-        <p class="success-body">Your FlowGuard account is now active. Sign in to access your service dashboard and monitor your drainage infrastructure.</p>
-        <a href="login.html" class="btn-primary">Go to Login →</a>
-      </div>
-
-      <!-- Error state -->
-      <div class="state" id="state-error">
-        <div class="error-icon-wrap">
-          <div class="error-circle">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </div>
-        </div>
-        <div class="error-title">Verification Failed</div>
-        <p class="error-body" id="error-message">This verification link is invalid or has expired. Links are valid for 24 hours from sign-up.</p>
-
-        <div class="resend-wrap">
-          <p class="resend-label">Didn't get the email or link expired?</p>
-          <button class="btn-resend" id="resend-btn" onclick="resendVerification()">Resend Verification Email</button>
-          <div class="resend-timer" id="resend-timer"></div>
-        </div>
-
-        <a href="login.html" class="btn-ghost-link">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-          Back to login
-        </a>
-      </div>
-
-    </div>
-
-    <nav class="page-footer">
-      <a href="#">Privacy Policy</a>
-      <span>·</span>
-      <a href="#">Terms of Service</a>
-      <span>·</span>
-      <a href="mailto:support@flowguard.ng">Support</a>
-    </nav>
-
   </main>
 
   <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const token     = urlParams.get('token');
-
-    function showState(id) {
-      ['state-loading','state-success','state-error'].forEach(s => {
-        document.getElementById(s).classList.toggle('active', s === id);
-      });
-    }
-
-    async function verifyEmail() {
-      if (!token) {
-        document.getElementById('error-message').textContent = 'No verification token found. Please use the link from your confirmation email.';
-        showState('state-error');
-        return;
-      }
-
-      try {
-        const response = await fetch(`https://api.flowguard.ng/api/v1/auth/verify-email?token=${token}`);
-        const data     = await response.json();
-
-        if (data.success) {
-          showState('state-success');
-        } else {
-          document.getElementById('error-message').textContent =
-            data.error || 'This verification link is invalid or has expired.';
-          showState('state-error');
-        }
-      } catch (err) {
-        console.error('Verification error:', err);
-        document.getElementById('error-message').textContent =
-          'Could not connect to the server. Please check your internet connection and try again.';
-        showState('state-error');
-      }
-    }
-
-    // ── Resend verification ──
-    let resendCooldown = false;
-
-    async function resendVerification() {
-      if (resendCooldown) return;
-
-      const btn   = document.getElementById('resend-btn');
-      const timer = document.getElementById('resend-timer');
-
-      btn.disabled    = true;
-      btn.textContent = 'Sending…';
-
-      try {
-        // Extract email from token if possible, otherwise prompt
-        // For now we call a generic resend endpoint; backend can derive email from stale token
-        const response = await fetch('https://api.flowguard.ng/api/v1/auth/resend-verification', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token })
+    function show(id){ document.querySelectorAll('.state').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+    (async function(){
+      const token = new URLSearchParams(location.search).get('token');
+      if(!token){ document.getElementById('err-msg').textContent='No verification token found in the link.'; show('s-err'); return; }
+      try{
+        const r = await fetch('https://api.flowguard.ng/api/v1/auth/verify-email', {
+          method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token})
         });
-        const data = await response.json();
-
-        if (data.success) {
-          btn.textContent = 'Email Sent ✓';
-          startCooldown(60);
-        } else {
-          btn.disabled    = false;
-          btn.textContent = 'Resend Verification Email';
-          timer.textContent = data.error || 'Failed to resend. Please try again.';
-        }
-      } catch (err) {
-        btn.disabled    = false;
-        btn.textContent = 'Resend Verification Email';
-        timer.textContent = 'Connection failed. Please try again.';
+        const d = await r.json();
+        if(d.success){ show('s-ok'); }
+        else { document.getElementById('err-msg').textContent = d.error || 'This verification link is invalid or has expired.'; show('s-err'); }
+      }catch(e){
+        document.getElementById('err-msg').textContent = "Couldn't reach the server. Please try again.";
+        show('s-err');
       }
-    }
-
-    function startCooldown(seconds) {
-      resendCooldown = true;
-      const btn   = document.getElementById('resend-btn');
-      const timer = document.getElementById('resend-timer');
-      let   s     = seconds;
-
-      const tick = setInterval(() => {
-        s--;
-        timer.textContent = `You can resend again in ${s}s`;
-        if (s <= 0) {
-          clearInterval(tick);
-          resendCooldown      = false;
-          btn.disabled        = false;
-          btn.textContent     = 'Resend Verification Email';
-          timer.textContent   = '';
-        }
-      }, 1000);
-    }
-
-    // Run on load
-    verifyEmail();
+    })();
   </script>
-
 </body>
 </html>
