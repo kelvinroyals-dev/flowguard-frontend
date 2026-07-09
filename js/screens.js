@@ -404,8 +404,9 @@ const Screens = (function () {
     const online = p.sensors_online != null ? `${p.sensors_online} sensors` : null;
     const fee = p.monthly_fee ? UI.fmtNaira(p.monthly_fee) + '/mo' : null;
     return `<div class="card statcard" style="cursor:pointer" onclick="App.openProperty('${UI.esc(p.property_id)}')">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <div class="lbl" style="margin:0">${UI.esc(p.property_type || 'property')}</div>${st}
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px">
+        <div class="lbl" style="margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${UI.esc(UI.prettyType(p.property_type))}</div>
+        <div style="flex-shrink:0">${st}</div>
       </div>
       <div style="font-family:var(--ff-d);font-size:18px;font-weight:600;letter-spacing:-.01em;margin-bottom:4px">${UI.esc(p.property_name || 'Unnamed area')}</div>
       <div class="sub">${UI.esc([p.city, p.state].filter(Boolean).join(', '))}</div>
@@ -624,6 +625,23 @@ const Screens = (function () {
     monitoring_active: 'Monitoring active'
   };
 
+  // Render a team's members list (members JSONB may be array of strings or objects)
+  function teamMembersHtml(members) {
+    let arr = members;
+    if (typeof arr === 'string') { try { arr = JSON.parse(arr); } catch (_) { arr = null; } }
+    if (!Array.isArray(arr) || !arr.length) return '';
+    const rows = arr.slice(0, 6).map(m => {
+      const name = typeof m === 'string' ? m : (m.name || m.full_name || '—');
+      const role = typeof m === 'object' ? (m.role || m.title || '') : '';
+      const initials = name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+      return `<div class="tm-row">
+        <div class="tm-av">${UI.esc(initials)}</div>
+        <div><div class="tm-name">${UI.esc(name)}</div>${role ? `<div class="tm-role">${UI.esc(role)}</div>` : ''}</div>
+      </div>`;
+    }).join('');
+    return `<div class="tm-list">${rows}</div>`;
+  }
+
   async function propertyDetail(view, propertyId) {
     view.innerHTML = `
       <div class="top"><div>
@@ -677,7 +695,16 @@ const Screens = (function () {
           <h3>Inspection</h3>
           ${inspection
             ? `<div class="evt ok"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons.check}</svg></div>
-                 <div><b>${UI.esc(cap(inspection.status || 'Scheduled'))}</b><small>${inspection.scheduled_date ? UI.fmtDate(inspection.scheduled_date) : 'Date to be confirmed'}</small></div></div>`
+                 <div><b>${UI.esc(cap(inspection.status || 'Scheduled'))}</b><small>${inspection.scheduled_date ? UI.fmtDate(inspection.scheduled_date) : 'Date to be confirmed'}</small></div></div>
+               ${inspection.team_name ? `
+               <div class="assigned-team">
+                 <div class="lbl" style="margin:14px 0 8px">Assigned team</div>
+                 <div class="team-head">
+                   <b style="font-family:var(--ff-d);font-size:14px">${UI.esc(inspection.team_name)}</b>
+                   ${inspection.team_status ? UI.chip(inspection.team_status === 'on_site' ? 'ok' : 'progress', cap(String(inspection.team_status).replace(/_/g,' '))) : ''}
+                 </div>
+                 ${teamMembersHtml(inspection.team_members)}
+               </div>` : ''}`
             : UI.state('awaiting', 'No inspection yet', 'An inspection will be scheduled after your area is reviewed.').replace('card', '')}
           <h3 style="margin-top:22px">Recent invoices</h3>
           ${invoices.length

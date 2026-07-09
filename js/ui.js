@@ -194,6 +194,13 @@ const UI = (function () {
       ${e.depletion_date ? `<p style="color:var(--ink-3);font-size:12.5px;margin-top:10px">Estimated depletion: ${fmtDate(e.depletion_date)}</p>` : ''}`;
   }
 
-  return { esc, toast, loading, state, chip, gauge, sensorCard, enzymeDetail, stat, fmtNaira, fmtDate, lineChart, fmtTime };
+  // Turn "residential_estate" / "RESIDENTIAL_ESTATE" into "Residential Estate"
+  function prettyType(t) {
+    if (!t) return 'Property';
+    return String(t).replace(/[_-]+/g, ' ').trim()
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  return { esc, toast, loading, state, chip, gauge, sensorCard, enzymeDetail, stat, fmtNaira, fmtDate, lineChart, fmtTime, prettyType };
 })();
 window.UI = UI;

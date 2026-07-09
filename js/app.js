@@ -3,9 +3,18 @@
    ============================================================ */
 const App = (function () {
   let current = 'overview';
+  let _suppressHashChange = false;
 
   function go(tab, arg) {
     current = tab;
+    // persist active screen in the URL hash so a refresh restores it
+    // and so emails can deep-link (e.g. #property/PROP-123)
+    const hashMap = { propertyDetail: 'property', sensorDetail: 'sensor', ticketDetail: 'ticket' };
+    const newHash = hashMap[tab] ? `#${hashMap[tab]}/${arg}` : `#${tab}`;
+    if (location.hash !== newHash) {
+      _suppressHashChange = true;
+      location.hash = newHash;
+    }
     const railEl = document.getElementById('rail');
     if (railEl) railEl.classList.remove('open');
     // nav active state (property/notifications map to their parent nav where relevant)
@@ -403,8 +412,28 @@ const App = (function () {
     const rail = document.getElementById('rail');
     if (mob && rail) mob.addEventListener('click', () => rail.classList.toggle('open'));
 
-    // refresh cached user from server (non-blocking), then render
-    refreshUser().finally(() => go('overview'));
+    // restore the screen from the URL hash (refresh / email deep-link),
+    // otherwise land on overview
+    refreshUser().finally(() => routeFromHash());
+
+    // respond to browser back/forward and in-app hash changes
+    window.addEventListener('hashchange', () => {
+      if (_suppressHashChange) { _suppressHashChange = false; return; }
+      routeFromHash();
+    });
+  }
+
+  // Parse location.hash -> screen. Supports #overview, #properties,
+  // and detail deep-links like #property/PROP-123, #sensor/ID, #ticket/ID
+  function routeFromHash() {
+    const raw = (location.hash || '').replace(/^#/, '');
+    if (!raw) { go('overview'); return; }
+    const [seg, id] = raw.split('/');
+    const detailMap = { property: 'propertyDetail', sensor: 'sensorDetail', ticket: 'ticketDetail' };
+    if (detailMap[seg] && id) { go(detailMap[seg], decodeURIComponent(id)); return; }
+    // plain screens — only if the screen actually exists, else overview
+    if (Screens[seg]) { go(seg); return; }
+    go('overview');
   }
 
   async function refreshUser() {
