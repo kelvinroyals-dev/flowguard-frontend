@@ -104,6 +104,27 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff);-webkit-font-sm
 .pw-wrap input{padding-right:44px}
 .pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;padding:8px;display:grid;place-items:center}
 .pw-toggle svg{width:20px;height:20px}
+
+/* password strength indicator */
+.strength-wrap{margin-top:10px;display:flex;align-items:center;gap:10px}
+.strength-track{flex:1;height:5px;border-radius:100px;background:rgba(255,255,255,.18);overflow:hidden}
+.strength-bar{height:100%;width:0;border-radius:100px;transition:width .25s,background .25s}
+.strength-label{font-size:12px;font-weight:600;white-space:nowrap}
+
+/* agreement checkboxes on the colored panel */
+.check-group{display:flex;align-items:flex-start;gap:11px;margin-bottom:12px}
+.check-group input[type="checkbox"]{
+  appearance:none;-webkit-appearance:none;flex-shrink:0;width:19px;height:19px;margin-top:1px;
+  border:1.5px solid rgba(255,255,255,.5);border-radius:5px;background:rgba(255,255,255,.08);
+  cursor:pointer;position:relative;transition:.15s}
+.check-group input[type="checkbox"]:hover{border-color:rgba(255,255,255,.8)}
+.check-group input[type="checkbox"]:checked{background:#fff;border-color:#fff}
+.check-group input[type="checkbox"]:checked::after{
+  content:"";position:absolute;left:6px;top:2px;width:5px;height:9px;
+  border:solid #0891b2;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.check-group span{font-size:13px;line-height:1.5;color:rgba(255,255,255,.85)}
+.check-group a{color:#fff;font-weight:600;text-decoration:underline;text-underline-offset:2px}
+.check-group a:hover{color:#d6f7ff}
 .page-footer{display:none}
 
 @media(max-width:860px){
@@ -264,14 +285,14 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff);-webkit-font-sm
           </div>
 
           <div style="margin-bottom:24px">
-            <div class="check-group">
+            <label class="check-group">
               <input type="checkbox" id="terms" required/>
               <span>I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></span>
-            </div>
-            <div class="check-group">
+            </label>
+            <label class="check-group">
               <input type="checkbox" id="marketing"/>
               <span>Send me service updates and FlowGuard announcements</span>
-            </div>
+            </label>
           </div>
 
           <div id="alert-3"></div>
