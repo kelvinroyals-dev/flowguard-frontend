@@ -662,7 +662,7 @@ const Screens = (function () {
     if (!p) { document.getElementById('pd-body').innerHTML = UI.state('error', 'Property not found', 'This area may have been removed.'); return; }
 
     document.getElementById('pd-name').textContent = p.property_name || 'Property';
-    document.getElementById('pd-loc').textContent = [p.city, p.state].filter(Boolean).join(', ') + ' · ' + (p.property_type || 'property');
+    document.getElementById('pd-loc').textContent = [p.city, p.state].filter(Boolean).join(', ') + ' · ' + UI.prettyType(p.property_type);
 
     const curIdx = Math.max(0, STATUS_FLOW.indexOf(p.status === 'monitoring_active' ? 'active' : p.status));
     const steps = STATUS_FLOW.map((st, i) => ({
@@ -696,14 +696,25 @@ const Screens = (function () {
           ${inspection
             ? `<div class="evt ok"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons.check}</svg></div>
                  <div><b>${UI.esc(cap(inspection.status || 'Scheduled'))}</b><small>${inspection.scheduled_date ? UI.fmtDate(inspection.scheduled_date) : 'Date to be confirmed'}</small></div></div>
-               ${inspection.team_name ? `
+               ${(inspection.team_name || inspection.assigned_agent_name) ? `
                <div class="assigned-team">
-                 <div class="lbl" style="margin:14px 0 8px">Assigned team</div>
-                 <div class="team-head">
-                   <b style="font-family:var(--ff-d);font-size:14px">${UI.esc(inspection.team_name)}</b>
-                   ${inspection.team_status ? UI.chip(inspection.team_status === 'on_site' ? 'ok' : 'progress', cap(String(inspection.team_status).replace(/_/g,' '))) : ''}
-                 </div>
-                 ${teamMembersHtml(inspection.team_members)}
+                 <div class="lbl" style="margin:14px 0 8px">Assigned ${inspection.team_name ? 'team' : 'inspector'}</div>
+                 ${inspection.team_name ? `
+                   <div class="team-head">
+                     <b style="font-family:var(--ff-d);font-size:14px">${UI.esc(inspection.team_name)}</b>
+                     ${inspection.team_status ? UI.chip(inspection.team_status === 'on_site' ? 'ok' : 'progress', cap(String(inspection.team_status).replace(/_/g,' '))) : ''}
+                   </div>
+                   ${teamMembersHtml(inspection.team_members)}
+                 ` : ''}
+                 ${inspection.assigned_agent_name ? `
+                   <div class="tm-row">
+                     <div class="tm-av">${UI.esc(inspection.assigned_agent_name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase())}</div>
+                     <div>
+                       <div class="tm-name">${UI.esc(inspection.assigned_agent_name)}</div>
+                       ${inspection.assigned_agent_phone ? `<div class="tm-role">${UI.esc(inspection.assigned_agent_phone)}</div>` : ''}
+                     </div>
+                   </div>
+                 ` : ''}
                </div>` : ''}`
             : UI.state('awaiting', 'No inspection yet', 'An inspection will be scheduled after your area is reviewed.').replace('card', '')}
           <h3 style="margin-top:22px">Recent invoices</h3>
