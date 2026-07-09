@@ -388,10 +388,12 @@ const Screens = (function () {
       <div id="prop-list">${UI.loading(3)}</div>`;
     let props;
     if (Demo.isOn()) props = Demo.data.properties;
-    else { try { const r = await apiRequest('/properties'); props = (r && r.data) || []; } catch (_) { props = []; } }
+    else { try { const r = await apiRequest('/properties'); props = (r && r.data) || []; } catch (_) { props = null; } }
     const el = document.getElementById('prop-list');
 
-    if (props && props.length) {
+    if (props === null) {
+      el.innerHTML = UI.state('error', "Couldn't load your properties", 'Please check your connection and try again.', 'Retry', "onclick=\"App.go('properties')\"");
+    } else if (props.length) {
       el.innerHTML = `<div class="grid-3">${props.map(propertyCard).join('')}</div>`;
     } else {
       // Onboarding for brand-new users (no areas yet)
@@ -472,7 +474,7 @@ const Screens = (function () {
     let invoices, contract;
     if (Demo.isOn()) { invoices = Demo.data.invoices; contract = Demo.data.contract; }
     else {
-      try { const r = await apiRequest('/billing/invoices'); invoices = (r && r.data) || []; } catch (_) { invoices = []; }
+      try { const r = await apiRequest('/billing/invoices'); invoices = (r && r.data) || []; } catch (_) { invoices = null; }
       // subscription + SLA come from the property billing endpoint; try the first property
       try {
         const rp = await apiRequest('/properties');
@@ -513,7 +515,10 @@ const Screens = (function () {
 
     // Payment history
     const el = document.getElementById('bill-list');
-    if (invoices && invoices.length) {
+    if (invoices === null) {
+      el.className = '';
+      el.innerHTML = UI.state('error', "Couldn't load your invoices", 'Please check your connection and try again.', 'Retry', "onclick=\"App.go('billing')\"");
+    } else if (invoices && invoices.length) {
       el.innerHTML = `<div class="rows">${invoices.map(inv => {
         const paid = (inv.payment_status || inv.status) === 'paid';
         return `<div class="row" style="cursor:pointer" onclick="App.openInvoice('${UI.esc(inv.invoice_id || '')}')">
@@ -541,7 +546,16 @@ const Screens = (function () {
 
     let items;
     if (Demo.isOn()) items = Demo.data.alerts.map(normalizeAlert);
-    else { try { const r = await apiRequest('/alerts'); items = ((r && r.data) || []).map(normalizeAlert); } catch (_) { items = []; } }
+    else {
+      try { const r = await apiRequest('/alerts'); items = ((r && r.data) || []).map(normalizeAlert); }
+      catch (_) {
+        const kEl = document.getElementById('alert-kpis');
+        const aEl = document.getElementById('alert-active');
+        if (kEl) kEl.innerHTML = '';
+        if (aEl) aEl.innerHTML = UI.state('error', "Couldn't load alerts", 'Please check your connection and try again.', 'Retry', "onclick=\"App.go('alerts')\"");
+        return;
+      }
+    }
 
     const active = items.filter(a => a.status !== 'resolved');
     const resolved = items.filter(a => a.status === 'resolved');
@@ -645,7 +659,7 @@ const Screens = (function () {
   async function propertyDetail(view, propertyId) {
     view.innerHTML = `
       <div class="top"><div>
-        <div class="crumb" style="color:var(--ink-3);font-size:12.5px;margin-bottom:6px;cursor:pointer" onclick="App.go('properties')">← My properties</div>
+        <div class="crumb" onclick="App.go('properties')">← My properties</div>
         <h1 id="pd-name">Loading…</h1><div class="sub" id="pd-loc"></div>
       </div>
       <button class="btn ghost" onclick="App.go('properties')">Back</button></div>
@@ -751,7 +765,12 @@ const Screens = (function () {
     if (Demo.isOn()) {
       items = Demo.data.alerts.map((a, i) => ({ id: 'D' + i, title: a.title, message: a.description, type: a.type, read: i > 0, created_at: a.created_at }));
     } else {
-      try { const r = await apiRequest('/notifications'); items = (r && r.data) || []; } catch (_) { items = []; }
+      try { const r = await apiRequest('/notifications'); items = (r && r.data) || []; } catch (_) { items = null; }
+    }
+    if (items === null) {
+      const el0 = document.getElementById('notif-list');
+      if (el0) el0.innerHTML = UI.state('error', "Couldn't load notifications", 'Please check your connection and try again.', 'Retry', "onclick=\"App.go('notifications')\"");
+      return;
     }
     if (_notifFilter === 'unread') items = items.filter(n => !n.read && !n.is_read);
 
@@ -789,9 +808,11 @@ const Screens = (function () {
       <div class="card panel-pad" id="rep-list">${UI.loading(3)}</div>`;
     let items;
     if (Demo.isOn()) items = Demo.data.reports;
-    else { try { const r = await apiRequest('/field-reports?limit=100'); items = (r && r.data) || []; } catch (_) { items = []; } }
+    else { try { const r = await apiRequest('/field-reports?limit=100'); items = (r && r.data) || []; } catch (_) { items = null; } }
     const el = document.getElementById('rep-list');
-    if (items && items.length) {
+    if (items === null) {
+      el.innerHTML = UI.state('error', "Couldn't load your reports", 'Please check your connection and try again.', 'Retry', "onclick=\"App.go('reports')\"");
+    } else if (items && items.length) {
       el.innerHTML = items.map(r => `
         <div class="doc">
           <div class="dic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons.doc}</svg></div>
@@ -811,7 +832,7 @@ const Screens = (function () {
   async function sensorDetail(view, sensorId) {
     view.innerHTML = `
       <div class="top"><div>
-        <div class="crumb" style="color:var(--ink-3);font-size:12.5px;margin-bottom:6px;cursor:pointer" onclick="App.go('monitoring')">← Monitoring</div>
+        <div class="crumb" onclick="App.go('monitoring')">← Monitoring</div>
         <h1 id="sd-name">Loading…</h1><div class="sub" id="sd-sub"></div>
       </div>
       <div style="display:flex;gap:6px">
@@ -883,7 +904,14 @@ const Screens = (function () {
 
     let items;
     if (Demo.isOn()) items = Demo.data.tickets;
-    else { try { const r = await apiRequest('/tickets'); items = (r && r.data) || []; } catch (_) { items = []; } }
+    else {
+      try { const r = await apiRequest('/tickets'); items = (r && r.data) || []; }
+      catch (_) {
+        const el0 = document.getElementById('tk-list');
+        if (el0) { el0.className = ''; el0.innerHTML = UI.state('error', "Couldn't load your tickets", 'Please check your connection and try again.', 'Retry', "onclick=\"App.go('support')\""); }
+        return;
+      }
+    }
 
     if (_ticketFilter === 'open') items = items.filter(t => !['resolved', 'closed'].includes(t.status));
     if (_ticketFilter === 'resolved') items = items.filter(t => ['resolved', 'closed'].includes(t.status));
@@ -917,7 +945,7 @@ const Screens = (function () {
   async function ticketDetail(view, ticketId) {
     view.innerHTML = `
       <div class="top"><div>
-        <div class="crumb" style="color:var(--ink-3);font-size:12.5px;margin-bottom:6px;cursor:pointer" onclick="App.go('support')">← Support</div>
+        <div class="crumb" onclick="App.go('support')">← Support</div>
         <h1 id="td-subj">Loading…</h1><div class="sub" id="td-meta"></div>
       </div><button class="btn ghost" onclick="App.go('support')">Back</button></div>
       ${demoBanner()}
