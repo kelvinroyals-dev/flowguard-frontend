@@ -72,6 +72,7 @@ const UI = (function () {
           <small>Risk index</small>
           <div class="lvl" style="color:${levelColor}">${has ? '<span class="lvl-dot" style="background:' + levelColor + '"></span>' : ''}${levelText}</div>
         </div>
+        <div class="gauge-sub">Index of 100 · we respond above 60</div>
       </div>`;
   }
 
@@ -108,8 +109,8 @@ const UI = (function () {
                <div class="offline-msg">Sensor not reporting</div>
                <div class="offline-sub">Last seen ${lastPing}</div>
              </div>`
-          : `<div class="v">${s.level != null ? Math.round(s.level) : '—'}<span class="u2">${s.level != null ? '%' : ''}</span></div>
-             <div class="u">water level</div>
+          : `<div class="v" style="color:${s.level == null ? 'var(--ink)' : s.level >= 70 ? 'var(--alert)' : s.level >= 50 ? 'var(--warn)' : 'var(--ink)'}">${s.level != null ? Math.round(s.level) : '—'}<span class="u2">${s.level != null ? '%' : ''}</span></div>
+             <div class="u">water level · alert at 70%</div>
              <div class="spark">${spark}</div>
              <div class="sensor-metrics">
                <div class="sm"><span class="sm-l">Flow</span><span class="sm-v">${flow}</span></div>

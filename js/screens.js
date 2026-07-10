@@ -152,7 +152,7 @@ const Screens = (function () {
       <div class="top">
         <div class="greeting"><h1>${greeting()}, ${UI.esc(name)}</h1><div class="sub" id="ov-sub">Here's the latest on your drainage network.</div></div>
         <div class="top-actions">
-          <button class="icon-btn" onclick="App.go('notifications')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons.bell}</svg></button>
+          <button class="icon-btn" aria-label="Notifications" onclick="App.go('notifications')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons.bell}</svg></button>
           <button class="btn" onclick="App.openRegister()">+ Add area</button>
         </div>
       </div>
@@ -568,60 +568,14 @@ const Screens = (function () {
   function propertyRow(p, score) {
     const scoreColor = score == null ? 'var(--ink-3)' : score >= 70 ? 'var(--ok)' : score >= 50 ? 'var(--warn)' : 'var(--alert)';
     return `<tr class="rowlink" onclick="App.openProperty('${UI.esc(p.property_id)}')">
-      <td><b>${UI.esc(p.property_name || 'Unnamed area')}</b></td>
-      <td class="muted">${UI.esc([p.city, p.state].filter(Boolean).join(', ') || '—')}</td>
-      <td class="muted">${UI.esc(UI.prettyType(p.property_type))}</td>
-      <td><b style="color:${scoreColor}">${score != null ? score + '/100' : '—'}</b></td>
-      <td>${statusChip(p.status)}</td>
-      <td>${p.monthly_fee ? UI.fmtNaira(p.monthly_fee) + '/mo' : '—'}</td>
-      <td style="text-align:right;color:var(--brand);font-weight:600">→</td>
+      <td data-label="Property"><b>${UI.esc(p.property_name || 'Unnamed area')}</b></td>
+      <td class="muted" data-label="Location">${UI.esc([p.city, p.state].filter(Boolean).join(', ') || '—')}</td>
+      <td class="muted" data-label="Type">${UI.esc(UI.prettyType(p.property_type))}</td>
+      <td data-label="Score"><b style="color:${scoreColor}">${score != null ? score + '/100' : '—'}</b></td>
+      <td data-label="Status">${statusChip(p.status)}</td>
+      <td data-label="Fee">${p.monthly_fee ? UI.fmtNaira(p.monthly_fee) + '/mo' : '—'}</td>
+      <td class="tbl-arrow" style="text-align:right;color:var(--brand);font-weight:600">→</td>
     </tr>`;
-  }
-
-  function propertyCard(p, score) {
-    const st = statusChip(p.status);
-    const online = p.sensors_online != null ? `${p.sensors_online} sensors` : null;
-    const fee = p.monthly_fee ? UI.fmtNaira(p.monthly_fee) + '/mo' : null;
-    const scoreColor = score == null ? null : score >= 70 ? 'var(--ok)' : score >= 50 ? 'var(--warn)' : 'var(--alert)';
-    return `<div class="card statcard clickable" onclick="App.openProperty('${UI.esc(p.property_id)}')">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px">
-        <div class="lbl" style="margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${UI.esc(UI.prettyType(p.property_type))}</div>
-        <div style="flex-shrink:0">${st}</div>
-      </div>
-      <div style="font-family:var(--ff-d);font-size:18px;font-weight:600;letter-spacing:-.01em;margin-bottom:4px">${UI.esc(p.property_name || 'Unnamed area')}</div>
-      <div class="sub">${UI.esc([p.city, p.state].filter(Boolean).join(', '))}</div>
-      <div style="display:flex;gap:16px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
-        ${score != null ? `<div><div class="lbl m0b2">Score</div><b style="font-family:var(--ff-d);font-size:14px;color:${scoreColor}">${score}/100</b></div>` : ''}
-        ${online ? `<div><div class="lbl m0b2">Sensors</div><b class="dv">${online}</b></div>` : ''}
-        ${fee ? `<div><div class="lbl m0b2">Fee</div><b class="dv">${fee}</b></div>` : ''}
-        <div style="margin-left:auto;align-self:center;color:var(--brand);font-size:13px;font-weight:600">View →</div>
-      </div>
-    </div>`;
-  }
-
-  // ---------------- ONBOARDING (guided first-run) ----------------
-  function onboardingBlock() {
-    const stepsHtml = [
-      { n: 1, t: 'Register your area', d: 'Tell us about the drainage you want monitored', done: false, now: true },
-      { n: 2, t: 'Site inspection', d: 'Our team assesses and plans your coverage', done: false },
-      { n: 3, t: 'Sensors installed', d: 'We deploy monitoring across your channels', done: false },
-      { n: 4, t: 'Live monitoring', d: '24/7 flood-risk tracking begins', done: false }
-    ].map(s => `
-      <div class="evt ${s.now ? 'ok' : ''}" style="${s.now ? '' : 'opacity:.6'}">
-        <div class="ic" style="background:${s.now ? 'var(--brand-soft)' : 'var(--bg)'};color:${s.now ? 'var(--brand)' : 'var(--ink-3)'};font-family:var(--ff-d);font-weight:700">${s.n}</div>
-        <div><b>${s.t}</b><small>${s.d}</small></div>
-      </div>`).join('');
-
-    return `<div class="card panel-pad" style="text-align:center;padding:40px 30px">
-        <div style="width:64px;height:64px;border-radius:20px;background:var(--brand-soft);display:grid;place-items:center;margin:0 auto 20px">
-          <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="var(--brand)" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
-        </div>
-        <h2 style="font-family:var(--ff-d);font-size:22px;font-weight:600;margin-bottom:8px">Welcome to FlowGuard</h2>
-        <p style="color:var(--ink-2);font-size:14px;max-width:420px;margin:0 auto 24px">Let's get your first area set up for drainage monitoring. Here's how it works:</p>
-        <div style="max-width:420px;margin:0 auto 26px;text-align:left">${stepsHtml}</div>
-        <button class="btn" onclick="App.openRegister()">Register your first area</button>
-        ${Demo.isOn() ? '' : '<div style="margin-top:14px"><button class="btn ghost" onclick="App.toggleDemo(true)">Or explore with demo data</button></div>'}
-      </div>`;
   }
 
   function statusChip(status) {
@@ -776,10 +730,10 @@ const Screens = (function () {
         ? `<button class="btn ghost sm" onclick="App.openTicket('dispatch','Dispatch request: ${UI.esc(subj)}','high')">Request dispatch</button>`
         : '';
     return `<tr>
-      <td>${UI.chip(sk, sl)}</td>
-      <td><b>${UI.esc(a.title)}</b><div class="muted" style="margin-top:2px">${UI.esc(a.description)}</div></td>
-      <td class="muted">${UI.esc(a.resolved_at && !isActive ? UI.fmtDate(a.resolved_at) : (a.created_at || ''))}</td>
-      ${isActive ? `<td><div style="display:flex;gap:8px;flex-wrap:wrap">${actions || '<span class="muted">—</span>'}</div></td>` : ''}
+      <td data-label="Severity">${UI.chip(sk, sl)}</td>
+      <td data-label="Alert"><b>${UI.esc(a.title)}</b><div class="muted" style="margin-top:2px">${UI.esc(a.description)}</div></td>
+      <td class="muted" data-label="${isActive ? 'Raised' : 'Resolved'}">${UI.esc(a.resolved_at && !isActive ? UI.fmtDate(a.resolved_at) : (a.created_at || ''))}</td>
+      ${isActive ? `<td data-label="Actions"><div style="display:flex;gap:8px;flex-wrap:wrap">${actions || '<span class="muted">—</span>'}</div></td>` : ''}
     </tr>`;
   }
 
@@ -790,33 +744,6 @@ const Screens = (function () {
       severity: sev, status: a.status || (a.resolved_at ? 'resolved' : 'active'),
       created_at: a.created_at, resolved_at: a.resolved_at
     };
-  }
-
-  function incidentRow(a) {
-    const sevMap = { critical: ['alert', 'Critical'], warning: ['warn', 'Warning'], info: ['ok', 'Info'], success: ['ok', 'Resolved'] };
-    const [sk, sl] = sevMap[a.severity] || ['ok', 'Info'];
-    const ic = a.severity === 'critical' || a.severity === 'warning' ? icons.warn : icons.check;
-    const active = a.status === 'active';
-    const subj = (a.title || 'Alert').replace(/'/g, '');
-    const actions = !active ? '' :
-      a.severity === 'critical'
-        ? `<div class="alert-actions">
-             <button class="btn sm" onclick="event.stopPropagation();App.openTicket('emergency','Emergency dispatch: ${UI.esc(subj)}','urgent')">Request dispatch</button>
-             <button class="btn ghost sm" onclick="event.stopPropagation();App.openTicket('general','Escalation: ${UI.esc(subj)}','high')">Escalate</button>
-           </div>`
-        : a.severity === 'warning'
-        ? `<div class="alert-actions">
-             <button class="btn ghost sm" onclick="event.stopPropagation();App.openTicket('dispatch','Dispatch request: ${UI.esc(subj)}','high')">Request dispatch</button>
-           </div>`
-        : '';
-    return `<div class="evt ${sk === 'alert' ? 'alert' : sk === 'warn' ? 'warn' : 'ok'}">
-      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ic}</svg></div>
-      <div style="flex:1"><b>${UI.esc(a.title)}</b><small>${UI.esc(a.description)}</small>${actions}</div>
-      <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-        ${UI.chip(sk, sl)}
-        <span class="t">${UI.esc(a.status === 'resolved' && a.resolved_at ? 'Resolved ' + UI.fmtDate(a.resolved_at) : (a.created_at || ''))}</span>
-      </div>
-    </div>`;
   }
 
   // ---------------- ACCOUNT ----------------
@@ -1191,7 +1118,7 @@ const Screens = (function () {
 
     document.getElementById('sd-body').innerHTML = `
       <div class="grid-3 mb-20">
-        ${UI.stat('Current level', (d.level != null ? Math.round(d.level) : '—') + '%', 'Water level')}
+        ${UI.stat('Current level', `<span style="color:${d.level == null ? 'var(--ink)' : d.level >= 70 ? 'var(--alert)' : d.level >= 50 ? 'var(--warn)' : 'var(--ink)'}">${d.level != null ? Math.round(d.level) : '—'}%</span>`, 'Water level · alert at 70%')}
         ${UI.stat('Flow rate', d.flow_rate != null ? d.flow_rate + ' L/s' : '—', 'Current')}
         ${UI.stat('Status', `<span style="font-size:18px;color:${d.status === 'active' ? 'var(--ok)' : d.status === 'offline' ? 'var(--alert)' : 'var(--ink)'}">${d.status === 'active' ? 'Online' : d.status === 'offline' ? 'Offline' : 'Idle'}</span>`, d.device_variant === 'bio_dispenser' ? 'Bio-dispenser' : 'Standard')}
       </div>

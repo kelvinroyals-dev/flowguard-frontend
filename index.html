@@ -18,7 +18,7 @@
    ============================================================ */
 :root{
   --bg:#eef2f4; --surface:#ffffff; --surface-2:#f7fafb; --line:#e2e9ed; --line-2:#d3dde2;
-  --ink:#12222b; --ink-2:#4a626d; --ink-3:#8399a4;
+  --ink:#12222b; --ink-2:#4a626d; --ink-3:#6f8794;
   --brand:#0891b2; --brand-2:#06b6d4; --brand-deep:#0e5b6e; --brand-soft:#e0f5fa;
   --ok:#10b981; --ok-bg:#e6f7f1; --warn:#f59e0b; --warn-bg:#fef4e2; --alert:#ef4444; --alert-bg:#fdeceb;
   --r:20px; --rs:13px; --rx:9px;
@@ -28,7 +28,7 @@
 }
 [data-theme="dark"]{
   --bg:#0c1418; --surface:#131e24; --surface-2:#0f181d; --line:#20303a; --line-2:#2a3d47;
-  --ink:#e8f0f3; --ink-2:#9fb4bf; --ink-3:#6b8492;
+  --ink:#e8f0f3; --ink-2:#9fb4bf; --ink-3:#7f97a5;
   --brand-soft:#0d2b33;
   --ok-bg:#0e2b22; --warn-bg:#2e2410; --alert-bg:#2e1613;
   --sh:0 2px 4px rgba(0,0,0,.2), 0 12px 32px rgba(0,0,0,.3);
@@ -430,6 +430,20 @@ a{color:inherit}
 .field textarea{resize:vertical;min-height:84px}
 .field input[type="date"]{cursor:pointer}
 input[type="checkbox"],input[type="radio"]{accent-color:var(--brand)}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+button:focus:not(:focus-visible){outline:none}
+.gauge-sub{font-size:11px;color:var(--ink-3);text-align:center;margin-top:6px}
+.mon-wrap{position:relative;overflow:hidden}
+.mon-wrap::after{content:"";position:absolute;left:0;right:0;bottom:0;height:70px;pointer-events:none;background:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="70" viewBox="0 0 1200 70" preserveAspectRatio="none"><path d="M0 35 Q150 8 300 35 T600 35 T900 35 T1200 35 V70 H0 Z" fill="%230891b2" fill-opacity="0.04"/><path d="M0 48 Q150 22 300 48 T600 48 T900 48 T1200 48 V70 H0 Z" fill="%230891b2" fill-opacity="0.06"/></svg>') bottom/100% 70px no-repeat}
+@media(max-width:700px){
+  .tbl thead{display:none}
+  .tbl,.tbl tbody,.tbl tr,.tbl td{display:block;width:100%}
+  .tbl tr{padding:14px 16px;border-bottom:1px solid var(--line)}
+  .tbl tbody tr:last-child{border-bottom:none}
+  .tbl td{padding:3px 0;border:none}
+  .tbl td[data-label]::before{content:attr(data-label);display:inline-block;width:92px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);font-weight:600;vertical-align:top}
+  .tbl .tbl-arrow{display:none}
+}
 </style>
 </head>
 <body>

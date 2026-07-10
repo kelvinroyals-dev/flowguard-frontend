@@ -51,7 +51,7 @@ const App = (function () {
     bg.className = 'modal-bg';
     bg.innerHTML = `
       <div class="modal">
-        <div class="modal-h"><h2>Invoice ${UI.esc(inv.invoice_id || '')}</h2><button onclick="this.closest('.modal-bg').remove()">×</button></div>
+        <div class="modal-h"><h2>Invoice ${UI.esc(inv.invoice_id || '')}</h2><button onclick="this.closest('.modal-bg').remove()" aria-label="Close">×</button></div>
         <div class="modal-b">
           <div style="display:flex;justify-content:space-between;margin-bottom:20px">
             <div><div class="hint">Amount due</div><div style="font-family:var(--ff-d);font-size:30px;font-weight:700">${UI.fmtNaira(inv.total_amount)}</div></div>
@@ -96,7 +96,7 @@ const App = (function () {
     bg.className = 'modal-bg';
     bg.innerHTML = `
       <div class="modal">
-        <div class="modal-h"><h2>Choose a service tier</h2><button onclick="this.closest('.modal-bg').remove()">×</button></div>
+        <div class="modal-h"><h2>Choose a service tier</h2><button onclick="this.closest('.modal-bg').remove()" aria-label="Close">×</button></div>
         <div class="modal-b">
           <p style="color:var(--ink-2);font-size:13px;margin-bottom:16px">Select the level of drainage service for this property.</p>
           <div class="tier-list">
@@ -139,7 +139,7 @@ const App = (function () {
     bg.className = 'modal-bg';
     bg.innerHTML = `
       <div class="modal">
-        <div class="modal-h"><h2>Deactivate account</h2><button onclick="this.closest('.modal-bg').remove()">×</button></div>
+        <div class="modal-h"><h2>Deactivate account</h2><button onclick="this.closest('.modal-bg').remove()" aria-label="Close">×</button></div>
         <div class="modal-b">
           <p style="color:var(--ink-2);font-size:14px">This will deactivate your account and pause monitoring notifications. Your data is retained and our team can reactivate you on request. This won't cancel active service contracts — contact support for that.</p>
         </div>
@@ -222,7 +222,7 @@ const App = (function () {
     bg.className = 'modal-bg';
     bg.innerHTML = `
       <div class="modal">
-        <div class="modal-h"><h2>New support ticket</h2><button onclick="this.closest('.modal-bg').remove()">×</button></div>
+        <div class="modal-h"><h2>New support ticket</h2><button onclick="this.closest('.modal-bg').remove()" aria-label="Close">×</button></div>
         <div class="modal-b">
           <div class="field"><label>Subject</label><input id="tk-subj" value="${presetSubj}" placeholder="Brief summary of your request"></div>
           <div class="field"><label>Category</label><select id="tk-cat">${opts}</select></div>
@@ -303,7 +303,7 @@ const App = (function () {
     bg.className = 'modal-bg';
     bg.innerHTML = `
       <div class="modal modal-wide">
-        <div class="modal-h"><h2>Register an area</h2><button onclick="this.closest('.modal-bg').remove()">×</button></div>
+        <div class="modal-h"><h2>Register an area</h2><button onclick="this.closest('.modal-bg').remove()" aria-label="Close">×</button></div>
         <div class="modal-b">
 
           <div class="form-section-t">Area details</div>
