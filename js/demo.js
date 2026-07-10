@@ -145,6 +145,16 @@ const Demo = (function () {
     sla: { uptime_guarantee: 98, uptime: 99.8, response_time: '4h' }
   };
 
-  return { isOn, set, data: { floodRisk, sensors, properties, invoices, alerts, timeline, reports, services, tickets, history, contract } };
+  const activity = [
+    { type: 'battery', title: 'Low battery — Marina Culvert (S-08)', sub: 'Battery at 8%, node stopped reporting', when: '3 hrs ago' },
+    { type: 'offline', title: 'Node S-08 went offline', sub: 'Field visit scheduled for 18 Jul maintenance window', when: '3 hrs ago' },
+    { type: 'dispatch', title: 'Heavy-plant dispatch ordered', sub: 'East Channel silt clearing — crew scheduled', when: 'Yesterday' },
+    { type: 'report', title: 'Inspection report published', sub: 'Drainage score 72/100 · moderate flood risk', when: '8 Jul' },
+    { type: 'team', title: 'Team arrived on site', sub: 'Sunrise Court Estate — initial drainage inspection', when: '8 Jul' },
+    { type: 'inspection', title: 'Inspection scheduled', sub: 'Confirmed for 8 Jul, morning window', when: '6 Jul' },
+    { type: 'invoice', title: 'Invoice issued — ₦185,000', sub: 'July monitoring & maintenance', when: '4 Jul' }
+  ];
+
+  return { isOn, set, data: { activity, floodRisk, sensors, properties, invoices, alerts, timeline, reports, services, tickets, history, contract } };
 })();
 window.Demo = Demo;

@@ -168,7 +168,7 @@ const Screens = (function () {
       <div class="cols" id="ov-bottom"></div>`;
 
     // Gather data (real or demo)
-    let props, risk, sensors, alerts, reports;
+    let props, risk, sensors, alerts, reports, notifs = [];
     if (Demo.isOn()) {
       props = Demo.data.properties; risk = Demo.data.floodRisk; sensors = Demo.data.sensors;
       alerts = Demo.data.alerts; reports = Demo.data.reports;
@@ -178,6 +178,7 @@ const Screens = (function () {
       try { const r = await apiRequest('/monitoring/sensors'); sensors = (r && r.data) || []; } catch (_) { sensors = []; }
       try { const r = await apiRequest('/alerts'); alerts = (r && r.data) || []; } catch (_) { alerts = []; }
       try { const r = await apiRequest('/field-reports?limit=5'); reports = (r && r.data) || []; } catch (_) { reports = []; }
+      try { const r = await apiRequest('/notifications'); notifs = (r && r.data) || []; } catch (_) { notifs = []; }
     }
 
     // ---- Journey hero (adapts to where the customer is) ----
@@ -244,9 +245,11 @@ const Screens = (function () {
     // ---- Bottom: recent activity + reports ----
     document.getElementById('ov-bottom').innerHTML = `
       <div class="panel panel-pad">
-        <h3>Recent activity</h3>
-        ${alerts && alerts.length ? alerts.slice(0, 4).map(activityRow).join('')
-          : `<p class="muted">No recent activity. We'll post updates here.</p>`}
+        <div class="row-between" style="margin-bottom:14px">
+          <h3 style="margin:0">Activity stream</h3>
+          <a onclick="App.go('notifications')" class="clickable" style="color:var(--brand);font-size:13px;font-weight:500">All →</a>
+        </div>
+        ${(() => { const ev = buildActivity(notifs, alerts); return ev.length ? ev.slice(0, 7).map(activityEvent).join('') : `<p class="muted">No recent activity. We'll post updates here — dispatches, inspections, node health, and account events.</p>`; })()}
       </div>
       <div class="panel panel-pad">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
@@ -256,6 +259,42 @@ const Screens = (function () {
         ${reports && reports.length ? reports.slice(0, 3).map(docRow).join('')
           : `<p class="muted">No reports yet. Inspection reports and documents FlowGuard sends you will appear here.</p>`}
       </div>`;
+  }
+
+  // ---- Activity stream: merge account events (notifications) + live alerts ----
+  const ACT_ICON = { dispatch: 'truck', team: 'check', inspection: 'check', report: 'doc', invoice: 'bell', battery: 'warn', offline: 'warn', node: 'sensor', alert: 'warn', default: 'bell' };
+  function classifyEvent(text) {
+    const t = (text || '').toLowerCase();
+    if (t.includes('dispatch')) return 'dispatch';
+    if (t.includes('team') || t.includes('arrived')) return 'team';
+    if (t.includes('inspect')) return 'inspection';
+    if (t.includes('report')) return 'report';
+    if (t.includes('invoice') || t.includes('payment')) return 'invoice';
+    if (t.includes('battery')) return 'battery';
+    if (t.includes('offline')) return 'offline';
+    return 'default';
+  }
+  function buildActivity(notifs, alerts) {
+    const ev = [];
+    (notifs || []).forEach(n => ev.push({
+      type: n.type || classifyEvent((n.title || '') + ' ' + (n.message || n.body || '')),
+      title: n.title || n.message || 'Update',
+      sub: n.title ? (n.message || n.body || '') : '',
+      when: n.when || n.created_at || ''
+    }));
+    (alerts || []).filter(a => a.status === 'active').forEach(a => ev.push({
+      type: classifyEvent((a.title || '') + ' ' + (a.description || '')),
+      title: a.title, sub: a.description, when: a.created_at || ''
+    }));
+    return ev;
+  }
+  function activityEvent(e) {
+    const ic = icons[ACT_ICON[e.type] || 'bell'] || icons.bell;
+    return `<div class="evt ${e.type === 'battery' || e.type === 'offline' || e.type === 'alert' ? 'warn' : 'ok'}">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ic}</svg></div>
+      <div style="flex:1"><b>${UI.esc(e.title)}</b>${e.sub ? `<small>${UI.esc(e.sub)}</small>` : ''}</div>
+      <div class="muted" style="white-space:nowrap;font-size:12px">${UI.esc(e.when)}</div>
+    </div>`;
   }
 
   function serviceCard(s) {
@@ -846,7 +885,7 @@ const Screens = (function () {
         <div class="crumb" onclick="App.go('properties')">← My properties</div>
         <h1 id="pd-name">Loading…</h1><div class="sub" id="pd-loc"></div>
       </div>
-      <button class="btn ghost" onclick="App.go('properties')">Back</button></div>
+      <div id="pd-actions" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end"><button class="btn ghost" onclick="App.go('properties')">Back</button></div></div>
       ${demoBanner()}
       <div id="pd-body">${UI.loading(3)}</div>`;
 
@@ -932,9 +971,9 @@ const Screens = (function () {
             : `<p class="muted">No invoices yet.</p>`}
         </div>
       </div>
-      <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
-        ${detailActions(p)}
-      </div>`;
+      `;
+    const pa = document.getElementById('pd-actions');
+    if (pa) pa.insertAdjacentHTML('afterbegin', detailActions(p));
   }
 
   // Status-aware action bar for the property detail page
@@ -1108,7 +1147,7 @@ const Screens = (function () {
 
     document.getElementById('sd-body').innerHTML = `
       <div class="grid-3 mb-20">
-        ${UI.stat('Current level', `<span style="color:${d.level == null ? 'var(--ink)' : d.level >= 70 ? 'var(--alert)' : d.level >= 50 ? 'var(--warn)' : 'var(--ink)'}">${d.level != null ? Math.round(d.level) : '—'}%</span>`, 'Water level · alert at 70%')}
+        ${UI.stat('Current level', `<span style="color:${d.level == null ? 'var(--ink)' : d.level >= 70 ? 'var(--alert)' : d.level >= 50 ? 'var(--warn)' : 'var(--ink)'}">${d.level != null ? Math.round(d.level) : '—'}<span style="font-size:16px;margin-left:3px">%</span></span>`, 'Water level · alert at 70%')}
         ${UI.stat('Flow rate', d.flow_rate != null ? d.flow_rate + ' L/s' : '—', 'Current')}
         ${UI.stat('Status', `<span style="font-size:18px;color:${d.status === 'active' ? 'var(--ok)' : d.status === 'offline' ? 'var(--alert)' : 'var(--ink)'}">${d.status === 'active' ? 'Online' : d.status === 'offline' ? 'Offline' : 'Idle'}</span>`, d.device_variant === 'bio_dispenser' ? 'Bio-dispenser' : 'Standard')}
       </div>
