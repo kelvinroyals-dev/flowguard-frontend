@@ -39,19 +39,23 @@ const Screens = (function () {
     catch (_) { _propsCache = _propsCache || []; }
     return _propsCache;
   }
-  // dropdown shown only when the client has 2+ properties
-  function propertySelector(props) {
-    if (!props || props.length < 2) return '';
+  // resolve the active property to a real one (no all-estates view)
+  function resolveActive(props) {
     const cur = App.activeProperty();
+    if (props && props.some(p => p.property_id === cur)) return cur;
+    return props && props.length ? props[0].property_id : null;
+  }
+  function propertySelector(props) {
+    if (!props || !props.length) return '';
+    const cur = resolveActive(props);
     return `<select class="prop-select" aria-label="Select property" onchange="App.setActiveProperty(this.value)">
-      <option value="all" ${cur === 'all' ? 'selected' : ''}>All properties</option>
       ${props.map(p => `<option value="${UI.esc(p.property_id)}" ${cur === p.property_id ? 'selected' : ''}>${UI.esc(p.property_name || p.property_id)}</option>`).join('')}
     </select>`;
   }
   // filter any collection to the active property (matches id or name fields)
   function scopeToProperty(items, props) {
-    const cur = App.activeProperty();
-    if (cur === 'all' || !items) return items || [];
+    const cur = resolveActive(props);
+    if (!cur || !items) return items || [];
     const sel = (props || []).find(p => p.property_id === cur);
     const name = sel ? sel.property_name : null;
     const match = it => it.property_id === cur
@@ -177,13 +181,13 @@ const Screens = (function () {
   }
 
   async function overview(view) {
+    const allProps = await getMyProperties();
     const user = Auth.getUser() || {};
     const name = (user.fullName || user.full_name || '').split(' ')[0] || 'there';
     view.innerHTML = `
       <div class="top">
         <div class="greeting"><h1>${greeting()}, ${UI.esc(name)}</h1><div class="sub"><span id="ov-date">${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span> · <span id="ov-sub">Here's the latest on your drainage network.</span></div></div>
         <div class="top-actions">
-          ${propertySelector(allProps)}
           <button class="icon-btn" aria-label="Notifications" onclick="App.go('notifications')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons.bell}</svg></button>
           <button class="btn" onclick="App.openRegister()">+ Add area</button>
         </div>
@@ -200,7 +204,6 @@ const Screens = (function () {
       <div class="cols" id="ov-bottom"></div>`;
 
     // Gather data (real or demo)
-    const allProps = await getMyProperties();
     let props, risk, sensors, alerts, reports, notifs = [];
     if (Demo.isOn()) {
       props = Demo.data.properties; risk = Demo.data.floodRisk; sensors = Demo.data.sensors;
@@ -234,12 +237,11 @@ const Screens = (function () {
       ${kpiCard('Active alerts', alertCount, alertCount ? 'Need attention' : 'All clear', icons.bell)}
     </div>`;
 
-    // ---- Weather context (Open-Meteo, free, no key) ----
-    renderWeather(props);
     renderSeasonal();
 
     // ---- Property health score (computed from data already loaded) ----
     const health = computeHealth(reports, risk, alerts);
+    renderForecastWidget(allProps, health); // 14-day risk calendar (async, fills #ov-weather)
 
     // ---- Monitoring section (gauge + sensors together) ----
     const mon = document.getElementById('ov-mon');
@@ -486,7 +488,7 @@ const Screens = (function () {
     const allProps = await getMyProperties();
     view.innerHTML = `
       <div class="top"><div><h1>Monitoring</h1><div class="sub">Live readings, trends, and history across your sensors</div></div>
-      <div style="display:flex;gap:10px;align-items:center">${propertySelector(allProps)}<button class="btn ghost" onclick="App.go('overview')">← Overview</button></div></div>
+      <div style="display:flex;gap:10px;align-items:center"><button class="btn ghost" onclick="App.go('overview')">← Overview</button></div></div>
       ${demoBanner()}
       <div id="mon-refill"></div>
       <div class="mon-controls">
@@ -768,7 +770,7 @@ const Screens = (function () {
   async function alerts(view) {
     const allProps = await getMyProperties();
     view.innerHTML = `
-      <div class="top"><div><h1>Flood &amp; sensor alerts</h1><div class="sub">Real-time drainage and flood-risk events detected across your properties</div></div>${propertySelector(allProps)}</div>
+      <div class="top"><div><h1>Flood &amp; sensor alerts</h1><div class="sub">Real-time drainage and flood-risk events detected across your properties</div></div></div>
       ${demoBanner()}
       <div id="alert-kpis"></div>
       <div class="section-t">Active alerts</div>
@@ -1129,6 +1131,62 @@ const Screens = (function () {
   }
 
 
+  // shared: fetch precipitation + compute daily flood chance from current health
+  async function computeForecastDays(horizon, allProps, vulnerability) {
+    let days;
+    if (Demo.isOn()) {
+      const d = i => new Date(Date.now() + i * 864e5);
+      const mm = [0.4, 5.8, 1.2, 0, 0, 12.5, 22.0, 8.4, 3.1, 0, 0.8, 15.6, 27.2, 6.0, 1.5, 0];
+      days = Array.from({ length: horizon }, (_, i) => ({ date: d(i), mm: mm[i % mm.length], prob: Math.min(95, Math.round(mm[i % mm.length] * 4 + 15)) }));
+    } else {
+      const cur = resolveActive(allProps);
+      const sel = (allProps || []).find(p => p.property_id === cur);
+      const p0 = sel && sel.latitude ? sel : ((allProps || []).find(x => x.latitude) || {});
+      const lat = p0.latitude || 6.4478, lon = p0.longitude || 3.5476;
+      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum,precipitation_probability_max&timezone=Africa%2FLagos&forecast_days=${horizon}`);
+      const j = await r.json();
+      days = j.daily.time.map((t, i) => ({ date: new Date(t), mm: j.daily.precipitation_sum[i] || 0, prob: j.daily.precipitation_probability_max[i] || 0 }));
+    }
+    return days.map(d => {
+      const mmFactor = Math.min(100, d.mm * 4);
+      const chance = Math.round(Math.min(96, Math.max(2, vulnerability * 0.4 + mmFactor * 0.45 + d.prob * 0.15)));
+      const level = chance >= 65 ? 'high' : chance >= 35 ? 'moderate' : 'low';
+      return { ...d, chance, level };
+    });
+  }
+  const FC_COLOR = { low: 'var(--ok)', moderate: 'var(--warn)', high: 'var(--alert)' };
+  const FC_WORD = { low: 'Low', moderate: 'Medium', high: 'High' };
+  function fcCloud(level) {
+    return `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="${FC_COLOR[level]}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16.2A4.5 4.5 0 0017.5 8h-1.8A7 7 0 104 14.9"/><path d="M8 18v2M12 19v2M16 18v2"/></svg>`;
+  }
+  function fcDayCell(r, i) {
+    const dn = i === 0 ? 'Today' : r.date.toLocaleDateString('en-GB', { weekday: 'short' });
+    return `<div class="fc-cell">
+      <b>${dn}</b>
+      <span class="muted" style="font-size:12px">${r.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+      ${fcCloud(r.level)}
+      <span style="font-weight:600;font-size:13px;color:${FC_COLOR[r.level]}">${FC_WORD[r.level]}</span>
+      <b style="font-size:14px">${r.chance}%</b>
+    </div>`;
+  }
+  // overview widget: 14-day risk calendar
+  async function renderForecastWidget(allProps, health) {
+    const el = document.getElementById('ov-weather');
+    if (!el) return;
+    try {
+      const rows = await computeForecastDays(14, allProps, health ? (100 - health.score) : 45);
+      el.innerHTML = `
+        <div class="panel panel-pad mb-20">
+          <div class="row-between mb-10"><h3 style="margin:0">Risk forecast</h3><span class="muted">14-day outlook</span></div>
+          <div class="fc-grid">${rows.map(fcDayCell).join('')}</div>
+          <div class="row-between" style="margin-top:14px;flex-wrap:wrap;gap:8px">
+            <span class="muted" style="font-size:12px">Flood-risk prediction from your drainage health and verified weather sources.</span>
+            <a class="clickable" style="color:var(--brand);font-size:13px;font-weight:600" onclick="App.go('forecast')">View full forecast →</a>
+          </div>
+        </div>`;
+    } catch (_) { el.innerHTML = ''; }
+  }
+
   // ---------------- RISK FORECAST ----------------
   let _fcRange = 7; // days; Open-Meteo free forecast caps at 16
   function setFcRange(d) { _fcRange = d; App.go('forecast'); }
@@ -1136,90 +1194,104 @@ const Screens = (function () {
   async function forecast(view) {
     const allProps = await getMyProperties();
     view.innerHTML = `
-      <div class="top"><div><h1>Risk forecast</h1><div class="sub">Chance of flooding — your drainage health today vs the rain that's coming</div></div>
-      <div style="display:flex;gap:10px;align-items:center">${propertySelector(allProps)}
-        <span style="display:flex;gap:6px">
-          ${[7, 14, 30].map(d => `<button class="chip ${_fcRange === d ? 'ok' : ''} clickable-outline" onclick="App.setFcRange(${d})">${d}d</button>`).join('')}
-        </span></div></div>
+      <div class="top"><div><h1>Risk forecast</h1><div class="sub">Prediction of flooding risk across your property</div></div>
+      <span style="display:flex;gap:6px">
+        ${[7, 14, 30].map(d => `<button class="chip ${_fcRange === d ? 'ok' : ''} clickable-outline" onclick="App.setFcRange(${d})">${d}d</button>`).join('')}
+      </span></div>
       ${demoBanner()}
       <div id="fc-body">${UI.loading(2)}</div>`;
 
-    // gather the same health inputs the overview uses, under the current property scope
-    let risk, alerts, reports;
-    if (Demo.isOn()) { risk = Demo.data.floodRisk; alerts = scopeToProperty(Demo.data.alerts, allProps); reports = scopeToProperty(Demo.data.reports, allProps); }
-    else {
+    // inputs under the current property scope
+    let risk, alerts, reports, sensors;
+    if (Demo.isOn()) {
+      risk = Demo.data.floodRisk;
+      alerts = scopeToProperty(Demo.data.alerts, allProps);
+      reports = scopeToProperty(Demo.data.reports, allProps);
+      sensors = scopeToProperty(Demo.data.sensors, allProps);
+    } else {
       try { const r = await apiRequest('/monitoring/flood-risk'); risk = r && r.data; } catch (_) { risk = null; }
       try { const r = await apiRequest('/alerts'); alerts = scopeToProperty((r && r.data) || [], allProps); } catch (_) { alerts = []; }
       try { const r = await apiRequest('/field-reports?limit=20'); reports = scopeToProperty((r && r.data) || [], allProps); } catch (_) { reports = []; }
+      try { const r = await apiRequest('/monitoring/sensors'); sensors = scopeToProperty((r && r.data) || [], allProps); } catch (_) { sensors = []; }
     }
     const health = computeHealth(reports, risk, alerts);
-    const vulnerability = health ? (100 - health.score) : 45; // no data -> assume mid vulnerability
-
-    // precipitation forecast
-    let days;
+    const vulnerability = health ? (100 - health.score) : 45;
     const horizon = Math.min(_fcRange, 16);
-    if (Demo.isOn()) {
-      const d = i => new Date(Date.now() + i * 864e5);
-      const mm = [0.4, 5.8, 1.2, 0, 0, 12.5, 22.0, 8.4, 3.1, 0, 0.8, 15.6, 27.2, 6.0, 1.5, 0];
-      days = Array.from({ length: horizon }, (_, i) => ({ date: d(i), mm: mm[i % mm.length], prob: Math.min(95, Math.round(mm[i % mm.length] * 4 + 15)) }));
-    } else {
-      const sel = allProps.find(p => p.property_id === App.activeProperty());
-      const p0 = sel && sel.latitude ? sel : (allProps.find(x => x.latitude) || {});
-      const lat = p0.latitude || 6.4478, lon = p0.longitude || 3.5476;
-      try {
-        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum,precipitation_probability_max&timezone=Africa%2FLagos&forecast_days=${horizon}`);
-        const j = await r.json();
-        days = j.daily.time.map((t, i) => ({ date: new Date(t), mm: j.daily.precipitation_sum[i] || 0, prob: j.daily.precipitation_probability_max[i] || 0 }));
-      } catch (_) {
-        document.getElementById('fc-body').innerHTML = UI.state('error', "Couldn't load the weather forecast", 'Please check your connection and try again.', 'Retry', "onclick=\"App.go('forecast')\"");
-        return;
-      }
-    }
 
-    // daily flood chance: vulnerability (today's drainage health) x incoming rain
-    const rows = days.map(d => {
-      const mmFactor = Math.min(100, d.mm * 4);           // 25mm+ saturates
-      const chance = Math.round(Math.min(96, Math.max(2,
-        vulnerability * 0.4 + mmFactor * 0.45 + d.prob * 0.15)));
-      const level = chance >= 65 ? 'high' : chance >= 35 ? 'moderate' : 'low';
-      return { ...d, chance, level };
-    });
-    const worst = rows.reduce((a, b) => b.chance > a.chance ? b : a, rows[0]);
+    let rows;
+    try { rows = await computeForecastDays(horizon, allProps, vulnerability); }
+    catch (_) {
+      document.getElementById('fc-body').innerHTML = UI.state('error', "Couldn't load the weather forecast", 'Please check your connection and try again.', 'Retry', "onclick=\"App.go('forecast')\"");
+      return;
+    }
+    const today = rows[0];
+    const worst = rows.reduce((x, y) => y.chance > x.chance ? y : x, rows[0]);
     const dayLbl = d => d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 
+    // contributing factors (real, from data we hold)
+    const latestRep = (reports || []).find(r => r.drainage_condition_score != null);
+    const repScore = latestRep ? Number(latestRep.drainage_condition_score) : null;
+    const withSilt = (sensors || []).filter(x => x.silt_level != null);
+    const maxSilt = withSilt.length ? Math.max(...withSilt.map(x => x.silt_level)) : null;
+    const online = (sensors || []).filter(x => x.status === 'active').length;
+    const total = (sensors || []).length;
+    const openAlerts = (alerts || []).filter(a => a.status === 'active').length;
+    const factorChip = (v, warnAt, alertAt, invert) => {
+      if (v == null) return UI.chip('ok', '—');
+      const bad = invert ? v <= alertAt : v >= alertAt;
+      const mid = invert ? v <= warnAt : v >= warnAt;
+      return UI.chip(bad ? 'alert' : mid ? 'warn' : 'ok', bad ? 'High' : mid ? 'Medium' : 'Low');
+    };
+    const factors = [
+      ['Rainfall intensity', `${Math.round(today.mm)}mm next 24h`, factorChip(today.mm, 5, 20)],
+      ['Drainage capacity', repScore != null ? `Condition ${repScore}/100` : 'No report yet', repScore == null ? UI.chip('ok', '—') : UI.chip(repScore >= 70 ? 'ok' : repScore >= 50 ? 'warn' : 'alert', repScore >= 70 ? 'Good' : repScore >= 50 ? 'Medium' : 'Poor')],
+      ['Silt level', maxSilt != null ? `Peak ${maxSilt}% across nodes` : 'No node data', factorChip(maxSilt, 40, 70)],
+      ['Node network', total ? `${online} of ${total} reporting` : 'No nodes yet', total ? UI.chip(online === total ? 'ok' : online / total >= .75 ? 'warn' : 'alert', online === total ? 'Healthy' : 'Degraded') : UI.chip('ok', '—')],
+      ['Open alerts', `${openAlerts} active`, factorChip(openAlerts, 2, 4)],
+    ];
+
+    // rule-based recommendations from the same signals
+    const recs = [];
+    if (maxSilt != null && maxSilt >= 70) recs.push({ t: 'Schedule silt clearing', d: `Peak silt at ${maxSilt}% — clearing before the next heavy rain directly lowers your risk curve.`, cta: ['Request dispatch', `App.openTicket('dispatch','Silt clearing request','high')`] });
+    if (total && online < total) recs.push({ t: 'Restore offline node', d: `${total - online} node${total - online > 1 ? 's' : ''} not reporting — blind spots reduce forecast accuracy.`, cta: ['Contact support', `App.openTicket('sensor','Offline node — field visit request','high')`] });
+    const lowEnzyme = (sensors || []).find(x => x.enzyme && x.enzyme.level_percent != null && x.enzyme.level_percent <= 15);
+    if (lowEnzyme) recs.push({ t: 'Refill bio-enzyme cartridge', d: `${lowEnzyme.name} is at ${lowEnzyme.enzyme.level_percent}% — treatment lapses raise blockage risk.`, cta: ['Request refill', `App.openTicket('dispatch','Bio-enzyme cartridge refill request','normal')`] });
+    if (worst.level === 'high') recs.push({ t: `Prepare for ${dayLbl(worst.date)}`, d: `Peak risk ${worst.chance}% with ~${Math.round(worst.mm)}mm expected. Clear surface drains of debris and keep access routes open.`, cta: null });
+    if (!recs.length) recs.push({ t: 'No action needed', d: 'Your drainage is in good shape for the forecast window. We\'ll flag anything that changes.', cta: null });
+
+    const kpi = (label, valueHtml, sub) => `<div class="card statcard"><div class="lbl">${label}</div><div style="font-family:var(--ff-d);font-size:22px;font-weight:600;margin:6px 0 2px">${valueHtml}</div><div class="sub">${sub}</div></div>`;
+
     document.getElementById('fc-body').innerHTML = `
-      <div class="panel panel-pad mb-20">
-        <div class="row-between" style="flex-wrap:wrap;gap:10px">
-          <div>
-            <div class="lbl m0b2">Today's drainage health</div>
-            <b style="font-family:var(--ff-d);font-size:22px;color:${health ? (health.kind === 'ok' ? 'var(--ok)' : health.kind === 'warn' ? 'var(--warn)' : 'var(--alert)') : 'var(--ink-3)'}">${health ? health.score + '/100' : 'No data yet'}</b>
-            <div class="muted" style="margin-top:2px">${health ? 'From latest report, node status, and open alerts' : 'Forecast assumes mid-level vulnerability until your first report'}</div>
-          </div>
-          <div style="text-align:right">
-            <div class="lbl m0b2">Peak risk in this window</div>
-            ${UI.chip(worst.level === 'high' ? 'alert' : worst.level === 'moderate' ? 'warn' : 'ok', `${worst.chance}% — ${dayLbl(worst.date)}`)}
-          </div>
-        </div>
+      <div class="kpi-row">
+        ${kpi('Overall risk today', `<span style="color:${FC_COLOR[today.level]}">${FC_WORD[today.level]}</span>`, `${today.chance}% flood chance`)}
+        ${kpi('Rainfall forecast (24h)', `${Math.round(today.mm)}<span style="font-size:14px;color:var(--ink-3);margin-left:3px">mm</span>`, `${today.prob}% chance of rain`)}
+        ${kpi('Peak risk window', dayLbl(worst.date), `<span style="color:${FC_COLOR[worst.level]};font-weight:600">${worst.chance}% · ${FC_WORD[worst.level]} risk</span>`)}
+        ${kpi('Drainage health', health ? `${health.score}<span style="font-size:14px;color:var(--ink-3);margin-left:3px">/100</span>` : '—', health ? 'Powers this forecast' : 'Assuming mid vulnerability')}
       </div>
 
-      <div class="card tbl-wrap">
-        ${rows.map(r => `
-          <div class="fc-day">
-            <b style="font-size:13px">${dayLbl(r.date)}</b>
-            <div><div class="fc-bar"><i style="width:${r.chance}%;background:${r.level === 'high' ? 'var(--alert)' : r.level === 'moderate' ? 'var(--warn)' : 'var(--ok)'}"></i></div></div>
-            <span class="muted fc-hide-m">${r.mm ? r.mm.toFixed(1) + 'mm · ' + r.prob + '% rain' : 'No rain expected'}</span>
-            ${UI.chip(r.level === 'high' ? 'alert' : r.level === 'moderate' ? 'warn' : 'ok', r.chance + '% ' + cap(r.level))}
-          </div>`).join('')}
+      <div class="panel panel-pad mb-20">
+        <div class="row-between mb-10"><h3 style="margin:0">${horizon}-day risk outlook</h3><span class="muted">${_fcRange > 16 ? '16-day forecast horizon (max reliable)' : 'Daily flood chance'}</span></div>
+        <div class="fc-grid">${rows.map(fcDayCell).join('')}</div>
       </div>
-      ${_fcRange > 16 ? `<p class="muted" style="margin-top:12px">Precipitation forecasts beyond 16 days aren't reliable — showing the full 16-day horizon available.</p>` : ''}
-      <p class="muted" style="margin-top:10px">How this works: each day's flood chance blends your current drainage health (40%), forecast rainfall volume (45%), and rain probability (15%). Improving your drainage score directly lowers every day's risk.</p>`;
+
+      <div class="cols">
+        <div class="panel panel-pad">
+          <h3 style="margin:0 0 14px">Contributing factors</h3>
+          ${factors.map(([k, v, chip]) => `<div class="row-between" style="padding:11px 0;border-bottom:1px solid var(--line)"><div><b style="font-size:13px">${k}</b><div class="muted" style="margin-top:1px">${v}</div></div>${chip}</div>`).join('')}
+        </div>
+        <div class="panel panel-pad">
+          <h3 style="margin:0 0 14px">Recommendations</h3>
+          ${recs.map(r => `<div style="padding:11px 0;border-bottom:1px solid var(--line)"><b style="font-size:13px">${r.t}</b><div class="muted" style="margin:3px 0 8px;line-height:1.5">${r.d}</div>${r.cta ? `<button class="btn sm" onclick="${r.cta[1]}">${r.cta[0]}</button>` : ''}</div>`).join('')}
+        </div>
+      </div>
+      <p class="muted" style="margin-top:14px">How this works: each day blends your drainage health (40%), forecast rainfall volume (45%), and rain probability (15%). Forecast data: Open-Meteo, updated hourly. Improving your drainage score lowers every day's risk.</p>`;
   }
 
   // ---------------- REPORTS & DOCUMENTS ----------------
   async function reports(view) {
     const allProps = await getMyProperties();
     view.innerHTML = `
-      <div class="top"><div><h1>Reports &amp; documents</h1><div class="sub">Your inspection reports and drainage assessments — findings, scores, and recommendations</div></div>${propertySelector(allProps)}</div>
+      <div class="top"><div><h1>Reports &amp; documents</h1><div class="sub">Your inspection reports and drainage assessments — findings, scores, and recommendations</div></div></div>
       ${demoBanner()}
       <div id="rep-list">${UI.loading(3)}</div>`;
     let items;
@@ -1472,6 +1544,6 @@ const Screens = (function () {
       </div>`;
   }
 
-  return { overview, monitoring, forecast, sensorDetail, properties, propertyDetail, billing, alerts, notifications, reports, support, ticketDetail, settings, account, setNotifFilter, setTicketFilter, setFcRange, setSensorRange, monSearch, monFilter, monMetric, TICKET_CATS };
+  return { overview, monitoring, forecast, getMyProperties, propertySelector, sensorDetail, properties, propertyDetail, billing, alerts, notifications, reports, support, ticketDetail, settings, account, setNotifFilter, setTicketFilter, setFcRange, setSensorRange, monSearch, monFilter, monMetric, TICKET_CATS };
 })();
 window.Screens = Screens;

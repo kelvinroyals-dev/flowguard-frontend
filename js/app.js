@@ -8,8 +8,18 @@ const App = (function () {
   // ---- global active-property scope (persists across sessions) ----
   function activeProperty() { return localStorage.getItem('fg_active_property') || 'all'; }
   function setActiveProperty(id) {
-    localStorage.setItem('fg_active_property', id || 'all');
+    localStorage.setItem('fg_active_property', id || '');
+    refreshRailSelector();
     go(current); // re-render the current screen under the new scope
+  }
+  // property dropdown at the top of the sidebar
+  async function refreshRailSelector() {
+    const slot = document.getElementById('rail-prop');
+    if (!slot || !window.Screens || !Screens.getMyProperties) return;
+    try {
+      const props = await Screens.getMyProperties();
+      slot.innerHTML = Screens.propertySelector(props);
+    } catch (_) { /* leave empty */ }
   }
 
   function go(tab, arg) {
@@ -565,6 +575,7 @@ const App = (function () {
     // restore the screen from the URL hash (refresh / email deep-link),
     // otherwise land on overview
     refreshUser().finally(() => routeFromHash());
+    refreshRailSelector();
 
     // respond to browser back/forward and in-app hash changes
     window.addEventListener('hashchange', () => {
