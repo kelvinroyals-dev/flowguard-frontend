@@ -371,11 +371,11 @@ a{color:inherit}
 .field-row{display:flex;gap:12px}
 .field-row .field{flex:1}
 .field .req{color:var(--alert)}
-.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px}
-.pf-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
-.pf-k{font-size:13px;color:var(--ink-3)}
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;column-gap:40px;row-gap:0}
+.pf-row{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:11px 0;border-bottom:1px solid var(--line)}
+.pf-k{font-size:13px;color:var(--ink-3);flex-shrink:0}
 .pf-v{font-size:13.5px;color:var(--ink);font-weight:500;text-align:right}
-@media(max-width:600px){.profile-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.profile-grid{grid-template-columns:1fr;column-gap:0}}
 </style>
 </head>
 <body>

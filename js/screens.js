@@ -787,10 +787,26 @@ const Screens = (function () {
         </div>
       </div>
       <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn" onclick="App.selectServices('${UI.esc(propertyId)}')">Choose service tier</button>
-        <button class="btn ghost" onclick="App.go('billing')">View billing</button>
-        <button class="btn ghost" onclick="App.openRegister()">Register another area</button>
+        ${detailActions(p)}
       </div>`;
+  }
+
+  // Status-aware action bar for the property detail page
+  function detailActions(p) {
+    const s = p.status;
+    const btns = [];
+    if (s === 'report_ready' || s === 'quote_sent' || s === 'payment_pending') {
+      btns.push(`<button class="btn" onclick="App.selectServices('${UI.esc(p.property_id)}')">Choose service tier</button>`);
+      btns.push(`<button class="btn ghost" onclick="App.go('billing')">View billing</button>`);
+    } else if (s === 'active' || s === 'monitoring_active') {
+      btns.push(`<button class="btn" onclick="App.go('monitoring')">View live monitoring</button>`);
+      btns.push(`<button class="btn ghost" onclick="App.go('billing')">View billing</button>`);
+    } else if (s === 'submitted' || s === 'inspection_scheduled' || s === 'inspection_ongoing') {
+      btns.push(`<button class="btn ghost" onclick="App.go('support')">Contact support</button>`);
+    }
+    // always available
+    btns.push(`<button class="btn ghost" onclick="App.openRegister()">Register another area</button>`);
+    return btns.join('');
   }
 
   // ---------------- NOTIFICATIONS CENTER (filter / mark-read / delete) ----------------
@@ -879,7 +895,8 @@ const Screens = (function () {
             ? `<button class="btn" onclick="App.downloadReport('${UI.esc(r.report_id || '')}')">Download PDF</button>
                <button class="btn ghost" onclick="App.openProperty('${UI.esc(r.property_id || '')}')">View property</button>`
             : `<span class="sub">This report is being finalised — you'll be notified when it's ready to download.</span>`}
-        </div>`;
+        </div>
+      </div>`;
   }
 
   // ---------------- REPORTS & DOCUMENTS ----------------

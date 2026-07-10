@@ -46,9 +46,21 @@ const Demo = (function () {
   };
 
   const properties = [
-    { property_id: 'PROP-DEMO-1', property_name: 'Sunrise Court Estate', city: 'Lekki', state: 'Lagos', status: 'monitoring_active', property_type: 'residential estate' },
-    { property_id: 'PROP-DEMO-2', property_name: 'Palm Gardens', city: 'Ajah', state: 'Lagos', status: 'inspection_scheduled', property_type: 'residential estate' },
-    { property_id: 'PROP-DEMO-3', property_name: 'Marina Heights', city: 'Victoria Island', state: 'Lagos', status: 'submitted', property_type: 'commercial' }
+    { property_id: 'PROP-DEMO-1', property_name: 'Sunrise Court Estate', city: 'Lekki', state: 'Lagos', status: 'monitoring_active', property_type: 'residential_estate',
+      address_line1: '12 Admiralty Way', total_area_sqm: 15400, number_of_units: 64, number_of_buildings: 12, estimated_population: 480,
+      contact_person_name: 'Bayo Akinwale', contact_person_role: 'Facility Manager', contact_phone: '+234 802 345 6789',
+      issue_description: 'Recurring flooding at the main gate after heavy rain, and standing water along the east perimeter road that takes days to clear.',
+      urgency_level: 'high', preferred_inspection_date: '2026-07-18', preferred_inspection_time: 'morning', created_at: '2026-06-20' },
+    { property_id: 'PROP-DEMO-2', property_name: 'Palm Gardens', city: 'Ajah', state: 'Lagos', status: 'inspection_scheduled', property_type: 'residential_estate',
+      address_line1: '7 Palm Grove Crescent', total_area_sqm: 8900, number_of_units: 28, number_of_buildings: 5, estimated_population: 210,
+      contact_person_name: 'Ngozi Okafor', contact_person_role: 'Estate Chairperson', contact_phone: '+234 805 111 2222',
+      issue_description: 'Blocked culvert near the entrance causes water to back up onto the access road during storms.',
+      urgency_level: 'medium', created_at: '2026-07-02' },
+    { property_id: 'PROP-DEMO-3', property_name: 'Marina Heights', city: 'Victoria Island', state: 'Lagos', status: 'submitted', property_type: 'commercial_complex',
+      address_line1: '3 Ozumba Mbadiwe Avenue', total_area_sqm: 22000, number_of_buildings: 3, estimated_population: 1200,
+      contact_person_name: 'Tunde Bello', contact_person_role: 'Operations Lead', contact_phone: '+234 809 333 4444',
+      issue_description: 'Basement car park floods during exceptionally heavy rainfall; drainage pumps appear undersized.',
+      urgency_level: 'critical', created_at: '2026-07-09' }
   ];
 
   const invoices = [
