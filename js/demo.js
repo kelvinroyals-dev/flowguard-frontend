@@ -50,7 +50,7 @@ const Demo = (function () {
   };
 
   const properties = [
-    { property_id: 'PROP-DEMO-1', property_name: 'Sunrise Court Estate', city: 'Lekki', state: 'Lagos', status: 'monitoring_active', property_type: 'residential_estate',
+    { property_id: 'PROP-DEMO-1', property_name: 'Sunrise Court Estate', city: 'Lekki', state: 'Lagos', status: 'monitoring_active', property_type: 'residential_estate', monthly_fee: 185000, sensors_online: 7,
       address_line1: '12 Admiralty Way', total_area_sqm: 15400, number_of_units: 64, number_of_buildings: 12, estimated_population: 480,
       contact_person_name: 'Bayo Akinwale', contact_person_role: 'Facility Manager', contact_phone: '+234 802 345 6789',
       issue_description: 'Recurring flooding at the main gate after heavy rain, and standing water along the east perimeter road that takes days to clear.',

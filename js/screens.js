@@ -512,26 +512,57 @@ const Screens = (function () {
       <div class="top"><div><h1>My properties</h1><div class="sub">Areas you've registered for monitoring</div></div>
       <button class="btn" onclick="App.openRegister()">+ Add area</button></div>
       ${demoBanner()}
+      <div id="prop-portfolio"></div>
       <div id="prop-list">${UI.loading(3)}</div>`;
-    let props;
-    if (Demo.isOn()) props = Demo.data.properties;
-    else { try { const r = await apiRequest('/properties'); props = (r && r.data) || []; } catch (_) { props = null; } }
+    let props, reports, alerts;
+    if (Demo.isOn()) { props = Demo.data.properties; reports = Demo.data.reports; alerts = Demo.data.alerts; }
+    else {
+      try { const r = await apiRequest('/properties'); props = (r && r.data) || []; } catch (_) { props = null; }
+      try { const r = await apiRequest('/field-reports?limit=100'); reports = (r && r.data) || []; } catch (_) { reports = []; }
+      try { const r = await apiRequest('/alerts'); alerts = (r && r.data) || []; } catch (_) { alerts = []; }
+    }
     const el = document.getElementById('prop-list');
 
     if (props === null) {
       el.innerHTML = UI.state('error', "Couldn't load your properties", 'Please check your connection and try again.', 'Retry', "onclick=\"App.go('properties')\"");
     } else if (props.length) {
-      el.innerHTML = `<div class="grid-3">${props.map(propertyCard).join('')}</div>`;
+      // latest drainage score per property (by id or name)
+      const scoreOf = p => {
+        const r = (reports || []).find(r => (r.property_id && r.property_id === p.property_id) || (r.property_name && r.property_name === p.property_name));
+        return r && r.drainage_condition_score != null ? Number(r.drainage_condition_score) : null;
+      };
+      const scores = new Map(props.map(p => [p.property_id, scoreOf(p)]));
+
+      // portfolio summary (only meaningful with 2+ properties)
+      if (props.length >= 2) {
+        const live = props.filter(p => ['active', 'monitoring_active'].includes(p.status)).length;
+        const setup = props.length - live;
+        const spend = props.reduce((s, p) => s + (Number(p.monthly_fee) || 0), 0);
+        const scored = [...scores.values()].filter(v => v != null);
+        const avg = scored.length ? Math.round(scored.reduce((a, b) => a + b, 0) / scored.length) : null;
+        const atRisk = props.filter(p => {
+          const sc = scores.get(p.property_id);
+          return (sc != null && sc < 50) || ['high', 'critical'].includes(p.urgency_level);
+        }).length;
+        document.getElementById('prop-portfolio').innerHTML = `<div class="kpi-row" style="margin-bottom:20px">
+          ${kpiCard('Portfolio', props.length, `${live} live · ${setup} in setup`, icons.check)}
+          ${kpiCard('Avg drainage score', avg != null ? avg + '/100' : '—', avg != null ? (avg >= 70 ? 'Healthy' : avg >= 50 ? 'Fair' : 'Needs work') : 'No reports yet', icons.sensor)}
+          ${kpiCard('Need attention', atRisk, atRisk ? 'High urgency or low score' : 'All clear', icons.warn)}
+          ${kpiCard('Monthly spend', spend ? UI.fmtNaira(spend) : '—', spend ? 'Across portfolio' : 'No active billing', icons.bell)}
+        </div>`;
+      }
+      el.innerHTML = `<div class="grid-3">${props.map(p => propertyCard(p, scores.get(p.property_id))).join('')}</div>`;
     } else {
       // Onboarding for brand-new users (no areas yet)
       el.innerHTML = onboardingBlock();
     }
   }
 
-  function propertyCard(p) {
+  function propertyCard(p, score) {
     const st = statusChip(p.status);
     const online = p.sensors_online != null ? `${p.sensors_online} sensors` : null;
     const fee = p.monthly_fee ? UI.fmtNaira(p.monthly_fee) + '/mo' : null;
+    const scoreColor = score == null ? null : score >= 70 ? 'var(--ok)' : score >= 50 ? 'var(--warn)' : 'var(--alert)';
     return `<div class="card statcard" style="cursor:pointer" onclick="App.openProperty('${UI.esc(p.property_id)}')">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px">
         <div class="lbl" style="margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${UI.esc(UI.prettyType(p.property_type))}</div>
@@ -540,6 +571,7 @@ const Screens = (function () {
       <div style="font-family:var(--ff-d);font-size:18px;font-weight:600;letter-spacing:-.01em;margin-bottom:4px">${UI.esc(p.property_name || 'Unnamed area')}</div>
       <div class="sub">${UI.esc([p.city, p.state].filter(Boolean).join(', '))}</div>
       <div style="display:flex;gap:16px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+        ${score != null ? `<div><div class="lbl" style="margin:0 0 2px">Score</div><b style="font-family:var(--ff-d);font-size:14px;color:${scoreColor}">${score}/100</b></div>` : ''}
         ${online ? `<div><div class="lbl" style="margin:0 0 2px">Sensors</div><b style="font-family:var(--ff-d);font-size:14px">${online}</b></div>` : ''}
         ${fee ? `<div><div class="lbl" style="margin:0 0 2px">Fee</div><b style="font-family:var(--ff-d);font-size:14px">${fee}</b></div>` : ''}
         <div style="margin-left:auto;align-self:center;color:var(--brand);font-size:13px;font-weight:600">View →</div>
