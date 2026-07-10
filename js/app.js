@@ -7,6 +7,7 @@ const App = (function () {
 
   function go(tab, arg) {
     current = tab;
+    window.scrollTo(0, 0);
     // persist active screen in the URL hash so a refresh restores it
     // and so emails can deep-link (e.g. #property/PROP-123)
     const hashMap = { propertyDetail: 'property', sensorDetail: 'sensor', ticketDetail: 'ticket' };

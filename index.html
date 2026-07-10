@@ -415,6 +415,21 @@ a{color:inherit}
 .dv{font-family:var(--ff-d);font-size:14px}
 .row-between{display:flex;justify-content:space-between;align-items:center}
 .panel h3{font-family:var(--ff-d);font-size:16px}
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;padding:0}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);padding:12px 16px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:13px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tbody tr:last-child td{border-bottom:none}
+.tbl tbody tr.rowlink{cursor:pointer;transition:background .12s}
+.tbl tbody tr.rowlink:hover{background:var(--surface-2)}
+/* ---------- de-nativized form controls ---------- */
+.field input,.field select,.field textarea{appearance:none;-webkit-appearance:none;-moz-appearance:none;transition:border-color .15s, box-shadow .15s}
+.field input:focus,.field select:focus,.field textarea:focus{box-shadow:0 0 0 3px var(--brand-soft)}
+.field select{background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="8" viewBox="0 0 12 8"><path d="M1 1l5 5 5-5" stroke="%238399a4" stroke-width="2" fill="none" stroke-linecap="round"/></svg>');background-repeat:no-repeat;background-position:right 13px center;padding-right:38px;cursor:pointer}
+.field textarea{resize:vertical;min-height:84px}
+.field input[type="date"]{cursor:pointer}
+input[type="checkbox"],input[type="radio"]{accent-color:var(--brand)}
 </style>
 </head>
 <body>

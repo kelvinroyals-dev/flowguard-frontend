@@ -551,11 +551,31 @@ const Screens = (function () {
           ${kpiCard('Monthly spend', spend ? UI.fmtNaira(spend) : '—', spend ? 'Across portfolio' : 'No active billing', icons.bell)}
         </div>`;
       }
-      el.innerHTML = `<div class="grid-3">${props.map(p => propertyCard(p, scores.get(p.property_id))).join('')}</div>`;
+      el.innerHTML = `
+        <div class="card tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>Property</th><th>Location</th><th>Type</th><th>Score</th><th>Status</th><th>Monthly fee</th><th></th></tr></thead>
+            <tbody>${props.map(p => propertyRow(p, scores.get(p.property_id))).join('')}</tbody>
+          </table>
+        </div>`;
     } else {
       // Onboarding for brand-new users (no areas yet)
       el.innerHTML = onboardingBlock();
     }
+  }
+
+  // Table row for the properties listview
+  function propertyRow(p, score) {
+    const scoreColor = score == null ? 'var(--ink-3)' : score >= 70 ? 'var(--ok)' : score >= 50 ? 'var(--warn)' : 'var(--alert)';
+    return `<tr class="rowlink" onclick="App.openProperty('${UI.esc(p.property_id)}')">
+      <td><b>${UI.esc(p.property_name || 'Unnamed area')}</b></td>
+      <td class="muted">${UI.esc([p.city, p.state].filter(Boolean).join(', ') || '—')}</td>
+      <td class="muted">${UI.esc(UI.prettyType(p.property_type))}</td>
+      <td><b style="color:${scoreColor}">${score != null ? score + '/100' : '—'}</b></td>
+      <td>${statusChip(p.status)}</td>
+      <td>${p.monthly_fee ? UI.fmtNaira(p.monthly_fee) + '/mo' : '—'}</td>
+      <td style="text-align:right;color:var(--brand);font-weight:600">→</td>
+    </tr>`;
   }
 
   function propertyCard(p, score) {
@@ -699,9 +719,9 @@ const Screens = (function () {
       ${demoBanner()}
       <div id="alert-kpis"></div>
       <div class="section-t">Active alerts</div>
-      <div class="card panel-pad" id="alert-active">${UI.loading(2)}</div>
+      <div class="card tbl-wrap" id="alert-active">${UI.loading(2)}</div>
       <div class="section-t" style="margin-top:24px">Resolved history</div>
-      <div class="card panel-pad" id="alert-resolved"></div>`;
+      <div class="card tbl-wrap" id="alert-resolved"></div>`;
 
     let items;
     if (Demo.isOn()) items = Demo.data.alerts.map(normalizeAlert);
@@ -729,12 +749,38 @@ const Screens = (function () {
     </div>`;
 
     const av = document.getElementById('alert-active');
-    if (active.length) av.innerHTML = active.map(incidentRow).join('');
+    if (active.length) av.innerHTML = alertTable(active, true);
     else { av.className = ''; av.innerHTML = UI.state('ok', 'No active alerts', "Everything's clear. We'll alert you the moment anything needs attention."); }
 
     const rv = document.getElementById('alert-resolved');
-    if (resolved.length) rv.innerHTML = resolved.map(incidentRow).join('');
-    else rv.innerHTML = `<p class="muted">No resolved incidents yet.</p>`;
+    if (resolved.length) rv.innerHTML = alertTable(resolved, false);
+    else { rv.className = ''; rv.innerHTML = `<p class="muted">No resolved incidents yet.</p>`; }
+  }
+
+  // Alerts rendered as a table listview
+  function alertTable(items, isActive) {
+    return `<table class="tbl">
+      <thead><tr><th style="width:110px">Severity</th><th>Alert</th><th style="width:130px">${isActive ? 'Raised' : 'Resolved'}</th>${isActive ? '<th style="width:250px">Actions</th>' : ''}</tr></thead>
+      <tbody>${items.map(a => alertRow(a, isActive)).join('')}</tbody>
+    </table>`;
+  }
+  function alertRow(a, isActive) {
+    const sevMap = { critical: ['alert', 'Critical'], warning: ['warn', 'Warning'], info: ['ok', 'Info'], success: ['ok', 'Resolved'] };
+    const [sk, sl] = sevMap[a.severity] || ['ok', 'Info'];
+    const subj = (a.title || 'Alert').replace(/'/g, '');
+    const actions = !isActive ? '' :
+      a.severity === 'critical'
+        ? `<button class="btn sm" onclick="App.openTicket('emergency','Emergency dispatch: ${UI.esc(subj)}','urgent')">Request dispatch</button>
+           <button class="btn ghost sm" onclick="App.openTicket('general','Escalation: ${UI.esc(subj)}','high')">Escalate</button>`
+      : a.severity === 'warning'
+        ? `<button class="btn ghost sm" onclick="App.openTicket('dispatch','Dispatch request: ${UI.esc(subj)}','high')">Request dispatch</button>`
+        : '';
+    return `<tr>
+      <td>${UI.chip(sk, sl)}</td>
+      <td><b>${UI.esc(a.title)}</b><div class="muted" style="margin-top:2px">${UI.esc(a.description)}</div></td>
+      <td class="muted">${UI.esc(a.resolved_at && !isActive ? UI.fmtDate(a.resolved_at) : (a.created_at || ''))}</td>
+      ${isActive ? `<td><div style="display:flex;gap:8px;flex-wrap:wrap">${actions || '<span class="muted">—</span>'}</div></td>` : ''}
+    </tr>`;
   }
 
   function normalizeAlert(a) {
