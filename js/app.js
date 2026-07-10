@@ -97,7 +97,7 @@ const App = (function () {
       <div class="modal">
         <div class="modal-h"><h2>Choose a service tier</h2><button onclick="this.closest('.modal-bg').remove()">×</button></div>
         <div class="modal-b">
-          <p style="color:var(--ink-2);font-size:13.5px;margin-bottom:16px">Select the level of drainage service for this property.</p>
+          <p style="color:var(--ink-2);font-size:13px;margin-bottom:16px">Select the level of drainage service for this property.</p>
           <div class="tier-list">
             ${tiers.map(t => `<label class="tier-opt">
               <input type="radio" name="tier" value="${t.key}">
@@ -228,7 +228,7 @@ const App = (function () {
           <div class="field"><label>Priority</label>
             <select id="tk-prio"><option value="low" ${prio==='low'?'selected':''}>Low</option><option value="normal" ${!prio||prio==='normal'?'selected':''}>Normal</option><option value="high" ${prio==='high'?'selected':''}>High</option><option value="urgent" ${prio==='urgent'?'selected':''}>Urgent — flooding now</option></select></div>
           <div class="field"><label>Details</label><textarea id="tk-desc" rows="4" placeholder="Describe the issue or request…"></textarea></div>
-          <div id="tk-err" class="hint hidden" style="color:var(--alert)"></div>
+          <div id="tk-err" class="hint hidden c-alert"></div>
         </div>
         <div class="modal-f">
           <button class="btn ghost" onclick="this.closest('.modal-bg').remove()">Cancel</button>
@@ -354,7 +354,7 @@ const App = (function () {
               <select id="rg-itime"><option value="">No preference</option><option value="morning">Morning</option><option value="afternoon">Afternoon</option></select></div>
           </div>
 
-          <div id="rg-err" class="hint hidden" style="color:var(--alert)"></div>
+          <div id="rg-err" class="hint hidden c-alert"></div>
         </div>
         <div class="modal-f">
           <button class="btn ghost" onclick="this.closest('.modal-bg').remove()">Cancel</button>

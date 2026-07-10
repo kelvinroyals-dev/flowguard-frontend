@@ -222,11 +222,11 @@ const UI = (function () {
     const statusMap = { loaded: ['ok', 'Loaded'], dispensing: ['ok', 'Dispensing'], low: ['warn', 'Running low'], depleted: ['alert', 'Depleted'], due_replacement: ['alert', 'Due for refill'] };
     const [sk, sl] = statusMap[e.status] || ['ok', 'Loaded'];
     return `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="row-between mb-10">
         <span style="font-family:var(--ff-d);font-size:24px;font-weight:700">${lvl != null ? lvl + '%' : '—'}</span>${chip(sk, sl)}
       </div>
       <div class="enzyme-bar" style="height:10px"><span style="width:${lvl != null ? lvl : 0}%;background:${barColor}"></span></div>
-      ${e.depletion_date ? `<p style="color:var(--ink-3);font-size:12.5px;margin-top:10px">Estimated depletion: ${fmtDate(e.depletion_date)}</p>` : ''}`;
+      ${e.depletion_date ? `<p style="color:var(--ink-3);font-size:12px;margin-top:10px">Estimated depletion: ${fmtDate(e.depletion_date)}</p>` : ''}`;
   }
 
   // Turn "residential_estate" / "RESIDENTIAL_ESTATE" into "Residential Estate"
