@@ -463,6 +463,14 @@ button:focus:not(:focus-visible){outline:none}
 .fc-cell{display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 6px;border-radius:12px}
 .fc-cell:hover{background:var(--surface-2)}
 .fc-cell b{font-size:13px}
+.ov-cols{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;align-items:start}
+.ov-side{display:flex;flex-direction:column;gap:18px;position:sticky;top:16px}
+.ov-side .panel{width:100%}
+.fc-mini{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.fc-mini-cell{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 2px;border-radius:10px}
+.fc-mini-cell:hover{background:var(--surface-2)}
+.fc-mini-cell .fcd{font-size:11px;font-weight:600;color:var(--ink-3);text-transform:uppercase}
+@media(max-width:1100px){.ov-cols{grid-template-columns:1fr}.ov-side{position:static}}
 </style>
 </head>
 <body>

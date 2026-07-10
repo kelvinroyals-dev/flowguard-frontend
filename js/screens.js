@@ -195,13 +195,20 @@ const Screens = (function () {
       ${demoBanner()}
       <div id="ov-journey"></div>
       <div id="ov-kpis"></div>
-      <div id="ov-weather"></div>
       <div id="ov-season"></div>
-      <div class="section-t">Live monitoring <a onclick="App.go('monitoring')" class="clickable">View all →</a></div>
-      <div id="ov-mon">${UI.loading(2)}</div>
-      <div class="section-t">Your FlowGuard services</div>
-      <div id="ov-services" class="grid-3"></div>
-      <div class="cols" id="ov-bottom"></div>`;
+      <div class="ov-cols">
+        <div class="minw0">
+          <div class="section-t">Live monitoring <a onclick="App.go('monitoring')" class="clickable">View all →</a></div>
+          <div id="ov-mon">${UI.loading(2)}</div>
+          <div class="section-t">Your FlowGuard services</div>
+          <div id="ov-services" class="grid-3"></div>
+          <div id="ov-bottom"></div>
+        </div>
+        <aside class="ov-side">
+          <div id="ov-weather"></div>
+          <div id="ov-activity"></div>
+        </aside>
+      </div>`;
 
     // Gather data (real or demo)
     let props, risk, sensors, alerts, reports, notifs = [];
@@ -284,18 +291,19 @@ const Screens = (function () {
     document.getElementById('ov-services').innerHTML = services.map(serviceCard).join('');
 
     // ---- Bottom: recent activity + reports ----
-    document.getElementById('ov-bottom').innerHTML = `
+    document.getElementById('ov-activity').innerHTML = `
       <div class="panel panel-pad">
-        <div class="row-between" style="margin-bottom:14px">
+        <div class="row-between" style="margin-bottom:12px">
           <h3 style="margin:0">Activity stream</h3>
           <a onclick="App.go('notifications')" class="clickable" style="color:var(--brand);font-size:13px;font-weight:500">All →</a>
         </div>
-        ${(() => { const ev = buildActivity(notifs, alerts); return ev.length ? ev.slice(0, 7).map(activityEvent).join('') : `<p class="muted">No recent activity. We'll post updates here — dispatches, inspections, node health, and account events.</p>`; })()}
-      </div>
+        ${(() => { const ev = buildActivity(notifs, alerts); return ev.length ? ev.slice(0, 6).map(activityEvent).join('') : `<p class="muted">No recent activity yet — dispatches, inspections, node health, and account events will appear here.</p>`; })()}
+      </div>`;
+    document.getElementById('ov-bottom').innerHTML = `
       <div class="panel panel-pad">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div class="row-between" style="margin-bottom:14px">
           <h3 style="margin:0">Reports &amp; documents</h3>
-          <a onclick="App.go('reports')" style="cursor:pointer;color:var(--brand);font-size:13px;font-weight:500">All →</a>
+          <a onclick="App.go('reports')" class="clickable" style="color:var(--brand);font-size:13px;font-weight:500">All →</a>
         </div>
         ${reports && reports.length ? reports.slice(0, 3).map(docRow).join('')
           : `<p class="muted">No reports yet. Inspection reports and documents FlowGuard sends you will appear here.</p>`}
@@ -1170,20 +1178,32 @@ const Screens = (function () {
     </div>`;
   }
   // overview widget: 14-day risk calendar
+  // overview sidebar widget: compact 7-day risk calendar
   async function renderForecastWidget(allProps, health) {
     const el = document.getElementById('ov-weather');
     if (!el) return;
     try {
-      const rows = await computeForecastDays(14, allProps, health ? (100 - health.score) : 45);
+      const rows = await computeForecastDays(7, allProps, health ? (100 - health.score) : 45);
+      const worst = rows.reduce((a, b) => b.chance > a.chance ? b : a, rows[0]);
       el.innerHTML = `
-        <div class="panel panel-pad mb-20">
-          <div class="row-between mb-10"><h3 style="margin:0">Risk forecast</h3><span class="muted">14-day outlook</span></div>
-          <div class="fc-grid">${rows.map(fcDayCell).join('')}</div>
-          <div class="row-between" style="margin-top:14px;flex-wrap:wrap;gap:8px">
-            <span class="muted" style="font-size:12px">Flood-risk prediction from your drainage health and verified weather sources.</span>
-            <a class="clickable" style="color:var(--brand);font-size:13px;font-weight:600" onclick="App.go('forecast')">View full forecast →</a>
+        <div class="panel panel-pad">
+          <div class="row-between" style="margin-bottom:12px">
+            <h3 style="margin:0">Risk forecast</h3>
+            <span class="muted" style="font-size:12px">7-day</span>
           </div>
-        </div>`;
+          <div class="fc-mini">
+            ${rows.map((r, i) => `<div class="fc-mini-cell" title="${r.mm ? r.mm.toFixed(1) + 'mm rain' : 'No rain expected'}">
+              <span class="fcd">${i === 0 ? 'Now' : r.date.toLocaleDateString('en-GB', { weekday: 'short' }).slice(0, 2)}</span>
+              ${fcCloud(r.level).replace('width="30" height="30"', 'width="20" height="20"')}
+              <b style="font-size:12px;color:${FC_COLOR[r.level]}">${r.chance}%</b>
+            </div>`).join('')}
+          </div>
+          <div class="row-between" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+            <span class="muted" style="font-size:12px">Peak: ${UI.esc(worst.date.toLocaleDateString('en-GB', { weekday: 'short' }))} · ${worst.chance}%</span>
+            <a class="clickable" style="color:var(--brand);font-size:13px;font-weight:600" onclick="App.go('forecast')">Full forecast →</a>
+          </div>
+        </div>
+      `;
     } catch (_) { el.innerHTML = ''; }
   }
 
