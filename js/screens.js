@@ -951,6 +951,7 @@ const Screens = (function () {
       btns.push(`<button class="btn ghost" onclick="App.go('support')">Contact support</button>`);
     }
     // always available
+    btns.push(`<button class="btn ghost" onclick="App.openEditProperty('${UI.esc(p.property_id)}')">Edit details</button>`);
     btns.push(`<button class="btn ghost" onclick="App.openRegister()">Register another area</button>`);
     return btns.join('');
   }

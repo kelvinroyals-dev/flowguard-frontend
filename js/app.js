@@ -298,12 +298,12 @@ const App = (function () {
   }
 
   // ---- Register area modal ----
-  function openRegister() {
+  function openRegister(edit) {
     const bg = document.createElement('div');
     bg.className = 'modal-bg';
     bg.innerHTML = `
       <div class="modal modal-wide">
-        <div class="modal-h"><h2>Register an area</h2><button onclick="this.closest('.modal-bg').remove()" aria-label="Close">×</button></div>
+        <div class="modal-h"><h2>${edit ? 'Edit property details' : 'Register an area'}</h2><button onclick="this.closest('.modal-bg').remove()" aria-label="Close">×</button></div>
         <div class="modal-b">
 
           <div class="form-section-t">Area details</div>
@@ -359,11 +359,44 @@ const App = (function () {
         </div>
         <div class="modal-f">
           <button class="btn ghost" onclick="this.closest('.modal-bg').remove()">Cancel</button>
-          <button class="btn" id="rg-submit" onclick="App.submitRegister(this)">Submit area</button>
+          <button class="btn" id="rg-submit" ${edit ? `data-edit="${edit.property_id}"` : ''} onclick="App.submitRegister(this)">${edit ? 'Save changes' : 'Submit area'}</button>
         </div>
       </div>`;
     document.body.appendChild(bg);
     bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
+    if (edit) {
+      const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
+      set('rg-name', edit.property_name);
+      set('rg-type', edit.property_type);
+      set('rg-urgency', edit.urgency_level);
+      set('rg-addr', edit.address_line1);
+      set('rg-city', edit.city);
+      set('rg-state', edit.state);
+      set('rg-area', edit.total_area_sqm);
+      set('rg-pop', edit.estimated_population);
+      set('rg-units', edit.number_of_units);
+      set('rg-bldg', edit.number_of_buildings);
+      set('rg-desc', edit.issue_description);
+      set('rg-cname', edit.contact_person_name);
+      set('rg-crole', edit.contact_person_role);
+      set('rg-cphone', edit.contact_phone);
+      set('rg-idate', edit.preferred_inspection_date ? String(edit.preferred_inspection_date).slice(0, 10) : null);
+      set('rg-itime', edit.preferred_inspection_time);
+    }
+  }
+
+  // Edit an existing property — loads current values then opens the form prefilled
+  async function openEditProperty(propertyId) {
+    if (Demo.isOn()) {
+      const p = Demo.data.properties.find(x => x.property_id === propertyId);
+      if (p) openRegister(p);
+      return;
+    }
+    try {
+      const r = await apiRequest(`/properties/${propertyId}`);
+      if (r && r.data) openRegister(r.data);
+      else UI.toast("Couldn't load property details", 'error');
+    } catch (_) { UI.toast("Couldn't load property details", 'error'); }
   }
 
   async function submitRegister(btn) {
@@ -398,7 +431,33 @@ const App = (function () {
     };
     // strip undefined so we only send provided fields
     Object.keys(body).forEach(k => body[k] === undefined && delete body[k]);
+    const editId = btn.dataset.edit;
     try {
+      if (editId && Demo.isOn()) {
+        // demo: apply in memory so the change is visible
+        const p = Demo.data.properties.find(x => x.property_id === editId);
+        if (p) Object.assign(p, {
+          property_name: body.propertyName, property_type: body.propertyType,
+          address_line1: body.addressLine1, city: body.city, state: body.state,
+          total_area_sqm: body.totalAreaSqm, estimated_population: body.estimatedPopulation,
+          number_of_units: body.numberOfUnits, number_of_buildings: body.numberOfBuildings,
+          issue_description: body.issueDescription, urgency_level: body.urgencyLevel,
+          contact_person_name: body.contactPersonName, contact_person_role: body.contactPersonRole,
+          contact_phone: body.contactPhone,
+          preferred_inspection_date: body.preferredInspectionDate, preferred_inspection_time: body.preferredInspectionTime,
+        });
+        document.querySelector('.modal-bg').remove();
+        UI.toast('Property updated (demo)', 'success');
+        openProperty(editId);
+        return;
+      }
+      if (editId) {
+        await apiRequest(`/properties/${editId}`, { method: 'PUT', body });
+        document.querySelector('.modal-bg').remove();
+        UI.toast('Property updated', 'success');
+        openProperty(editId);
+        return;
+      }
       await apiRequest('/properties', { method: 'POST', body });
       document.querySelector('.modal-bg').remove();
       UI.toast('Area registered', 'success');
@@ -533,7 +592,7 @@ const App = (function () {
     } catch (_) { /* keep cached */ }
   }
 
-  return { go, openProperty, openSensor, setSensorRange, monSearch, monFilter, monMetric, viewReport, downloadReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings, changePassword,
+  return { go, openProperty, openEditProperty, openSensor, setSensorRange, monSearch, monFilter, monMetric, viewReport, downloadReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings, changePassword,
            openTicketDetail, sendReply, openInvoice, payInvoice, selectServices, confirmServices, deactivateAccount, confirmDeactivate,
            setNotifFilter, markRead, markAllRead, deleteNotif, setTicketFilter, openTicket, submitTicket, init };
 })();
