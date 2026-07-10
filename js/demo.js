@@ -21,19 +21,23 @@ const Demo = (function () {
   }
 
   // ---- Sample data (only used when the toggle is ON) ----
+  // Bayo Akinwale manages Sunrise Court Estate — 8 Sentinel nodes across the estate.
+  // Every other demo collection reconciles to this one story.
+  const _now = Date.now();
+  const _ago = mins => new Date(_now - mins * 60e3).toISOString();
   const sensors = [
-    { sensor_id: 'S-01', name: 'Main Gate', zone: 'entrance', status: 'active', device_variant: 'basic', level: 28, flow_rate: 12.4, silt_level: 18, has_data: true, trend: [40, 55, 35, 60, 45, 50, 28], enzyme: null },
-    { sensor_id: 'S-02', name: 'North Culvert', zone: 'north', status: 'active', device_variant: 'bio_dispenser', level: 19, flow_rate: 8.1, silt_level: 42, has_data: true, trend: [30, 25, 40, 20, 35, 28, 19],
+    { sensor_id: 'S-01', name: 'Main Gate', zone: 'entrance', status: 'active', device_variant: 'basic', level: 28, flow_rate: 12.4, silt_level: 18, battery_percent: 88, signal_strength: 82, last_ping: _ago(2), ping_interval: 'Every 15 min', temperature: 27.4, has_data: true, trend: [40, 55, 35, 60, 45, 50, 28], enzyme: null },
+    { sensor_id: 'S-02', name: 'North Culvert', zone: 'north', status: 'active', device_variant: 'bio_dispenser', level: 19, flow_rate: 8.1, silt_level: 42, battery_percent: 71, signal_strength: 64, last_ping: _ago(1), ping_interval: 'Every 15 min', temperature: 26.9, has_data: true, trend: [30, 25, 40, 20, 35, 28, 19],
       enzyme: { level_percent: 64, status: 'dispensing', capacity_ml: 5000, days_left: 21 } },
-    { sensor_id: 'S-03', name: 'East Channel', zone: 'east', status: 'active', device_variant: 'bio_dispenser', level: 41, flow_rate: 18.7, silt_level: 71, has_data: true, trend: [50, 60, 70, 55, 65, 72, 41],
+    { sensor_id: 'S-03', name: 'East Channel', zone: 'east', status: 'active', device_variant: 'bio_dispenser', level: 41, flow_rate: 18.7, silt_level: 71, battery_percent: 54, signal_strength: 77, last_ping: _ago(3), ping_interval: 'Every 15 min', temperature: 28.1, has_data: true, trend: [50, 60, 70, 55, 65, 72, 41],
       enzyme: { level_percent: 11, status: 'due_replacement', capacity_ml: 5000, days_left: 3 } },
-    { sensor_id: 'S-04', name: 'South Drain', zone: 'south', status: 'active', device_variant: 'basic', level: 23, flow_rate: 9.6, silt_level: 25, has_data: true, trend: [35, 30, 45, 38, 33, 40, 23], enzyme: null },
-    { sensor_id: 'S-05', name: 'West Outfall', zone: 'west', status: 'active', device_variant: 'bio_dispenser', level: 33, flow_rate: 14.2, silt_level: 30, has_data: true, trend: [28, 34, 30, 38, 32, 36, 33],
+    { sensor_id: 'S-04', name: 'South Drain', zone: 'south', status: 'active', device_variant: 'basic', level: 23, flow_rate: 9.6, silt_level: 25, battery_percent: 92, signal_strength: 58, last_ping: _ago(4), ping_interval: 'Every 15 min', temperature: 27.0, has_data: true, trend: [35, 30, 45, 38, 33, 40, 23], enzyme: null },
+    { sensor_id: 'S-05', name: 'West Outfall', zone: 'west', status: 'active', device_variant: 'bio_dispenser', level: 33, flow_rate: 14.2, silt_level: 30, battery_percent: 79, signal_strength: 71, last_ping: _ago(2), ping_interval: 'Every 15 min', temperature: 26.5, has_data: true, trend: [28, 34, 30, 38, 32, 36, 33],
       enzyme: { level_percent: 78, status: 'loaded', capacity_ml: 5000, days_left: 34 } },
-    { sensor_id: 'S-06', name: 'Central Junction', zone: 'central', status: 'active', device_variant: 'basic', level: 37, flow_rate: 16.0, silt_level: 48, has_data: true, trend: [42, 38, 45, 40, 35, 39, 37], enzyme: null },
-    { sensor_id: 'S-07', name: 'Lakeside Inlet', zone: 'north', status: 'active', device_variant: 'bio_dispenser', level: 26, flow_rate: 10.5, silt_level: 22, has_data: true, trend: [30, 28, 32, 25, 27, 29, 26],
+    { sensor_id: 'S-06', name: 'Central Junction', zone: 'central', status: 'active', device_variant: 'basic', level: 37, flow_rate: 16.0, silt_level: 48, battery_percent: 66, signal_strength: 69, last_ping: _ago(5), ping_interval: 'Every 15 min', temperature: 27.8, has_data: true, trend: [42, 38, 45, 40, 35, 39, 37], enzyme: null },
+    { sensor_id: 'S-07', name: 'Lakeside Inlet', zone: 'north', status: 'active', device_variant: 'bio_dispenser', level: 26, flow_rate: 10.5, silt_level: 22, battery_percent: 45, signal_strength: 52, last_ping: _ago(6), ping_interval: 'Every 15 min', temperature: 26.2, has_data: true, trend: [30, 28, 32, 25, 27, 29, 26],
       enzyme: { level_percent: 45, status: 'dispensing', capacity_ml: 5000, days_left: 14 } },
-    { sensor_id: 'S-08', name: 'Marina Culvert', zone: 'east', status: 'offline', device_variant: 'basic', level: null, flow_rate: null, silt_level: null, has_data: false, trend: [], enzyme: null }
+    { sensor_id: 'S-08', name: 'Marina Culvert', zone: 'east', status: 'offline', device_variant: 'basic', level: null, flow_rate: null, silt_level: null, battery_percent: 8, signal_strength: null, last_ping: _ago(220), ping_interval: 'Every 15 min', temperature: null, has_data: false, trend: [], enzyme: null }
   ];
 
   // Derive flood-risk counts FROM the sensor array so the numbers are always consistent
@@ -70,17 +74,18 @@ const Demo = (function () {
   ];
 
   const alerts = [
+    { type: 'critical', severity: 'critical', status: 'active', title: 'Marina Culvert node offline', description: 'Node S-08 stopped reporting ~3.5 hrs ago — battery critically low (8%)', created_at: '3 hours ago' },
     { type: 'critical', severity: 'critical', status: 'active', title: 'East Channel silt high', description: 'Silt at 71% — clearing recommended', created_at: '12 min ago' },
     { type: 'warning', severity: 'warning', status: 'active', title: 'Bio-enzyme low — East Channel', description: 'Cartridge at 11%, refill due in ~3 days', created_at: '40 min ago' },
     { type: 'warning', severity: 'warning', status: 'active', title: 'Light rain expected', description: 'Tomorrow, 14:00–18:00 · drainage clear', created_at: '1 hour ago' },
-    { type: 'info', severity: 'info', status: 'resolved', title: 'Sensor check passed', description: 'All 12 sensors reporting normally', created_at: '2 hours ago', resolved_at: '2026-07-07' },
+    { type: 'info', severity: 'info', status: 'resolved', title: 'Sensor check passed', description: '7 of 8 nodes reporting normally', created_at: '2 hours ago', resolved_at: '2026-07-07' },
     { type: 'info', severity: 'info', status: 'resolved', title: 'East Channel cleared', description: 'Scheduled maintenance completed', created_at: 'Yesterday', resolved_at: '2026-07-06' }
   ];
 
   const timeline = [
     { status: 'done', title: 'Area submitted', sub: 'Sunrise Court Estate · Lekki, Lagos', when: '5 Jul' },
     { status: 'done', title: 'Inspection completed', sub: 'Drainage assessed, plan approved', when: '8 Jul' },
-    { status: 'now', title: 'Monitoring active', sub: '12 sensors reporting every 60s', when: 'Now' },
+    { status: 'now', title: 'Monitoring active', sub: '8 nodes across the estate, reporting every 15 min', when: 'Now' },
     { status: 'pending', title: 'First maintenance', sub: 'Bio-treatment + channel clearing', when: '18 Jul' }
   ];
 
@@ -97,18 +102,23 @@ const Demo = (function () {
   ];
 
   const services = [
-    { key: 'sentinel', name: 'Sentinel Network', desc: 'IoT drainage monitoring', status: 'active', detail: '12 sensors online', icon: 'sensor' },
+    { key: 'sentinel', name: 'Sentinel Network', desc: 'IoT drainage monitoring', status: 'active', detail: '7 of 8 nodes online', icon: 'sensor' },
     { key: 'biotreatment', name: 'Bio-Treatment', desc: 'Biological drainage prevention', status: 'active', detail: 'Last applied 2 Jul', icon: 'drop' },
     { key: 'dispatch', name: 'Heavy-Plant Dispatch', desc: 'Clearing & maintenance crews', status: 'scheduled', detail: 'Next visit 18 Jul', icon: 'truck' }
   ];
 
   const tickets = [
+    { ticket_id: 'TKT-1045', subject: 'Marina Culvert node offline', category: 'sensor', priority: 'high', status: 'in_progress', created_at: '2026-07-10', description: 'Node S-08 (Marina Culvert) stopped reporting this morning.',
+      messages: [
+        { author_type: 'client', author_name: 'You', message: 'The Marina Culvert node dropped offline this morning — dashboard shows battery at 8%. Can you check it?', created_at: '2026-07-10' },
+        { author_type: 'support', author_name: 'FlowGuard Support', message: 'Thanks Bayo — the node battery is depleted. We have scheduled a field visit to replace it during the 18 Jul maintenance window. Monitoring for that zone is covered by the East Channel node in the meantime.', created_at: '2026-07-10' }
+      ] },
     { ticket_id: 'TKT-1042', subject: 'East Channel silt buildup', category: 'dispatch', priority: 'high', status: 'in_progress', created_at: '2026-07-06', description: 'Silt level reading high, requesting crew.',
       messages: [
         { author_type: 'client', author_name: 'You', message: 'Silt level reading high at East Channel, requesting a clearing crew.', created_at: '2026-07-06' },
         { author_type: 'support', author_name: 'FlowGuard Support', message: 'Thanks — we\'ve logged this and a Heavy-Plant Dispatch crew is scheduled for 8 Jul. We\'ll confirm the window shortly.', created_at: '2026-07-06' }
       ] },
-    { ticket_id: 'TKT-1038', subject: 'Sensor S-02 intermittent', category: 'sensor', priority: 'normal', status: 'resolved', created_at: '2026-07-02', description: 'North Culvert sensor dropped offline twice.' },
+    { ticket_id: 'TKT-1038', subject: 'Node S-02 intermittent', category: 'sensor', priority: 'normal', status: 'resolved', created_at: '2026-07-02', description: 'North Culvert node dropped offline twice.' },
     { ticket_id: 'TKT-1031', subject: 'June invoice query', category: 'billing', priority: 'low', status: 'resolved', created_at: '2026-06-28', description: 'Question about pro-rating.' }
   ];
 

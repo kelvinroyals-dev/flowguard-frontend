@@ -954,11 +954,34 @@ const Screens = (function () {
     document.getElementById('sd-sub').textContent = `${d.zone ? cap(d.zone) + ' zone' : ''}${d.device_variant === 'bio_dispenser' ? ' · Bio-enzyme dispenser' : ' · Standard sensor'} · ${d.status === 'active' ? 'Live' : 'Offline'}`;
 
     const rangeLabel = _sensorRange === 24 ? 'last 24 hours' : _sensorRange === 168 ? 'last 7 days' : 'last 30 days';
+    const battPct = d.battery_percent != null ? d.battery_percent : (d.battery_voltage != null ? Math.round((d.battery_voltage / 4.2) * 100) : null);
+    const battColor = battPct == null ? 'var(--ink-3)' : battPct >= 40 ? 'var(--ok)' : battPct >= 20 ? 'var(--warn)' : 'var(--alert)';
+    const sig = d.signal_strength;
+    const sigLabel = sig == null ? '—' : sig >= 70 ? 'Strong' : sig >= 40 ? 'Fair' : 'Weak';
+    const silt = d.silt_level;
+    const siltLabel = silt == null ? '—' : silt >= 70 ? 'High' : silt >= 40 ? 'Moderate' : 'Low';
+    const siltColor = silt == null ? 'var(--ink-3)' : silt >= 70 ? 'var(--alert)' : silt >= 40 ? 'var(--warn)' : 'var(--ok)';
+    const healthRows = [
+      ['Battery', battPct != null ? `${battPct}%${d.battery_voltage ? ` (${d.battery_voltage}V)` : ''}` : '—', battColor],
+      ['Signal strength', sig != null ? `${sigLabel}${sig != null ? ` (${sig}%)` : ''}` : '—', 'var(--ink)'],
+      ['Silt level', silt != null ? `${siltLabel} (${silt}%)` : '—', siltColor],
+      ['Temperature', d.temperature != null ? `${d.temperature}°C` : '—', 'var(--ink)'],
+      ['Last ping', d.last_ping ? UI.fmtRelative(d.last_ping) : '—', 'var(--ink)'],
+      ['Ping interval', d.ping_interval || d.ping_rate || 'Every 15 min', 'var(--ink)'],
+    ];
+
     document.getElementById('sd-body').innerHTML = `
       <div class="grid-3" style="margin-bottom:20px">
         ${UI.stat('Current level', (d.level != null ? Math.round(d.level) : '—') + '%', 'Water level')}
         ${UI.stat('Flow rate', d.flow_rate != null ? d.flow_rate + ' L/s' : '—', 'Current')}
-        ${UI.stat('Status', `<span style="font-size:18px">${d.status === 'active' ? 'Online' : 'Offline'}</span>`, d.device_variant === 'bio_dispenser' ? 'Bio-dispenser' : 'Standard')}
+        ${UI.stat('Status', `<span style="font-size:18px;color:${d.status === 'active' ? 'var(--ok)' : d.status === 'offline' ? 'var(--alert)' : 'var(--ink)'}">${d.status === 'active' ? 'Online' : d.status === 'offline' ? 'Offline' : 'Idle'}</span>`, d.device_variant === 'bio_dispenser' ? 'Bio-dispenser' : 'Standard')}
+      </div>
+
+      <div class="panel panel-pad" style="margin-bottom:20px">
+        <h3 style="font-family:var(--ff-d);font-size:15px;margin:0 0 12px">Device health</h3>
+        <div class="profile-grid">
+          ${healthRows.map(([k, v, c]) => `<div class="pf-row"><div class="pf-k">${k}</div><div class="pf-v" style="color:${c}">${v}</div></div>`).join('')}
+        </div>
       </div>
       ${d.enzyme ? `<div class="panel panel-pad" style="margin-bottom:20px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">

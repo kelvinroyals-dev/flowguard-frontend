@@ -82,26 +82,61 @@ const UI = (function () {
       ? s.trend.map(v => `<i style="height:${Math.max(8, Math.min(100, v))}%"></i>`).join('')
       : '<i style="height:8%"></i>'.repeat(7);
     const live = s.status === 'active';
+    const offline = s.status === 'offline';
     const flow = s.flow_rate != null ? `${s.flow_rate} L/s` : '—';
     const siltPct = s.silt_level != null ? s.silt_level : null;
     const siltLabel = siltPct == null ? '—' : siltPct >= 70 ? 'High' : siltPct >= 40 ? 'Moderate' : 'Low';
     const siltColor = siltPct == null ? 'var(--ink-3)' : siltPct >= 70 ? 'var(--alert)' : siltPct >= 40 ? 'var(--warn)' : 'var(--ok)';
     const isBio = s.device_variant === 'bio_dispenser';
+    // device health signals
+    const batt = s.battery_percent != null ? s.battery_percent : (s.battery_voltage != null ? Math.round((s.battery_voltage / 4.2) * 100) : null);
+    const battColor = batt == null ? 'var(--ink-3)' : batt >= 40 ? 'var(--ok)' : batt >= 20 ? 'var(--warn)' : 'var(--alert)';
+    const signal = s.signal_strength != null ? s.signal_strength : null;
+    const sigLabel = signal == null ? '—' : signal >= 70 ? 'Strong' : signal >= 40 ? 'Fair' : 'Weak';
+    const lastPing = s.last_ping ? fmtRelative(s.last_ping) : '—';
+
     return `
-      <div class="sensor sensor-clickable" onclick="App.openSensor('${esc(s.sensor_id)}')">
+      <div class="sensor sensor-clickable${offline ? ' sensor-offline' : ''}" onclick="App.openSensor('${esc(s.sensor_id)}')">
         <div class="sh">
           <span class="nm">${esc(s.name || s.sensor_id)}${isBio ? '<span class="bio-badge">Bio</span>' : ''}</span>
-          ${live ? '<span class="live"><span class="d"></span>Live</span>' : '<span class="live off">Offline</span>'}
+          ${live ? '<span class="live"><span class="d"></span>Live</span>'
+                 : offline ? '<span class="live off-red"><span class="d"></span>Offline</span>'
+                 : '<span class="live off">Idle</span>'}
         </div>
-        <div class="v">${s.level != null ? Math.round(s.level) : '—'}<span class="u2">${s.level != null ? '%' : ''}</span></div>
-        <div class="u">water level</div>
-        <div class="spark">${spark}</div>
-        <div class="sensor-metrics">
-          <div class="sm"><span class="sm-l">Flow</span><span class="sm-v">${flow}</span></div>
-          <div class="sm"><span class="sm-l">Silt</span><span class="sm-v" style="color:${siltColor}">${siltLabel}</span></div>
-        </div>
-        ${isBio ? enzymeBlock(s.enzyme) : '<div class="enzyme-none">Standard sensor</div>'}
+        ${offline
+          ? `<div class="offline-body">
+               <div class="offline-msg">Sensor not reporting</div>
+               <div class="offline-sub">Last seen ${lastPing}</div>
+             </div>`
+          : `<div class="v">${s.level != null ? Math.round(s.level) : '—'}<span class="u2">${s.level != null ? '%' : ''}</span></div>
+             <div class="u">water level</div>
+             <div class="spark">${spark}</div>
+             <div class="sensor-metrics">
+               <div class="sm"><span class="sm-l">Flow</span><span class="sm-v">${flow}</span></div>
+               <div class="sm"><span class="sm-l">Silt</span><span class="sm-v" style="color:${siltColor}">${siltLabel}</span></div>
+             </div>
+             <div class="sensor-metrics" style="margin-top:6px">
+               <div class="sm"><span class="sm-l">Battery</span><span class="sm-v" style="color:${battColor}">${batt != null ? batt + '%' : '—'}</span></div>
+               <div class="sm"><span class="sm-l">Signal</span><span class="sm-v">${sigLabel}</span></div>
+             </div>
+             <div class="sensor-ping">Last ping ${lastPing}</div>
+             ${isBio ? enzymeBlock(s.enzyme) : '<div class="enzyme-none">Standard sensor</div>'}`}
       </div>`;
+  }
+
+  // Relative time helper for pings ("2 min ago", "3 hrs ago")
+  function fmtRelative(ts) {
+    try {
+      const d = new Date(ts), now = new Date();
+      const secs = Math.floor((now - d) / 1000);
+      if (secs < 60) return 'just now';
+      const mins = Math.floor(secs / 60);
+      if (mins < 60) return `${mins} min ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs} hr${hrs > 1 ? 's' : ''} ago`;
+      const days = Math.floor(hrs / 24);
+      return `${days} day${days > 1 ? 's' : ''} ago`;
+    } catch (_) { return '—'; }
   }
 
   // Bio-enzyme cartridge status block
@@ -201,6 +236,6 @@ const UI = (function () {
       .replace(/\b\w/g, c => c.toUpperCase());
   }
 
-  return { esc, toast, loading, state, chip, gauge, sensorCard, enzymeDetail, stat, fmtNaira, fmtDate, lineChart, fmtTime, prettyType };
+  return { esc, toast, loading, state, chip, gauge, sensorCard, enzymeDetail, stat, fmtNaira, fmtDate, lineChart, fmtTime, prettyType, fmtRelative };
 })();
 window.UI = UI;

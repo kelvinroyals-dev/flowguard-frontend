@@ -166,7 +166,8 @@ a{color:inherit}
 .kpi-c .ks{font-size:11.5px;color:var(--ink-3);margin-top:2px}
 
 /* monitoring section wrapper */
-.mon-wrap{display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:28px;box-shadow:var(--sh);margin-bottom:8px}
+.mon-wrap{display:grid;grid-template-columns:280px minmax(0,1fr);gap:24px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:28px;box-shadow:var(--sh);margin-bottom:8px}
+.mon-wrap > :first-child{align-self:center;justify-self:center}
 
 /* report/document rows */
 .doc{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
@@ -376,6 +377,13 @@ a{color:inherit}
 .pf-k{font-size:13px;color:var(--ink-3);flex-shrink:0}
 .pf-v{font-size:13.5px;color:var(--ink);font-weight:500;text-align:right}
 @media(max-width:600px){.profile-grid{grid-template-columns:1fr;column-gap:0}}
+.sensor-offline{border-color:rgba(239,68,68,.45)!important;background:linear-gradient(180deg,rgba(239,68,68,.06),transparent)!important}
+.live.off-red{color:#fca5a5;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3)}
+.live.off-red .d{background:#ef4444}
+.offline-body{padding:18px 0 8px}
+.offline-msg{font-size:14px;font-weight:600;color:#fca5a5}
+.offline-sub{font-size:12px;color:var(--ink-3);margin-top:3px}
+.sensor-ping{font-size:11px;color:var(--ink-3);margin-top:8px}
 </style>
 </head>
 <body>
