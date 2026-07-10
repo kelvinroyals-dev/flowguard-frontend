@@ -150,7 +150,7 @@ const Screens = (function () {
     const name = (user.fullName || user.full_name || '').split(' ')[0] || 'there';
     view.innerHTML = `
       <div class="top">
-        <div class="greeting"><h1>${greeting()}, ${UI.esc(name)}</h1><div class="sub" id="ov-sub">Here's the latest on your drainage network.</div></div>
+        <div class="greeting"><h1>${greeting()}, ${UI.esc(name)}</h1><div class="sub"><span id="ov-date">${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span> · <span id="ov-sub">Here's the latest on your drainage network.</span></div></div>
         <div class="top-actions">
           <button class="icon-btn" aria-label="Notifications" onclick="App.go('notifications')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons.bell}</svg></button>
           <button class="btn" onclick="App.openRegister()">+ Add area</button>
@@ -1008,41 +1008,24 @@ const Screens = (function () {
   function setNotifFilter(f) { _notifFilter = f; }
 
   // A single inspection report presented as a deliverable
-  function reportCard(r) {
+  // Table row for the reports listview
+  function reportRow(r) {
     const score = r.drainage_condition_score;
+    const scoreColor = score == null ? 'var(--ink-3)' : score >= 70 ? 'var(--ok)' : score >= 40 ? 'var(--warn)' : 'var(--alert)';
     const risk = r.flood_risk_level;
     const riskKind = risk === 'high' || risk === 'critical' ? 'alert' : risk === 'moderate' || risk === 'medium' ? 'warn' : 'ok';
-    const scoreColor = score == null ? 'var(--ink-3)' : score >= 70 ? 'var(--ok)' : score >= 40 ? 'var(--warn)' : 'var(--alert)';
-    const findings = r.findings || r.executive_summary;
-    const sent = r.sent_to_client_at || r.created_at;
     const isReady = (r.status === 'sent' || r.status === 'approved' || r.status === 'completed' || r.sent_to_client_at);
-    return `
-      <div class="card panel-pad" style="margin-bottom:14px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px">
-          <div class="minw0">
-            <b style="font-family:var(--ff-d);font-size:16px">Inspection report</b>
-            <div class="sub" style="margin-top:2px">${UI.esc(r.property_name || r.property_id || '')} · ${UI.fmtDate(sent)}</div>
-          </div>
-          ${isReady
-            ? UI.chip('ok', 'Ready')
-            : UI.chip('warn', cap(r.status || 'In progress'))}
-        </div>
-
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-          ${score != null ? `<div class="rep-metric"><div class="l">Drainage score</div><div class="v" style="color:${scoreColor}">${score}<span style="font-size:12px;color:var(--ink-3)">/100</span></div></div>` : ''}
-          ${risk ? `<div class="rep-metric"><div class="l">Flood risk</div><div class="v">${UI.chip(riskKind, cap(String(risk)))}</div></div>` : ''}
-        </div>
-
-        ${findings ? `<div style="margin-bottom:10px"><div class="lbl" style="margin:0 0 4px">Findings</div><p style="font-size:13px;color:var(--ink-2);line-height:1.55;margin:0">${UI.esc(findings)}</p></div>` : ''}
-        ${r.recommendations ? `<div style="margin-bottom:14px"><div class="lbl" style="margin:0 0 4px">Recommendations</div><p style="font-size:13px;color:var(--ink-2);line-height:1.55;margin:0">${UI.esc(r.recommendations)}</p></div>` : ''}
-
-        <div style="display:flex;gap:10px;border-top:1px solid var(--line);padding-top:14px">
-          ${isReady
-            ? `<button class="btn" onclick="App.downloadReport('${UI.esc(r.report_id || '')}')">Download PDF</button>
-               <button class="btn ghost" onclick="App.openProperty('${UI.esc(r.property_id || '')}')">View property</button>`
-            : `<span class="sub">This report is being finalised — you'll be notified when it's ready to download.</span>`}
-        </div>
-      </div>`;
+    return `<tr>
+      <td data-label="Report"><b>${UI.esc(r.title || 'Inspection report')}</b></td>
+      <td class="muted" data-label="Property">${UI.esc(r.property_name || r.property_id || '—')}</td>
+      <td class="muted" data-label="Date">${UI.fmtDate(r.sent_to_client_at || r.created_at)}</td>
+      <td data-label="Score"><b style="color:${scoreColor}">${score != null ? score + '/100' : '—'}</b></td>
+      <td data-label="Flood risk">${risk ? UI.chip(riskKind, cap(String(risk))) : '<span class="muted">—</span>'}</td>
+      <td data-label="Status">${isReady ? UI.chip('ok', 'Ready') : UI.chip('warn', cap(r.status || 'In progress'))}</td>
+      <td data-label="Download">${isReady
+        ? `<button class="btn ghost sm" onclick="App.downloadReport('${UI.esc(r.report_id || '')}')">Download PDF</button>`
+        : '<span class="muted">Finalising</span>'}</td>
+    </tr>`;
   }
 
   // ---------------- REPORTS & DOCUMENTS ----------------
@@ -1058,7 +1041,13 @@ const Screens = (function () {
     if (items === null) {
       el.innerHTML = UI.state('error', "Couldn't load your reports", 'Please check your connection and try again.', 'Retry', "onclick=\"App.go('reports')\"");
     } else if (items && items.length) {
-      el.innerHTML = items.map(reportCard).join('');
+      el.innerHTML = `
+        <div class="card tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>Report</th><th>Property</th><th>Date</th><th>Score</th><th>Flood risk</th><th>Status</th><th style="width:150px"></th></tr></thead>
+            <tbody>${items.map(reportRow).join('')}</tbody>
+          </table>
+        </div>`;
     } else {
       el.className = '';
       el.innerHTML = UI.state('empty', 'No reports yet',
