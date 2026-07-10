@@ -30,6 +30,68 @@ const Screens = (function () {
     return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
   }
 
+  // ---- Property health score: weighted blend of data we already have ----
+  // drainage condition (latest report, 50%) + sensor network (30%) + open alerts (20%)
+  function computeHealth(reports, risk, alerts) {
+    const latest = (reports || []).find(r => r.drainage_condition_score != null);
+    const rep = latest ? Number(latest.drainage_condition_score) : null;
+    const sens = (risk && risk.sensors_total) ? Math.round((risk.sensors_online / risk.sensors_total) * 100) : null;
+    const openAlerts = (alerts || []).filter(a => a.status === 'active').length;
+    const alertScore = Math.max(0, 100 - openAlerts * 12);
+    const parts = [];
+    if (rep != null) parts.push([rep, .5]);
+    if (sens != null) parts.push([sens, .3]);
+    parts.push([alertScore, .2]);
+    const tw = parts.reduce((s, p) => s + p[1], 0);
+    const score = Math.round(parts.reduce((s, p) => s + p[0] * p[1], 0) / tw);
+    // with only the alert component the score is too thin to be meaningful
+    if (parts.length < 2) return null;
+    return {
+      score, rep, sens, openAlerts,
+      label: score >= 75 ? 'Good' : score >= 50 ? 'Fair' : 'Needs attention',
+      kind: score >= 75 ? 'ok' : score >= 50 ? 'warn' : 'alert'
+    };
+  }
+
+  // ---- Weather context: Open-Meteo (free, no key). Lekki fallback coords. ----
+  async function renderWeather(props) {
+    const el = document.getElementById('ov-weather');
+    if (!el) return;
+    let days;
+    if (Demo.isOn()) {
+      const d = i => new Date(Date.now() + i * 864e5).toISOString().slice(0, 10);
+      days = [
+        { date: d(0), mm: 0.4, prob: 20 },
+        { date: d(1), mm: 5.8, prob: 70 },   // matches the "light rain tomorrow" alert in the demo story
+        { date: d(2), mm: 1.2, prob: 30 },
+        { date: d(3), mm: 0, prob: 10 },
+        { date: d(4), mm: 0, prob: 5 },
+      ];
+    } else {
+      const p = (props || []).find(x => x.latitude && x.longitude);
+      const lat = p ? p.latitude : 6.4478, lon = p ? p.longitude : 3.5476;
+      try {
+        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum,precipitation_probability_max&timezone=Africa%2FLagos&forecast_days=5`);
+        const j = await r.json();
+        days = j.daily.time.map((t, i) => ({ date: t, mm: j.daily.precipitation_sum[i] || 0, prob: j.daily.precipitation_probability_max[i] || 0 }));
+      } catch (_) { el.innerHTML = ''; return; }
+    }
+    const worst = days.reduce((a, b) => (b.mm > a.mm ? b : a), days[0]);
+    const dayName = t => {
+      const diff = Math.round((new Date(t) - new Date(new Date().toISOString().slice(0, 10))) / 864e5);
+      return diff <= 0 ? 'today' : diff === 1 ? 'tomorrow' : new Date(t).toLocaleDateString('en-GB', { weekday: 'long' });
+    };
+    let kind, msg;
+    if (worst.mm >= 20) { kind = 'alert'; msg = `<b>Heavy rain expected ${dayName(worst.date)}</b> — est. ${Math.round(worst.mm)}mm (${worst.prob}% chance). Your drainage network is monitored and the team is on standby.`; }
+    else if (worst.mm >= 5) { kind = 'warn'; msg = `<b>Rain expected ${dayName(worst.date)}</b> — est. ${Math.round(worst.mm)}mm (${worst.prob}% chance). Drainage is clear and monitoring is active.`; }
+    else { kind = 'ok'; msg = `<b>No significant rain</b> expected over the next 5 days.`; }
+    el.innerHTML = `
+      <div class="weather-strip ${kind}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16.2A4.5 4.5 0 0017.5 8h-1.8A7 7 0 104 14.9"/><path d="M8 19v2M12 20v2M16 19v2"/></svg>
+        <span>${msg}</span>
+      </div>`;
+  }
+
   async function overview(view) {
     const user = Auth.getUser() || {};
     const name = (user.fullName || user.full_name || '').split(' ')[0] || 'there';
@@ -44,6 +106,7 @@ const Screens = (function () {
       ${demoBanner()}
       <div id="ov-journey"></div>
       <div id="ov-kpis"></div>
+      <div id="ov-weather"></div>
       <div class="section-t">Live monitoring <a onclick="App.go('monitoring')" style="cursor:pointer">View all →</a></div>
       <div id="ov-mon">${UI.loading(2)}</div>
       <div class="section-t">Your FlowGuard services</div>
@@ -77,6 +140,12 @@ const Screens = (function () {
       ${kpiCard('Active alerts', alertCount, alertCount ? 'Need attention' : 'All clear', icons.bell)}
     </div>`;
 
+    // ---- Weather context (Open-Meteo, free, no key) ----
+    renderWeather(props);
+
+    // ---- Property health score (computed from data already loaded) ----
+    const health = computeHealth(reports, risk, alerts);
+
     // ---- Monitoring section (gauge + sensors together) ----
     const mon = document.getElementById('ov-mon');
     if (risk && risk.has_data) {
@@ -89,7 +158,10 @@ const Screens = (function () {
         <div class="mon-wrap">
           ${UI.gauge(risk.risk_index, risk.level)}
           <div style="min-width:0">
-            <h3 style="font-family:var(--ff-d);font-size:18px;font-weight:600;margin-bottom:6px">${msg}</h3>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+              <h3 style="font-family:var(--ff-d);font-size:18px;font-weight:600;margin:0">${msg}</h3>
+              ${health ? `<span class="health-chip ${health.kind}" title="Drainage ${health.rep != null ? health.rep : '—'} · Sensors ${health.sens != null ? health.sens + '%' : '—'} · ${health.openAlerts} open alert${health.openAlerts === 1 ? '' : 's'}">Estate health ${health.score}/100 · ${health.label}</span>` : ''}
+            </div>
             <p style="color:var(--ink-2);font-size:14px;margin-bottom:16px;max-width:440px">Peak level today ${risk.peak_level}% · ${risk.sensors_online} of ${risk.sensors_total} sensors reporting. We'll alert you the moment anything changes.</p>
             <div class="sensor-carousel">
               ${shown.map(UI.sensorCard).join('')}

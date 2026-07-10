@@ -384,6 +384,19 @@ a{color:inherit}
 .offline-msg{font-size:14px;font-weight:600;color:#fca5a5}
 .offline-sub{font-size:12px;color:var(--ink-3);margin-top:3px}
 .sensor-ping{font-size:11px;color:var(--ink-3);margin-top:8px}
+.weather-strip{display:flex;align-items:center;gap:12px;padding:13px 18px;border-radius:var(--rs);border:1px solid var(--line);background:var(--surface);font-size:13.5px;color:var(--ink-2);margin-bottom:20px}
+.weather-strip svg{width:20px;height:20px;flex-shrink:0}
+.weather-strip.ok{border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.05)}
+.weather-strip.ok svg{color:var(--ok)}
+.weather-strip.warn{border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.06)}
+.weather-strip.warn svg{color:var(--warn)}
+.weather-strip.alert{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.06)}
+.weather-strip.alert svg{color:var(--alert)}
+.weather-strip b{color:var(--ink)}
+.health-chip{font-size:12px;font-weight:600;padding:5px 12px;border-radius:100px;white-space:nowrap;cursor:default}
+.health-chip.ok{color:var(--ok);background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25)}
+.health-chip.warn{color:var(--warn);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25)}
+.health-chip.alert{color:var(--alert);background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25)}
 </style>
 </head>
 <body>
