@@ -5,6 +5,13 @@ const App = (function () {
   let current = 'overview';
   let _suppressHashChange = false;
 
+  // ---- global active-property scope (persists across sessions) ----
+  function activeProperty() { return localStorage.getItem('fg_active_property') || 'all'; }
+  function setActiveProperty(id) {
+    localStorage.setItem('fg_active_property', id || 'all');
+    go(current); // re-render the current screen under the new scope
+  }
+
   function go(tab, arg) {
     current = tab;
     window.scrollTo(0, 0);
@@ -211,6 +218,7 @@ const App = (function () {
 
   // ---- Notifications actions ----
   function setNotifFilter(f) { Screens.setNotifFilter(f); go('notifications'); }
+  function setFcRange(d) { Screens.setFcRange(d); }
 
   // ---- Support tickets ----
   function setTicketFilter(f) { Screens.setTicketFilter(f); go('support'); }
@@ -592,7 +600,7 @@ const App = (function () {
     } catch (_) { /* keep cached */ }
   }
 
-  return { go, openProperty, openEditProperty, openSensor, setSensorRange, monSearch, monFilter, monMetric, viewReport, downloadReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings, changePassword,
+  return { go, openProperty, openEditProperty, activeProperty, setActiveProperty, setFcRange, openSensor, setSensorRange, monSearch, monFilter, monMetric, viewReport, downloadReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings, changePassword,
            openTicketDetail, sendReply, openInvoice, payInvoice, selectServices, confirmServices, deactivateAccount, confirmDeactivate,
            setNotifFilter, markRead, markAllRead, deleteNotif, setTicketFilter, openTicket, submitTicket, init };
 })();

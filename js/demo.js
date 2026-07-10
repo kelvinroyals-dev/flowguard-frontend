@@ -26,18 +26,18 @@ const Demo = (function () {
   const _now = Date.now();
   const _ago = mins => new Date(_now - mins * 60e3).toISOString();
   const sensors = [
-    { sensor_id: 'S-01', name: 'Main Gate', zone: 'entrance', status: 'active', device_variant: 'basic', level: 28, flow_rate: 12.4, silt_level: 18, battery_percent: 88, signal_strength: 82, last_ping: _ago(2), ping_interval: 'Every 15 min', temperature: 27.4, has_data: true, trend: [40, 55, 35, 60, 45, 50, 28], enzyme: null },
-    { sensor_id: 'S-02', name: 'North Culvert', zone: 'north', status: 'active', device_variant: 'bio_dispenser', level: 19, flow_rate: 8.1, silt_level: 42, battery_percent: 71, signal_strength: 64, last_ping: _ago(1), ping_interval: 'Every 15 min', temperature: 26.9, has_data: true, trend: [30, 25, 40, 20, 35, 28, 19],
+    { property_id: 'PROP-DEMO-1', sensor_id: 'S-01', name: 'Main Gate', zone: 'entrance', status: 'active', device_variant: 'basic', level: 28, flow_rate: 12.4, silt_level: 18, battery_percent: 88, signal_strength: 82, last_ping: _ago(2), ping_interval: 'Every 15 min', temperature: 27.4, has_data: true, trend: [40, 55, 35, 60, 45, 50, 28], enzyme: null },
+    { property_id: 'PROP-DEMO-1', sensor_id: 'S-02', name: 'North Culvert', zone: 'north', status: 'active', device_variant: 'bio_dispenser', level: 19, flow_rate: 8.1, silt_level: 42, battery_percent: 71, signal_strength: 64, last_ping: _ago(1), ping_interval: 'Every 15 min', temperature: 26.9, has_data: true, trend: [30, 25, 40, 20, 35, 28, 19],
       enzyme: { level_percent: 64, status: 'dispensing', capacity_ml: 5000, days_left: 21 } },
-    { sensor_id: 'S-03', name: 'East Channel', zone: 'east', status: 'active', device_variant: 'bio_dispenser', level: 41, flow_rate: 18.7, silt_level: 71, battery_percent: 54, signal_strength: 77, last_ping: _ago(3), ping_interval: 'Every 15 min', temperature: 28.1, has_data: true, trend: [50, 60, 70, 55, 65, 72, 41],
+    { property_id: 'PROP-DEMO-1', sensor_id: 'S-03', name: 'East Channel', zone: 'east', status: 'active', device_variant: 'bio_dispenser', level: 41, flow_rate: 18.7, silt_level: 71, battery_percent: 54, signal_strength: 77, last_ping: _ago(3), ping_interval: 'Every 15 min', temperature: 28.1, has_data: true, trend: [50, 60, 70, 55, 65, 72, 41],
       enzyme: { level_percent: 11, status: 'due_replacement', capacity_ml: 5000, days_left: 3 } },
-    { sensor_id: 'S-04', name: 'South Drain', zone: 'south', status: 'active', device_variant: 'basic', level: 23, flow_rate: 9.6, silt_level: 25, battery_percent: 92, signal_strength: 58, last_ping: _ago(4), ping_interval: 'Every 15 min', temperature: 27.0, has_data: true, trend: [35, 30, 45, 38, 33, 40, 23], enzyme: null },
-    { sensor_id: 'S-05', name: 'West Outfall', zone: 'west', status: 'active', device_variant: 'bio_dispenser', level: 33, flow_rate: 14.2, silt_level: 30, battery_percent: 79, signal_strength: 71, last_ping: _ago(2), ping_interval: 'Every 15 min', temperature: 26.5, has_data: true, trend: [28, 34, 30, 38, 32, 36, 33],
+    { property_id: 'PROP-DEMO-1', sensor_id: 'S-04', name: 'South Drain', zone: 'south', status: 'active', device_variant: 'basic', level: 23, flow_rate: 9.6, silt_level: 25, battery_percent: 92, signal_strength: 58, last_ping: _ago(4), ping_interval: 'Every 15 min', temperature: 27.0, has_data: true, trend: [35, 30, 45, 38, 33, 40, 23], enzyme: null },
+    { property_id: 'PROP-DEMO-1', sensor_id: 'S-05', name: 'West Outfall', zone: 'west', status: 'active', device_variant: 'bio_dispenser', level: 33, flow_rate: 14.2, silt_level: 30, battery_percent: 79, signal_strength: 71, last_ping: _ago(2), ping_interval: 'Every 15 min', temperature: 26.5, has_data: true, trend: [28, 34, 30, 38, 32, 36, 33],
       enzyme: { level_percent: 78, status: 'loaded', capacity_ml: 5000, days_left: 34 } },
-    { sensor_id: 'S-06', name: 'Central Junction', zone: 'central', status: 'active', device_variant: 'basic', level: 37, flow_rate: 16.0, silt_level: 48, battery_percent: 66, signal_strength: 69, last_ping: _ago(5), ping_interval: 'Every 15 min', temperature: 27.8, has_data: true, trend: [42, 38, 45, 40, 35, 39, 37], enzyme: null },
-    { sensor_id: 'S-07', name: 'Lakeside Inlet', zone: 'north', status: 'active', device_variant: 'bio_dispenser', level: 26, flow_rate: 10.5, silt_level: 22, battery_percent: 45, signal_strength: 52, last_ping: _ago(6), ping_interval: 'Every 15 min', temperature: 26.2, has_data: true, trend: [30, 28, 32, 25, 27, 29, 26],
+    { property_id: 'PROP-DEMO-1', sensor_id: 'S-06', name: 'Central Junction', zone: 'central', status: 'active', device_variant: 'basic', level: 37, flow_rate: 16.0, silt_level: 48, battery_percent: 66, signal_strength: 69, last_ping: _ago(5), ping_interval: 'Every 15 min', temperature: 27.8, has_data: true, trend: [42, 38, 45, 40, 35, 39, 37], enzyme: null },
+    { property_id: 'PROP-DEMO-1', sensor_id: 'S-07', name: 'Lakeside Inlet', zone: 'north', status: 'active', device_variant: 'bio_dispenser', level: 26, flow_rate: 10.5, silt_level: 22, battery_percent: 45, signal_strength: 52, last_ping: _ago(6), ping_interval: 'Every 15 min', temperature: 26.2, has_data: true, trend: [30, 28, 32, 25, 27, 29, 26],
       enzyme: { level_percent: 45, status: 'dispensing', capacity_ml: 5000, days_left: 14 } },
-    { sensor_id: 'S-08', name: 'Marina Culvert', zone: 'east', status: 'offline', device_variant: 'basic', level: null, flow_rate: null, silt_level: null, battery_percent: 8, signal_strength: null, last_ping: _ago(220), ping_interval: 'Every 15 min', temperature: null, has_data: false, trend: [], enzyme: null }
+    { property_id: 'PROP-DEMO-1', sensor_id: 'S-08', name: 'Marina Culvert', zone: 'east', status: 'offline', device_variant: 'basic', level: null, flow_rate: null, silt_level: null, battery_percent: 8, signal_strength: null, last_ping: _ago(220), ping_interval: 'Every 15 min', temperature: null, has_data: false, trend: [], enzyme: null }
   ];
 
   // Derive flood-risk counts FROM the sensor array so the numbers are always consistent
@@ -74,12 +74,12 @@ const Demo = (function () {
   ];
 
   const alerts = [
-    { type: 'critical', severity: 'critical', status: 'active', title: 'Marina Culvert node offline', description: 'Node S-08 stopped reporting ~3.5 hrs ago — battery critically low (8%)', created_at: '3 hours ago' },
-    { type: 'critical', severity: 'critical', status: 'active', title: 'East Channel silt high', description: 'Silt at 71% — clearing recommended', created_at: '12 min ago' },
-    { type: 'warning', severity: 'warning', status: 'active', title: 'Bio-enzyme low — East Channel', description: 'Cartridge at 11%, refill due in ~3 days', created_at: '40 min ago' },
-    { type: 'warning', severity: 'warning', status: 'active', title: 'Light rain expected', description: 'Tomorrow, 14:00–18:00 · drainage clear', created_at: '1 hour ago' },
-    { type: 'info', severity: 'info', status: 'resolved', title: 'Sensor check passed', description: '7 of 8 nodes reporting normally', created_at: '2 hours ago', resolved_at: '2026-07-07' },
-    { type: 'info', severity: 'info', status: 'resolved', title: 'East Channel cleared', description: 'Scheduled maintenance completed', created_at: 'Yesterday', resolved_at: '2026-07-06' }
+    { property_id: 'PROP-DEMO-1', type: 'critical', severity: 'critical', status: 'active', title: 'Marina Culvert node offline', description: 'Node S-08 stopped reporting ~3.5 hrs ago — battery critically low (8%)', created_at: '3 hours ago' },
+    { property_id: 'PROP-DEMO-1', type: 'critical', severity: 'critical', status: 'active', title: 'East Channel silt high', description: 'Silt at 71% — clearing recommended', created_at: '12 min ago' },
+    { property_id: 'PROP-DEMO-1', type: 'warning', severity: 'warning', status: 'active', title: 'Bio-enzyme low — East Channel', description: 'Cartridge at 11%, refill due in ~3 days', created_at: '40 min ago' },
+    { property_id: 'PROP-DEMO-1', type: 'warning', severity: 'warning', status: 'active', title: 'Light rain expected', description: 'Tomorrow, 14:00–18:00 · drainage clear', created_at: '1 hour ago' },
+    { property_id: 'PROP-DEMO-1', type: 'info', severity: 'info', status: 'resolved', title: 'Sensor check passed', description: '7 of 8 nodes reporting normally', created_at: '2 hours ago', resolved_at: '2026-07-07' },
+    { property_id: 'PROP-DEMO-1', type: 'info', severity: 'info', status: 'resolved', title: 'East Channel cleared', description: 'Scheduled maintenance completed', created_at: 'Yesterday', resolved_at: '2026-07-06' }
   ];
 
   const timeline = [

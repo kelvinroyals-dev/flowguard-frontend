@@ -30,6 +30,37 @@ const Screens = (function () {
     return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
   }
 
+  // ---- property scope: cache, selector control, filter ----
+  let _propsCache = null, _propsCacheAt = 0;
+  async function getMyProperties() {
+    if (Demo.isOn()) return Demo.data.properties;
+    if (_propsCache && Date.now() - _propsCacheAt < 60e3) return _propsCache;
+    try { const r = await apiRequest('/properties'); _propsCache = (r && r.data) || []; _propsCacheAt = Date.now(); }
+    catch (_) { _propsCache = _propsCache || []; }
+    return _propsCache;
+  }
+  // dropdown shown only when the client has 2+ properties
+  function propertySelector(props) {
+    if (!props || props.length < 2) return '';
+    const cur = App.activeProperty();
+    return `<select class="prop-select" aria-label="Select property" onchange="App.setActiveProperty(this.value)">
+      <option value="all" ${cur === 'all' ? 'selected' : ''}>All properties</option>
+      ${props.map(p => `<option value="${UI.esc(p.property_id)}" ${cur === p.property_id ? 'selected' : ''}>${UI.esc(p.property_name || p.property_id)}</option>`).join('')}
+    </select>`;
+  }
+  // filter any collection to the active property (matches id or name fields)
+  function scopeToProperty(items, props) {
+    const cur = App.activeProperty();
+    if (cur === 'all' || !items) return items || [];
+    const sel = (props || []).find(p => p.property_id === cur);
+    const name = sel ? sel.property_name : null;
+    const match = it => it.property_id === cur
+      || (name && (it.property_name === name || it.property === name || it.site_name === name));
+    // if nothing in this collection is property-linked at all, don't filter (backend gap: e.g. sensors)
+    const linkable = items.some(it => it.property_id || it.property_name || it.property || it.site_name);
+    return linkable ? items.filter(match) : items;
+  }
+
   // ---- Property health score: weighted blend of data we already have ----
   // drainage condition (latest report, 50%) + sensor network (30%) + open alerts (20%)
   function computeHealth(reports, risk, alerts) {
@@ -152,6 +183,7 @@ const Screens = (function () {
       <div class="top">
         <div class="greeting"><h1>${greeting()}, ${UI.esc(name)}</h1><div class="sub"><span id="ov-date">${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span> · <span id="ov-sub">Here's the latest on your drainage network.</span></div></div>
         <div class="top-actions">
+          ${propertySelector(allProps)}
           <button class="icon-btn" aria-label="Notifications" onclick="App.go('notifications')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons.bell}</svg></button>
           <button class="btn" onclick="App.openRegister()">+ Add area</button>
         </div>
@@ -168,6 +200,7 @@ const Screens = (function () {
       <div class="cols" id="ov-bottom"></div>`;
 
     // Gather data (real or demo)
+    const allProps = await getMyProperties();
     let props, risk, sensors, alerts, reports, notifs = [];
     if (Demo.isOn()) {
       props = Demo.data.properties; risk = Demo.data.floodRisk; sensors = Demo.data.sensors;
@@ -180,6 +213,12 @@ const Screens = (function () {
       try { const r = await apiRequest('/field-reports?limit=5'); reports = (r && r.data) || []; } catch (_) { reports = []; }
       try { const r = await apiRequest('/audit-logs/mine?limit=30'); notifs = (r && r.data) || []; } catch (_) { notifs = []; }
     }
+
+    // ---- scope everything to the selected property ----
+    props = scopeToProperty(props, allProps);
+    sensors = scopeToProperty(sensors, allProps);
+    alerts = scopeToProperty(alerts, allProps);
+    reports = scopeToProperty(reports, allProps);
 
     // ---- Journey hero (adapts to where the customer is) ----
     renderJourney(props);
@@ -444,9 +483,10 @@ const Screens = (function () {
   let _monSensors = [], _monHist = { series: [], log: [] };
 
   async function monitoring(view) {
+    const allProps = await getMyProperties();
     view.innerHTML = `
       <div class="top"><div><h1>Monitoring</h1><div class="sub">Live readings, trends, and history across your sensors</div></div>
-      <button class="btn ghost" onclick="App.go('overview')">← Overview</button></div>
+      <div style="display:flex;gap:10px;align-items:center">${propertySelector(allProps)}<button class="btn ghost" onclick="App.go('overview')">← Overview</button></div></div>
       ${demoBanner()}
       <div id="mon-refill"></div>
       <div class="mon-controls">
@@ -467,9 +507,10 @@ const Screens = (function () {
       <div class="section-t" style="margin-top:26px">Reading history</div>
       <div class="panel panel-pad" id="mon-log"></div>`;
 
-    if (Demo.isOn()) { _monSensors = Demo.data.sensors; _monHist = Demo.data.history; }
+    const _scopeProps = await getMyProperties();
+    if (Demo.isOn()) { _monSensors = scopeToProperty(Demo.data.sensors, _scopeProps); _monHist = Demo.data.history; }
     else {
-      try { const r = await apiRequest('/monitoring/sensors'); _monSensors = (r && r.data) || []; } catch (_) { _monSensors = []; }
+      try { const r = await apiRequest('/monitoring/sensors'); _monSensors = scopeToProperty((r && r.data) || [], _scopeProps); } catch (_) { _monSensors = []; }
       try { const r = await apiRequest('/monitoring/history?hours=24'); _monHist = (r && r.data) || { series: [], log: [] }; } catch (_) { _monHist = { series: [], log: [] }; }
     }
 
@@ -725,8 +766,9 @@ const Screens = (function () {
 
   // ---------------- ALERTS & INCIDENTS ----------------
   async function alerts(view) {
+    const allProps = await getMyProperties();
     view.innerHTML = `
-      <div class="top"><div><h1>Flood &amp; sensor alerts</h1><div class="sub">Real-time drainage and flood-risk events detected across your properties</div></div></div>
+      <div class="top"><div><h1>Flood &amp; sensor alerts</h1><div class="sub">Real-time drainage and flood-risk events detected across your properties</div></div>${propertySelector(allProps)}</div>
       ${demoBanner()}
       <div id="alert-kpis"></div>
       <div class="section-t">Active alerts</div>
@@ -735,9 +777,9 @@ const Screens = (function () {
       <div class="card tbl-wrap" id="alert-resolved"></div>`;
 
     let items;
-    if (Demo.isOn()) items = Demo.data.alerts.map(normalizeAlert);
+    if (Demo.isOn()) items = scopeToProperty(Demo.data.alerts, allProps).map(normalizeAlert);
     else {
-      try { const r = await apiRequest('/alerts'); items = ((r && r.data) || []).map(normalizeAlert); }
+      try { const r = await apiRequest('/alerts'); items = scopeToProperty((r && r.data) || [], allProps).map(normalizeAlert); }
       catch (_) {
         const kEl = document.getElementById('alert-kpis');
         const aEl = document.getElementById('alert-active');
@@ -1086,15 +1128,103 @@ const Screens = (function () {
     </tr>`;
   }
 
+
+  // ---------------- RISK FORECAST ----------------
+  let _fcRange = 7; // days; Open-Meteo free forecast caps at 16
+  function setFcRange(d) { _fcRange = d; App.go('forecast'); }
+
+  async function forecast(view) {
+    const allProps = await getMyProperties();
+    view.innerHTML = `
+      <div class="top"><div><h1>Risk forecast</h1><div class="sub">Chance of flooding — your drainage health today vs the rain that's coming</div></div>
+      <div style="display:flex;gap:10px;align-items:center">${propertySelector(allProps)}
+        <span style="display:flex;gap:6px">
+          ${[7, 14, 30].map(d => `<button class="chip ${_fcRange === d ? 'ok' : ''} clickable-outline" onclick="App.setFcRange(${d})">${d}d</button>`).join('')}
+        </span></div></div>
+      ${demoBanner()}
+      <div id="fc-body">${UI.loading(2)}</div>`;
+
+    // gather the same health inputs the overview uses, under the current property scope
+    let risk, alerts, reports;
+    if (Demo.isOn()) { risk = Demo.data.floodRisk; alerts = scopeToProperty(Demo.data.alerts, allProps); reports = scopeToProperty(Demo.data.reports, allProps); }
+    else {
+      try { const r = await apiRequest('/monitoring/flood-risk'); risk = r && r.data; } catch (_) { risk = null; }
+      try { const r = await apiRequest('/alerts'); alerts = scopeToProperty((r && r.data) || [], allProps); } catch (_) { alerts = []; }
+      try { const r = await apiRequest('/field-reports?limit=20'); reports = scopeToProperty((r && r.data) || [], allProps); } catch (_) { reports = []; }
+    }
+    const health = computeHealth(reports, risk, alerts);
+    const vulnerability = health ? (100 - health.score) : 45; // no data -> assume mid vulnerability
+
+    // precipitation forecast
+    let days;
+    const horizon = Math.min(_fcRange, 16);
+    if (Demo.isOn()) {
+      const d = i => new Date(Date.now() + i * 864e5);
+      const mm = [0.4, 5.8, 1.2, 0, 0, 12.5, 22.0, 8.4, 3.1, 0, 0.8, 15.6, 27.2, 6.0, 1.5, 0];
+      days = Array.from({ length: horizon }, (_, i) => ({ date: d(i), mm: mm[i % mm.length], prob: Math.min(95, Math.round(mm[i % mm.length] * 4 + 15)) }));
+    } else {
+      const sel = allProps.find(p => p.property_id === App.activeProperty());
+      const p0 = sel && sel.latitude ? sel : (allProps.find(x => x.latitude) || {});
+      const lat = p0.latitude || 6.4478, lon = p0.longitude || 3.5476;
+      try {
+        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum,precipitation_probability_max&timezone=Africa%2FLagos&forecast_days=${horizon}`);
+        const j = await r.json();
+        days = j.daily.time.map((t, i) => ({ date: new Date(t), mm: j.daily.precipitation_sum[i] || 0, prob: j.daily.precipitation_probability_max[i] || 0 }));
+      } catch (_) {
+        document.getElementById('fc-body').innerHTML = UI.state('error', "Couldn't load the weather forecast", 'Please check your connection and try again.', 'Retry', "onclick=\"App.go('forecast')\"");
+        return;
+      }
+    }
+
+    // daily flood chance: vulnerability (today's drainage health) x incoming rain
+    const rows = days.map(d => {
+      const mmFactor = Math.min(100, d.mm * 4);           // 25mm+ saturates
+      const chance = Math.round(Math.min(96, Math.max(2,
+        vulnerability * 0.4 + mmFactor * 0.45 + d.prob * 0.15)));
+      const level = chance >= 65 ? 'high' : chance >= 35 ? 'moderate' : 'low';
+      return { ...d, chance, level };
+    });
+    const worst = rows.reduce((a, b) => b.chance > a.chance ? b : a, rows[0]);
+    const dayLbl = d => d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+
+    document.getElementById('fc-body').innerHTML = `
+      <div class="panel panel-pad mb-20">
+        <div class="row-between" style="flex-wrap:wrap;gap:10px">
+          <div>
+            <div class="lbl m0b2">Today's drainage health</div>
+            <b style="font-family:var(--ff-d);font-size:22px;color:${health ? (health.kind === 'ok' ? 'var(--ok)' : health.kind === 'warn' ? 'var(--warn)' : 'var(--alert)') : 'var(--ink-3)'}">${health ? health.score + '/100' : 'No data yet'}</b>
+            <div class="muted" style="margin-top:2px">${health ? 'From latest report, node status, and open alerts' : 'Forecast assumes mid-level vulnerability until your first report'}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="lbl m0b2">Peak risk in this window</div>
+            ${UI.chip(worst.level === 'high' ? 'alert' : worst.level === 'moderate' ? 'warn' : 'ok', `${worst.chance}% — ${dayLbl(worst.date)}`)}
+          </div>
+        </div>
+      </div>
+
+      <div class="card tbl-wrap">
+        ${rows.map(r => `
+          <div class="fc-day">
+            <b style="font-size:13px">${dayLbl(r.date)}</b>
+            <div><div class="fc-bar"><i style="width:${r.chance}%;background:${r.level === 'high' ? 'var(--alert)' : r.level === 'moderate' ? 'var(--warn)' : 'var(--ok)'}"></i></div></div>
+            <span class="muted fc-hide-m">${r.mm ? r.mm.toFixed(1) + 'mm · ' + r.prob + '% rain' : 'No rain expected'}</span>
+            ${UI.chip(r.level === 'high' ? 'alert' : r.level === 'moderate' ? 'warn' : 'ok', r.chance + '% ' + cap(r.level))}
+          </div>`).join('')}
+      </div>
+      ${_fcRange > 16 ? `<p class="muted" style="margin-top:12px">Precipitation forecasts beyond 16 days aren't reliable — showing the full 16-day horizon available.</p>` : ''}
+      <p class="muted" style="margin-top:10px">How this works: each day's flood chance blends your current drainage health (40%), forecast rainfall volume (45%), and rain probability (15%). Improving your drainage score directly lowers every day's risk.</p>`;
+  }
+
   // ---------------- REPORTS & DOCUMENTS ----------------
   async function reports(view) {
+    const allProps = await getMyProperties();
     view.innerHTML = `
-      <div class="top"><div><h1>Reports &amp; documents</h1><div class="sub">Your inspection reports and drainage assessments — findings, scores, and recommendations</div></div></div>
+      <div class="top"><div><h1>Reports &amp; documents</h1><div class="sub">Your inspection reports and drainage assessments — findings, scores, and recommendations</div></div>${propertySelector(allProps)}</div>
       ${demoBanner()}
       <div id="rep-list">${UI.loading(3)}</div>`;
     let items;
-    if (Demo.isOn()) items = Demo.data.reports;
-    else { try { const r = await apiRequest('/field-reports?limit=100'); items = (r && r.data) || []; } catch (_) { items = null; } }
+    if (Demo.isOn()) items = scopeToProperty(Demo.data.reports, allProps);
+    else { try { const r = await apiRequest('/field-reports?limit=100'); items = scopeToProperty((r && r.data) || [], allProps); } catch (_) { items = null; } }
     const el = document.getElementById('rep-list');
     if (items === null) {
       el.innerHTML = UI.state('error', "Couldn't load your reports", 'Please check your connection and try again.', 'Retry', "onclick=\"App.go('reports')\"");
@@ -1342,6 +1472,6 @@ const Screens = (function () {
       </div>`;
   }
 
-  return { overview, monitoring, sensorDetail, properties, propertyDetail, billing, alerts, notifications, reports, support, ticketDetail, settings, account, setNotifFilter, setTicketFilter, setSensorRange, monSearch, monFilter, monMetric, TICKET_CATS };
+  return { overview, monitoring, forecast, sensorDetail, properties, propertyDetail, billing, alerts, notifications, reports, support, ticketDetail, settings, account, setNotifFilter, setTicketFilter, setFcRange, setSensorRange, monSearch, monFilter, monMetric, TICKET_CATS };
 })();
 window.Screens = Screens;
