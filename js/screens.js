@@ -656,6 +656,45 @@ const Screens = (function () {
     return `<div class="tm-list">${rows}</div>`;
   }
 
+  // Reported drainage issues — closes the loop by showing the client what they told us
+  function reportedIssuesBlock(p) {
+    const desc = p.issue_description;
+    let extra = p.current_issues;
+    if (typeof extra === 'string') { try { extra = JSON.parse(extra); } catch (_) { extra = null; } }
+    if (!desc && !(extra && (Array.isArray(extra) ? extra.length : Object.keys(extra).length))) return '';
+    const urgency = p.urgency_level;
+    const uKind = urgency === 'critical' || urgency === 'high' ? 'alert' : urgency === 'medium' ? 'warn' : 'ok';
+    return `
+      <div class="panel panel-pad" style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <h3 style="margin:0">Reported drainage concern</h3>
+          ${urgency ? UI.chip(uKind, cap(urgency) + ' urgency') : ''}
+        </div>
+        ${desc ? `<p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0">${UI.esc(desc)}</p>` : ''}
+      </div>`;
+  }
+
+  // Property profile — the rich intake fields, shown when present
+  function propertyProfileBlock(p) {
+    const rows = [];
+    const addr = [p.address_line1, p.address_line2, p.city, p.state].filter(Boolean).join(', ');
+    if (addr) rows.push(['Address', UI.esc(addr)]);
+    if (p.property_type) rows.push(['Type', UI.prettyType(p.property_type)]);
+    if (p.total_area_sqm) rows.push(['Total area', `${Number(p.total_area_sqm).toLocaleString()} sqm`]);
+    if (p.number_of_units) rows.push(['Units', Number(p.number_of_units).toLocaleString()]);
+    if (p.number_of_buildings) rows.push(['Buildings', Number(p.number_of_buildings).toLocaleString()]);
+    if (p.estimated_population) rows.push(['Est. population', Number(p.estimated_population).toLocaleString()]);
+    if (p.preferred_inspection_date) rows.push(['Preferred inspection', UI.fmtDate(p.preferred_inspection_date) + (p.preferred_inspection_time ? ` (${cap(p.preferred_inspection_time)})` : '')]);
+    if (!rows.length) return '';
+    return `
+      <div class="panel panel-pad" style="margin-bottom:20px">
+        <h3 style="margin:0 0 12px">Property profile</h3>
+        <div class="profile-grid">
+          ${rows.map(([k, v]) => `<div class="pf-row"><div class="pf-k">${k}</div><div class="pf-v">${v}</div></div>`).join('')}
+        </div>
+      </div>`;
+  }
+
   async function propertyDetail(view, propertyId) {
     view.innerHTML = `
       <div class="top"><div>
@@ -697,9 +736,13 @@ const Screens = (function () {
     document.getElementById('pd-body').innerHTML = `
       <div class="grid-3" style="margin-bottom:20px">
         ${UI.stat('Status', `<span style="font-size:18px">${STATUS_LABEL[p.status] || cap(p.status || 'Pending')}</span>`, 'Current stage')}
-        ${UI.stat('Contact', `<span style="font-size:16px">${UI.esc(p.contact_person_name || p.client_name || '—')}</span>`, p.client_phone || p.contact_phone || '')}
+        ${UI.stat('Contact', `<span style="font-size:16px">${UI.esc(p.contact_person_name || p.client_name || '—')}</span>`, p.contact_person_role || p.client_phone || p.contact_phone || '')}
         ${UI.stat('Registered', `<span style="font-size:18px">${UI.fmtDate(p.created_at)}</span>`, 'Submission date')}
       </div>
+
+      ${reportedIssuesBlock(p)}
+      ${propertyProfileBlock(p)}
+
       <div class="cols wide">
         <div class="panel panel-pad">
           <h3>Service progress</h3>

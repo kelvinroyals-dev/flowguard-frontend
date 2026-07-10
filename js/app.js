@@ -185,10 +185,27 @@ const App = (function () {
     // Reports open in a modal (placeholder until a report-detail endpoint exists)
     UI.toast('Report viewing opens the full document — coming with the reports backend.', 'info');
   }
-  function downloadReport(id) {
-    // PDF generation endpoint not built yet — honest placeholder.
-    // The report's findings, score and recommendations are already shown on the card.
-    UI.toast('PDF download is coming soon — your full findings are shown above in the meantime.', 'info');
+  async function downloadReport(id) {
+    if (!id) return;
+    try {
+      UI.toast('Preparing your report…', 'info');
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${window.API_BASE}/field-reports/${id}/pdf`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (!res.ok) throw new Error('Download failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `FlowGuard-Report-${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      UI.toast("Couldn't download the report. Please try again.", 'error');
+    }
   }
 
   // ---- Notifications actions ----
@@ -284,22 +301,64 @@ const App = (function () {
     const bg = document.createElement('div');
     bg.className = 'modal-bg';
     bg.innerHTML = `
-      <div class="modal">
+      <div class="modal modal-wide">
         <div class="modal-h"><h2>Register an area</h2><button onclick="this.closest('.modal-bg').remove()">×</button></div>
         <div class="modal-b">
-          <div class="field"><label>Area name</label><input id="rg-name" placeholder="e.g. Sunrise Court Estate"></div>
-          <div class="field"><label>Property type</label>
-            <select id="rg-type"><option>residential estate</option><option>commercial</option><option>mixed use</option><option>public</option></select></div>
-          <div class="field"><label>City</label><input id="rg-city" placeholder="Lekki"></div>
-          <div class="field"><label>State</label><input id="rg-state" value="Lagos"></div>
-          <div class="field"><label>What's the drainage concern?</label><textarea id="rg-desc" rows="3" placeholder="e.g. Recurring flooding at the main gate after heavy rain"></textarea></div>
-          <div class="field"><label>Urgency</label>
-            <select id="rg-urgency"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
+
+          <div class="form-section-t">Area details</div>
+          <div class="field"><label>Area name <span class="req">*</span></label><input id="rg-name" placeholder="e.g. Sunrise Court Estate"></div>
+          <div class="field-row">
+            <div class="field"><label>Property type</label>
+              <select id="rg-type">
+                <option value="residential_estate">Residential estate</option>
+                <option value="commercial_complex">Commercial complex</option>
+                <option value="industrial_park">Industrial park</option>
+                <option value="mixed_use">Mixed use</option>
+                <option value="individual_building">Individual building</option>
+              </select></div>
+            <div class="field"><label>Urgency</label>
+              <select id="rg-urgency"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="critical">Critical</option></select></div>
+          </div>
+
+          <div class="form-section-t">Location</div>
+          <div class="field"><label>Street address</label><input id="rg-addr" placeholder="e.g. 12 Admiralty Way"></div>
+          <div class="field-row">
+            <div class="field"><label>City <span class="req">*</span></label><input id="rg-city" placeholder="Lekki"></div>
+            <div class="field"><label>State</label><input id="rg-state" value="Lagos"></div>
+          </div>
+
+          <div class="form-section-t">Size &amp; scale <span class="opt">(optional — helps us plan coverage)</span></div>
+          <div class="field-row">
+            <div class="field"><label>Total area (sqm)</label><input id="rg-area" type="number" min="0" placeholder="e.g. 15000"></div>
+            <div class="field"><label>Est. population</label><input id="rg-pop" type="number" min="0" placeholder="e.g. 450"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Number of units</label><input id="rg-units" type="number" min="0" placeholder="e.g. 60"></div>
+            <div class="field"><label>Number of buildings</label><input id="rg-bldg" type="number" min="0" placeholder="e.g. 12"></div>
+          </div>
+
+          <div class="form-section-t">Drainage concern</div>
+          <div class="field"><label>What's the drainage concern? <span class="req">*</span></label><textarea id="rg-desc" rows="3" placeholder="e.g. Recurring flooding at the main gate after heavy rain; standing water along the east perimeter road"></textarea></div>
+
+          <div class="form-section-t">On-site contact <span class="opt">(who our team should reach)</span></div>
+          <div class="field-row">
+            <div class="field"><label>Contact name</label><input id="rg-cname" placeholder="e.g. Bayo Akinwale"></div>
+            <div class="field"><label>Role</label><input id="rg-crole" placeholder="e.g. Facility Manager"></div>
+          </div>
+          <div class="field"><label>Contact phone</label><input id="rg-cphone" placeholder="e.g. +234 800 000 0000"></div>
+
+          <div class="form-section-t">Preferred inspection <span class="opt">(optional)</span></div>
+          <div class="field-row">
+            <div class="field"><label>Preferred date</label><input id="rg-idate" type="date"></div>
+            <div class="field"><label>Preferred time</label>
+              <select id="rg-itime"><option value="">No preference</option><option value="morning">Morning</option><option value="afternoon">Afternoon</option></select></div>
+          </div>
+
           <div id="rg-err" class="hint hidden" style="color:var(--alert)"></div>
         </div>
         <div class="modal-f">
           <button class="btn ghost" onclick="this.closest('.modal-bg').remove()">Cancel</button>
-          <button class="btn" id="rg-submit" onclick="App.submitRegister(this)">Submit</button>
+          <button class="btn" id="rg-submit" onclick="App.submitRegister(this)">Submit area</button>
         </div>
       </div>`;
     document.body.appendChild(bg);
@@ -308,27 +367,45 @@ const App = (function () {
 
   async function submitRegister(btn) {
     const g = id => document.getElementById(id);
-    const name = g('rg-name').value.trim();
-    const city = g('rg-city').value.trim();
+    const val = id => { const el = g(id); return el ? el.value.trim() : ''; };
+    const num = id => { const v = val(id); return v === '' ? undefined : Number(v); };
+    const name = val('rg-name');
+    const city = val('rg-city');
+    const desc = val('rg-desc');
     const err = g('rg-err');
-    if (!name || !city) {
-      err.textContent = 'Please add at least an area name and city.';
+    if (!name || !city || !desc) {
+      err.textContent = 'Please add an area name, city, and the drainage concern.';
       err.classList.remove('hidden'); return;
     }
     btn.disabled = true; btn.textContent = 'Submitting…';
+    const body = {
+      propertyName: name,
+      propertyType: g('rg-type').value,
+      addressLine1: val('rg-addr') || undefined,
+      city, state: val('rg-state'),
+      totalAreaSqm: num('rg-area'),
+      estimatedPopulation: num('rg-pop'),
+      numberOfUnits: num('rg-units'),
+      numberOfBuildings: num('rg-bldg'),
+      issueDescription: desc,
+      urgencyLevel: g('rg-urgency').value,
+      contactPersonName: val('rg-cname') || undefined,
+      contactPersonRole: val('rg-crole') || undefined,
+      contactPhone: val('rg-cphone') || undefined,
+      preferredInspectionDate: val('rg-idate') || undefined,
+      preferredInspectionTime: g('rg-itime').value || undefined,
+    };
+    // strip undefined so we only send provided fields
+    Object.keys(body).forEach(k => body[k] === undefined && delete body[k]);
     try {
-      await apiRequest('/properties', { method: 'POST', body: {
-        propertyName: name, propertyType: g('rg-type').value,
-        city, state: g('rg-state').value.trim(),
-        issueDescription: g('rg-desc').value.trim(), urgencyLevel: g('rg-urgency').value
-      }});
+      await apiRequest('/properties', { method: 'POST', body });
       document.querySelector('.modal-bg').remove();
       UI.toast('Area registered', 'success');
       go('properties');
     } catch (e) {
       err.textContent = e.message || 'Could not submit. Please try again.';
       err.classList.remove('hidden');
-      btn.disabled = false; btn.textContent = 'Submit';
+      btn.disabled = false; btn.textContent = 'Submit area';
     }
   }
 
