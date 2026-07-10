@@ -536,7 +536,7 @@ const Screens = (function () {
   // ---------------- ALERTS & INCIDENTS ----------------
   async function alerts(view) {
     view.innerHTML = `
-      <div class="top"><div><h1>Alerts &amp; incidents</h1><div class="sub">Severity-ranked alerts with full incident history</div></div></div>
+      <div class="top"><div><h1>Flood &amp; sensor alerts</h1><div class="sub">Real-time drainage and flood-risk events detected across your properties</div></div></div>
       ${demoBanner()}
       <div id="alert-kpis"></div>
       <div class="section-t">Active alerts</div>
@@ -730,7 +730,9 @@ const Screens = (function () {
                    </div>
                  ` : ''}
                </div>` : ''}`
-            : UI.state('awaiting', 'No inspection yet', 'An inspection will be scheduled after your area is reviewed.').replace('card', '')}
+            : (STATUS_FLOW.indexOf(p.status) >= STATUS_FLOW.indexOf('inspection_scheduled')
+                ? UI.state('awaiting', 'Inspection scheduled', 'Your inspection is being arranged. Team and timing details will appear here shortly.').replace('card', '')
+                : UI.state('awaiting', 'No inspection yet', 'An inspection will be scheduled after your area is reviewed.').replace('card', ''))}
           <h3 style="margin-top:22px">Recent invoices</h3>
           ${invoices.length
             ? `<div class="rows">${invoices.map(inv => {
@@ -752,7 +754,7 @@ const Screens = (function () {
   let _notifFilter = 'all';
   async function notifications(view) {
     view.innerHTML = `
-      <div class="top"><div><h1>Notifications</h1><div class="sub">Updates about your account and network</div></div>
+      <div class="top"><div><h1>Notifications</h1><div class="sub">Account and service updates — submissions, inspections, reports, and billing</div></div>
         <button class="btn ghost" onclick="App.markAllRead()">Mark all read</button></div>
       ${demoBanner()}
       <div style="display:flex;gap:8px;margin-bottom:16px">
@@ -800,12 +802,49 @@ const Screens = (function () {
   }
   function setNotifFilter(f) { _notifFilter = f; }
 
+  // A single inspection report presented as a deliverable
+  function reportCard(r) {
+    const score = r.drainage_condition_score;
+    const risk = r.flood_risk_level;
+    const riskKind = risk === 'high' || risk === 'critical' ? 'alert' : risk === 'moderate' || risk === 'medium' ? 'warn' : 'ok';
+    const scoreColor = score == null ? 'var(--ink-3)' : score >= 70 ? 'var(--ok)' : score >= 40 ? 'var(--warn)' : 'var(--alert)';
+    const findings = r.findings || r.executive_summary;
+    const sent = r.sent_to_client_at || r.created_at;
+    const isReady = (r.status === 'sent' || r.status === 'approved' || r.status === 'completed' || r.sent_to_client_at);
+    return `
+      <div class="card panel-pad" style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px">
+          <div style="min-width:0">
+            <b style="font-family:var(--ff-d);font-size:15px">Inspection report</b>
+            <div class="sub" style="margin-top:2px">${UI.esc(r.property_name || r.property_id || '')} · ${UI.fmtDate(sent)}</div>
+          </div>
+          ${isReady
+            ? UI.chip('ok', 'Ready')
+            : UI.chip('warn', cap(r.status || 'In progress'))}
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+          ${score != null ? `<div class="rep-metric"><div class="l">Drainage score</div><div class="v" style="color:${scoreColor}">${score}<span style="font-size:12px;color:var(--ink-3)">/100</span></div></div>` : ''}
+          ${risk ? `<div class="rep-metric"><div class="l">Flood risk</div><div class="v">${UI.chip(riskKind, cap(String(risk)))}</div></div>` : ''}
+        </div>
+
+        ${findings ? `<div style="margin-bottom:10px"><div class="lbl" style="margin:0 0 4px">Findings</div><p style="font-size:13.5px;color:var(--ink-2);line-height:1.55;margin:0">${UI.esc(findings)}</p></div>` : ''}
+        ${r.recommendations ? `<div style="margin-bottom:14px"><div class="lbl" style="margin:0 0 4px">Recommendations</div><p style="font-size:13.5px;color:var(--ink-2);line-height:1.55;margin:0">${UI.esc(r.recommendations)}</p></div>` : ''}
+
+        <div style="display:flex;gap:10px;border-top:1px solid var(--line);padding-top:14px">
+          ${isReady
+            ? `<button class="btn" onclick="App.downloadReport('${UI.esc(r.report_id || '')}')">Download PDF</button>
+               <button class="btn ghost" onclick="App.openProperty('${UI.esc(r.property_id || '')}')">View property</button>`
+            : `<span class="sub">This report is being finalised — you'll be notified when it's ready to download.</span>`}
+        </div>`;
+  }
+
   // ---------------- REPORTS & DOCUMENTS ----------------
   async function reports(view) {
     view.innerHTML = `
-      <div class="top"><div><h1>Reports &amp; documents</h1><div class="sub">Inspection reports, incident records, and documents FlowGuard sends you</div></div></div>
+      <div class="top"><div><h1>Reports &amp; documents</h1><div class="sub">Your inspection reports and drainage assessments — findings, scores, and recommendations</div></div></div>
       ${demoBanner()}
-      <div class="card panel-pad" id="rep-list">${UI.loading(3)}</div>`;
+      <div id="rep-list">${UI.loading(3)}</div>`;
     let items;
     if (Demo.isOn()) items = Demo.data.reports;
     else { try { const r = await apiRequest('/field-reports?limit=100'); items = (r && r.data) || []; } catch (_) { items = null; } }
@@ -813,13 +852,7 @@ const Screens = (function () {
     if (items === null) {
       el.innerHTML = UI.state('error', "Couldn't load your reports", 'Please check your connection and try again.', 'Retry', "onclick=\"App.go('reports')\"");
     } else if (items && items.length) {
-      el.innerHTML = items.map(r => `
-        <div class="doc">
-          <div class="dic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons.doc}</svg></div>
-          <div class="dmain"><b>${UI.esc(r.title || r.report_type || 'Inspection report')}</b>
-            <small>${UI.esc(r.property_name || r.property_id || '')} · ${UI.fmtDate(r.created_at || r.sent_at)}${r.status ? ' · ' + UI.esc(cap(r.status)) : ''}</small></div>
-          <div class="dl"><a onclick="App.viewReport('${UI.esc(r.report_id || r.id || '')}')" style="cursor:pointer">Open</a></div>
-        </div>`).join('');
+      el.innerHTML = items.map(reportCard).join('');
     } else {
       el.className = '';
       el.innerHTML = UI.state('empty', 'No reports yet',

@@ -73,9 +73,15 @@ const Demo = (function () {
   ];
 
   const reports = [
-    { report_id: 'RPT-1', title: 'Initial drainage inspection', property_name: 'Sunrise Court Estate', status: 'completed', created_at: '2026-07-08' },
-    { report_id: 'RPT-2', title: 'Channel capacity assessment', property_name: 'Sunrise Court Estate', status: 'completed', created_at: '2026-07-08' },
-    { report_id: 'RPT-3', title: 'Monthly monitoring summary — June', property_name: 'Palm Gardens', status: 'sent', created_at: '2026-06-30' }
+    { report_id: 'RPT-1', title: 'Initial drainage inspection', property_name: 'Sunrise Court Estate', status: 'sent', sent_to_client_at: '2026-07-08', created_at: '2026-07-08',
+      drainage_condition_score: 72, flood_risk_level: 'moderate',
+      findings: 'Primary channels are clear and flowing well. Two secondary drains along the east perimeter show early silt accumulation (approx. 30% capacity reduction). Gate-area gulley is functioning but would benefit from a debris screen.',
+      recommendations: 'Schedule silt clearing for the east perimeter drains within 3 weeks. Install a debris screen at the main gate gulley before peak rainfall. Continue monthly sensor monitoring.' },
+    { report_id: 'RPT-2', title: 'Channel capacity assessment', property_name: 'Sunrise Court Estate', status: 'sent', sent_to_client_at: '2026-07-08', created_at: '2026-07-08',
+      drainage_condition_score: 58, flood_risk_level: 'high',
+      findings: 'Main outfall channel is operating near capacity during heavy rainfall. Downstream constriction identified at the road culvert crossing.',
+      recommendations: 'Prioritise clearing of the road culvert. Consider a Tier-2 upgrade for automated flow monitoring at the outfall.' },
+    { report_id: 'RPT-3', title: 'Monthly monitoring summary — June', property_name: 'Palm Gardens', status: 'in_progress', created_at: '2026-06-30' }
   ];
 
   const services = [

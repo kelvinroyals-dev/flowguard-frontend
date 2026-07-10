@@ -185,6 +185,11 @@ const App = (function () {
     // Reports open in a modal (placeholder until a report-detail endpoint exists)
     UI.toast('Report viewing opens the full document — coming with the reports backend.', 'info');
   }
+  function downloadReport(id) {
+    // PDF generation endpoint not built yet — honest placeholder.
+    // The report's findings, score and recommendations are already shown on the card.
+    UI.toast('PDF download is coming soon — your full findings are shown above in the meantime.', 'info');
+  }
 
   // ---- Notifications actions ----
   function setNotifFilter(f) { Screens.setNotifFilter(f); go('notifications'); }
@@ -450,7 +455,7 @@ const App = (function () {
     } catch (_) { /* keep cached */ }
   }
 
-  return { go, openProperty, openSensor, setSensorRange, monSearch, monFilter, monMetric, viewReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings, changePassword,
+  return { go, openProperty, openSensor, setSensorRange, monSearch, monFilter, monMetric, viewReport, downloadReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings, changePassword,
            openTicketDetail, sendReply, openInvoice, payInvoice, selectServices, confirmServices, deactivateAccount, confirmDeactivate,
            setNotifFilter, markRead, markAllRead, deleteNotif, setTicketFilter, openTicket, submitTicket, init };
 })();
