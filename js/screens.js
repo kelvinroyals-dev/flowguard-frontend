@@ -92,6 +92,59 @@ const Screens = (function () {
       </div>`;
   }
 
+  // ---- Seasonal readiness (Lagos: rains Apr–Jul, second peak Sep–Oct) ----
+  function renderSeasonal() {
+    const el = document.getElementById('ov-season');
+    if (!el) return;
+    const m = new Date().getMonth() + 1; // 1-12
+    let title = null, body = '';
+    if (m === 3 || m === 8) {
+      title = 'Rainy season is approaching';
+      body = 'Lagos rains typically intensify next month. A pre-season inspection catches silt buildup and blockages before they become flooding.';
+    } else if ((m >= 4 && m <= 7) || m === 9 || m === 10) {
+      title = 'Rainy season readiness';
+      body = 'Peak rainfall period is here. Your network is monitored 24/7 — if you\'ve noticed slow drainage or pooling anywhere, flag it early.';
+    }
+    if (!title) { el.innerHTML = ''; return; }
+    el.innerHTML = `
+      <div class="season-strip">
+        <div style="min-width:0">
+          <b>${title}</b>
+          <p>${body}</p>
+        </div>
+        <button class="btn sm" style="flex-shrink:0" onclick="App.openTicket('general','Pre-rain readiness inspection request','normal')">Book readiness check</button>
+      </div>`;
+  }
+
+  // ---- Lagos flood-prone zone context (from FlowGuard's verified zone list) ----
+  const FLOOD_ZONES = [
+    ['lekki', 'Lekki', 'high'], ['ajah', 'Ajah', 'high'], ['victoria island', 'Victoria Island', 'high'],
+    ['ikoyi', 'Ikoyi', 'moderate'], ['agungi', 'Agungi', 'high'], ['osapa', 'Osapa London', 'high'],
+    ['ikota', 'Ikota', 'high'], ['chevron', 'Chevron Drive', 'high'], ['dolphin', 'Dolphin Estate', 'high'],
+    ['surulere', 'Surulere', 'moderate'], ['gbagada', 'Gbagada', 'moderate'], ['ketu', 'Ketu', 'high'],
+    ['mile 12', 'Mile 12', 'high'], ['agiliti', 'Agiliti', 'high'], ['ajegunle', 'Ajegunle', 'high'],
+    ['isolo', 'Isolo', 'moderate'], ['okota', 'Okota', 'moderate'], ['amuwo', 'Amuwo-Odofin', 'high'],
+    ['festac', 'Festac Town', 'moderate']
+  ];
+  function zoneContextBlock(p) {
+    const hay = `${p.city || ''} ${p.address_line1 || ''} ${p.property_name || ''}`.toLowerCase();
+    const zone = FLOOD_ZONES.find(z => hay.includes(z[0]));
+    if (!zone) return '';
+    const high = zone[2] === 'high';
+    return `
+      <div class="panel panel-pad" style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <h3 style="margin:0">Flood zone context</h3>
+          ${UI.chip(high ? 'alert' : 'warn', (high ? 'High' : 'Moderate') + '-risk zone')}
+        </div>
+        <p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0">
+          ${UI.esc(zone[1])} is one of Lagos's ${high ? 'highest' : 'recognised'}-risk flood corridors.
+          Your estate's drainage is actively managed and monitored — most surrounding properties in this zone are not.
+          Managed drainage significantly reduces flood exposure during peak rainfall.
+        </p>
+      </div>`;
+  }
+
   async function overview(view) {
     const user = Auth.getUser() || {};
     const name = (user.fullName || user.full_name || '').split(' ')[0] || 'there';
@@ -107,6 +160,7 @@ const Screens = (function () {
       <div id="ov-journey"></div>
       <div id="ov-kpis"></div>
       <div id="ov-weather"></div>
+      <div id="ov-season"></div>
       <div class="section-t">Live monitoring <a onclick="App.go('monitoring')" style="cursor:pointer">View all →</a></div>
       <div id="ov-mon">${UI.loading(2)}</div>
       <div class="section-t">Your FlowGuard services</div>
@@ -142,6 +196,7 @@ const Screens = (function () {
 
     // ---- Weather context (Open-Meteo, free, no key) ----
     renderWeather(props);
+    renderSeasonal();
 
     // ---- Property health score (computed from data already loaded) ----
     const health = computeHealth(reports, risk, alerts);
@@ -663,9 +718,22 @@ const Screens = (function () {
     const sevMap = { critical: ['alert', 'Critical'], warning: ['warn', 'Warning'], info: ['ok', 'Info'], success: ['ok', 'Resolved'] };
     const [sk, sl] = sevMap[a.severity] || ['ok', 'Info'];
     const ic = a.severity === 'critical' || a.severity === 'warning' ? icons.warn : icons.check;
+    const active = a.status === 'active';
+    const subj = (a.title || 'Alert').replace(/'/g, '');
+    const actions = !active ? '' :
+      a.severity === 'critical'
+        ? `<div class="alert-actions">
+             <button class="btn sm" onclick="event.stopPropagation();App.openTicket('emergency','Emergency dispatch: ${UI.esc(subj)}','urgent')">Request dispatch</button>
+             <button class="btn ghost sm" onclick="event.stopPropagation();App.openTicket('general','Escalation: ${UI.esc(subj)}','high')">Escalate</button>
+           </div>`
+        : a.severity === 'warning'
+        ? `<div class="alert-actions">
+             <button class="btn ghost sm" onclick="event.stopPropagation();App.openTicket('dispatch','Dispatch request: ${UI.esc(subj)}','high')">Request dispatch</button>
+           </div>`
+        : '';
     return `<div class="evt ${sk === 'alert' ? 'alert' : sk === 'warn' ? 'warn' : 'ok'}">
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ic}</svg></div>
-      <div style="flex:1"><b>${UI.esc(a.title)}</b><small>${UI.esc(a.description)}</small></div>
+      <div style="flex:1"><b>${UI.esc(a.title)}</b><small>${UI.esc(a.description)}</small>${actions}</div>
       <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
         ${UI.chip(sk, sl)}
         <span class="t">${UI.esc(a.status === 'resolved' && a.resolved_at ? 'Resolved ' + UI.fmtDate(a.resolved_at) : (a.created_at || ''))}</span>
@@ -813,6 +881,7 @@ const Screens = (function () {
       </div>
 
       ${reportedIssuesBlock(p)}
+      ${zoneContextBlock(p)}
       ${propertyProfileBlock(p)}
 
       <div class="cols wide">
