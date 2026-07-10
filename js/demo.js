@@ -146,13 +146,13 @@ const Demo = (function () {
   };
 
   const activity = [
-    { type: 'battery', title: 'Low battery — Marina Culvert (S-08)', sub: 'Battery at 8%, node stopped reporting', when: '3 hrs ago' },
-    { type: 'offline', title: 'Node S-08 went offline', sub: 'Field visit scheduled for 18 Jul maintenance window', when: '3 hrs ago' },
-    { type: 'dispatch', title: 'Heavy-plant dispatch ordered', sub: 'East Channel silt clearing — crew scheduled', when: 'Yesterday' },
-    { type: 'report', title: 'Inspection report published', sub: 'Drainage score 72/100 · moderate flood risk', when: '8 Jul' },
-    { type: 'team', title: 'Team arrived on site', sub: 'Sunrise Court Estate — initial drainage inspection', when: '8 Jul' },
-    { type: 'inspection', title: 'Inspection scheduled', sub: 'Confirmed for 8 Jul, morning window', when: '6 Jul' },
-    { type: 'invoice', title: 'Invoice issued — ₦185,000', sub: 'July monitoring & maintenance', when: '4 Jul' }
+    { type: 'dispatch', title: 'Bayo Akinwale requested heavy-plant dispatch', sub: 'East Channel silt clearing', when: 'Yesterday' },
+    { type: 'report', title: 'FlowGuard Ops sent inspection report', sub: 'Sunrise Court Estate · score 72/100', when: '8 Jul' },
+    { type: 'team', title: 'Field Team Alpha checked in on site', sub: 'Sunrise Court Estate — initial inspection', when: '8 Jul' },
+    { type: 'inspection', title: 'FlowGuard Ops scheduled an inspection', sub: 'Confirmed for 8 Jul, morning window', when: '6 Jul' },
+    { type: 'payment', title: 'Payment attempted — ₦185,000', sub: 'July invoice · successful', when: '4 Jul' },
+    { type: 'property', title: 'Bayo Akinwale updated property details', sub: 'Sunrise Court Estate', when: '3 Jul' },
+    { type: 'property', title: 'Bayo Akinwale registered a new property', sub: 'Sunrise Court Estate · Lekki, Lagos', when: '20 Jun' }
   ];
 
   return { isOn, set, data: { activity, floodRisk, sensors, properties, invoices, alerts, timeline, reports, services, tickets, history, contract } };

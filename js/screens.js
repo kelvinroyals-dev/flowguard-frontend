@@ -178,7 +178,7 @@ const Screens = (function () {
       try { const r = await apiRequest('/monitoring/sensors'); sensors = (r && r.data) || []; } catch (_) { sensors = []; }
       try { const r = await apiRequest('/alerts'); alerts = (r && r.data) || []; } catch (_) { alerts = []; }
       try { const r = await apiRequest('/field-reports?limit=5'); reports = (r && r.data) || []; } catch (_) { reports = []; }
-      try { const r = await apiRequest('/notifications'); notifs = (r && r.data) || []; } catch (_) { notifs = []; }
+      try { const r = await apiRequest('/audit-logs/mine?limit=30'); notifs = (r && r.data) || []; } catch (_) { notifs = []; }
     }
 
     // ---- Journey hero (adapts to where the customer is) ----
@@ -261,31 +261,49 @@ const Screens = (function () {
       </div>`;
   }
 
-  // ---- Activity stream: merge account events (notifications) + live alerts ----
-  const ACT_ICON = { dispatch: 'truck', team: 'check', inspection: 'check', report: 'doc', invoice: 'bell', battery: 'warn', offline: 'warn', node: 'sensor', alert: 'warn', default: 'bell' };
+  // ---- Activity stream: audit log (actor · action · object) + alert-fired events ----
+  const ACT_ICON = { dispatch: 'truck', team: 'check', inspection: 'check', report: 'doc', invoice: 'bell', payment: 'bell', battery: 'warn', offline: 'warn', alert: 'warn', property: 'doc', ticket: 'bell', default: 'bell' };
   function classifyEvent(text) {
     const t = (text || '').toLowerCase();
     if (t.includes('dispatch')) return 'dispatch';
-    if (t.includes('team') || t.includes('arrived')) return 'team';
+    if (t.includes('team') || t.includes('arrived') || t.includes('checked in')) return 'team';
     if (t.includes('inspect')) return 'inspection';
     if (t.includes('report')) return 'report';
-    if (t.includes('invoice') || t.includes('payment')) return 'invoice';
+    if (t.includes('invoice') || t.includes('payment')) return 'payment';
     if (t.includes('battery')) return 'battery';
     if (t.includes('offline')) return 'offline';
+    if (t.includes('propert')) return 'property';
+    if (t.includes('ticket')) return 'ticket';
     return 'default';
   }
-  function buildActivity(notifs, alerts) {
+  function buildActivity(audit, alerts) {
     const ev = [];
-    (notifs || []).forEach(n => ev.push({
-      type: n.type || classifyEvent((n.title || '') + ' ' + (n.message || n.body || '')),
-      title: n.title || n.message || 'Update',
-      sub: n.title ? (n.message || n.body || '') : '',
-      when: n.when || n.created_at || ''
-    }));
+    // audit rows: "{actor} {action}" — the real activity stream
+    (audit || []).forEach(a => {
+      if (a.actor_name !== undefined || a.action) {
+        let ch = a.changes;
+        if (typeof ch === 'string') { try { ch = JSON.parse(ch); } catch (_) { ch = null; } }
+        const objName = ch && (ch.property_name || ch.subject) ? (ch.property_name || ch.subject) : (a.entity_id || '');
+        ev.push({
+          type: classifyEvent(a.action),
+          title: `${a.actor_name || 'System'} ${a.action}`,
+          sub: objName, ts: a.created_at,
+          when: a.created_at ? UI.fmtRelative(a.created_at) : (a.when || '')
+        });
+      } else {
+        ev.push(a); // demo entries come pre-shaped
+      }
+    });
+    // alert-fired events belong in the stream too (the alert itself lives on the Alerts screen)
     (alerts || []).filter(a => a.status === 'active').forEach(a => ev.push({
       type: classifyEvent((a.title || '') + ' ' + (a.description || '')),
-      title: a.title, sub: a.description, when: a.created_at || ''
+      title: `Alert fired: ${a.title}`, sub: a.description, ts: a.created_at,
+      when: a.created_at || ''
     }));
+    // sort by timestamp when we have real ones; demo arrays arrive pre-ordered
+    if (ev.some(e => e.ts && !isNaN(Date.parse(e.ts)))) {
+      ev.sort((x, y) => (Date.parse(y.ts) || 0) - (Date.parse(x.ts) || 0));
+    }
     return ev;
   }
   function activityEvent(e) {
