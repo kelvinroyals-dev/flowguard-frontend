@@ -178,30 +178,55 @@ const Screens = (function () {
       </div>`;
   }
 
-  // ---- Health trend: 90-day score history ----
-  function healthTrendBlock(hist) {
+  // ---- Health trend: 90-day score history with bands + event markers ----
+  function healthTrendBlock(hist, events) {
     if (!hist || hist.length < 2) return '';
     const vals = hist.map(h => Number(h.score));
     const first = vals[0], last = vals[vals.length - 1];
     const delta = last - first;
     const color = last >= 75 ? 'var(--ok)' : last >= 50 ? 'var(--warn)' : 'var(--alert)';
-    const w = 640, h = 120, pad = 8;
-    const max = Math.max(...vals, 100), min = Math.min(...vals, 0);
-    const x = i => pad + (i * (w - pad * 2)) / (vals.length - 1);
-    const y = v => h - pad - ((v - min) * (h - pad * 2)) / (max - min || 1);
+    const w = 640, h = 190, padL = 30, padR = 64, padT = 10, padB = 24;
+    const max = 100, min = Math.max(0, Math.min(...vals) - 10);
+    const x = i => padL + (i * (w - padL - padR)) / (vals.length - 1);
+    const y = v => padT + (1 - (v - min) / (max - min)) * (h - padT - padB);
     const path = vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    // threshold bands: Good ≥75, Fair 50–75, Poor <50
+    const band = (top, bot, c, lbl) => `<rect x="${padL}" y="${y(top)}" width="${w - padL - padR}" height="${(y(Math.max(bot, min)) - y(top)).toFixed(1)}" fill="${c}" fill-opacity=".05"/><text x="${w - padR + 6}" y="${y((top + Math.max(bot, min)) / 2) + 3}" fill="${c}" font-size="10">${lbl}</text>`;
+    const bands = band(100, 75, 'var(--ok)', 'Good') + band(75, 50, 'var(--warn)', 'Fair') + (min < 50 ? band(50, min, 'var(--alert)', 'Poor') : '');
+    // y gridlines
+    const grid = [50, 75].filter(g => g > min).map(g => `<line x1="${padL}" y1="${y(g)}" x2="${w - padR}" y2="${y(g)}" stroke="var(--line)" stroke-width="1" stroke-dasharray="2 3"/><text x="${padL - 5}" y="${y(g) + 3}" fill="var(--ink-3)" font-size="10" text-anchor="end">${g}</text>`).join('');
+    // event markers (silt clearings, dispatches, refills) pinned to their dates
+    let markers = '';
+    (events || []).forEach(ev => {
+      const evDate = new Date(ev.occurred_at || ev.date).toISOString().slice(0, 10);
+      const idx = hist.findIndex(hh => String(hh.recorded_at).slice(0, 10) >= evDate);
+      if (idx < 0) return;
+      const lbl = ev.label || String(ev.event_type || '').replace(/_/g, ' ');
+      markers += `<line x1="${x(idx)}" y1="${y(vals[idx])}" x2="${x(idx)}" y2="${h - padB}" stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="2 3" opacity=".5"/>
+        <circle cx="${x(idx)}" cy="${y(vals[idx])}" r="4.5" fill="var(--brand)" stroke="var(--surface)" stroke-width="2"><title>${UI.esc(lbl)}</title></circle>
+        <text x="${x(idx)}" y="${y(vals[idx]) - 9}" fill="var(--ink-2)" font-size="9.5" text-anchor="middle">${UI.esc(lbl)}</text>`;
+    });
+    const startLbl = UI.fmtDate(hist[0].recorded_at);
+    const midLbl = UI.fmtDate(hist[Math.floor(hist.length / 2)].recorded_at);
+    const endLbl = 'Today';
     return `
       <div class="panel panel-pad mb-20">
         <div class="row-between mb-10">
           <h3 style="margin:0">Health trend</h3>
           <span style="font-weight:600;font-size:13px;color:${delta >= 0 ? 'var(--ok)' : 'var(--alert)'}">${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)} pts · 90 days</span>
         </div>
-        <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto" preserveAspectRatio="none" role="img" aria-label="Drainage health trend">
-          <path d="${path} L${x(vals.length - 1).toFixed(1)},${h - pad} L${x(0).toFixed(1)},${h - pad} Z" fill="${color}" fill-opacity=".08"/>
+        <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto" role="img" aria-label="Drainage health trend">
+          ${bands}${grid}
+          <path d="${path} L${x(vals.length - 1).toFixed(1)},${y(min)} L${x(0).toFixed(1)},${y(min)} Z" fill="${color}" fill-opacity=".08"/>
           <path d="${path}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+          ${markers}
+          <circle cx="${x(vals.length - 1)}" cy="${y(last)}" r="4.5" fill="${color}" stroke="var(--surface)" stroke-width="2"/>
+          <text x="${padL}" y="${h - 6}" fill="var(--ink-3)" font-size="10">${startLbl}</text>
+          <text x="${(padL + w - padR) / 2}" y="${h - 6}" fill="var(--ink-3)" font-size="10" text-anchor="middle">${midLbl}</text>
+          <text x="${w - padR}" y="${h - 6}" fill="var(--ink-3)" font-size="10" text-anchor="end">${endLbl}</text>
         </svg>
-        <div class="row-between" style="margin-top:6px">
-          <span class="muted" style="font-size:12px">${UI.fmtDate(hist[0].recorded_at)}</span>
+        <div class="row-between" style="margin-top:4px">
+          <span class="muted" style="font-size:12px">Markers show completed work — clearings, dispatches, refills.</span>
           <b style="font-size:13px;color:${color}">Now: ${last}/100</b>
         </div>
       </div>`;
@@ -631,7 +656,7 @@ const Screens = (function () {
     if (!ch) return;
     if (_monHist.series && _monHist.series.length > 1) {
       const isFlow = _monMetric === 'flow';
-      ch.innerHTML = `${UI.lineChart(_monHist.series, { metric: _monMetric })}
+      ch.innerHTML = `${UI.lineChart(_monHist.series, { metric: _monMetric, threshold: _monMetric === 'flow' ? null : { v: 70, label: 'Alert' } })}
         <div style="display:flex;gap:18px;margin-top:10px;font-size:12px;color:var(--ink-3)">
           <span><span style="display:inline-block;width:14px;height:3px;background:var(--brand);vertical-align:middle;margin-right:5px"></span>${isFlow ? 'Flow rate (L/s)' : 'Average level'}</span>
           ${isFlow ? '' : '<span><span style="display:inline-block;width:14px;height:0;border-top:2px dashed var(--warn);vertical-align:middle;margin-right:5px"></span>Peak level</span>'}
@@ -1064,7 +1089,7 @@ const Screens = (function () {
 
       ${reportedIssuesBlock(p)}
       ${outcomesBlock(outcomes, p)}
-      ${healthTrendBlock(healthHist)}
+      ${healthTrendBlock(healthHist, (outcomes && outcomes.recent_events) || [])}
       ${zoneContextBlock(p)}
       ${propertyProfileBlock(p)}
 
@@ -1281,6 +1306,75 @@ const Screens = (function () {
   let _fcRange = 7; // days; Open-Meteo free forecast caps at 16
   function setFcRange(d) { _fcRange = d; App.go('forecast'); }
 
+  // 48-hour hourly risk curve — color-graded with peak-risk window
+  async function hourlyRiskChart(allProps, vulnerability) {
+    let hours;
+    if (Demo.isOn()) {
+      const now = new Date(); now.setMinutes(0, 0, 0);
+      hours = Array.from({ length: 48 }, (_, i) => {
+        const t = new Date(now.getTime() + i * 3600e3);
+        const hr = t.getHours();
+        // storm building tomorrow afternoon
+        const tomorrowPm = i >= 24 && hr >= 12 && hr <= 19;
+        const mm = tomorrowPm ? 2.4 + Math.sin((hr - 12) / 7 * Math.PI) * 2.6 : Math.max(0, Math.sin(i / 9) * 0.7);
+        return { t, mm: Math.round(mm * 10) / 10, prob: Math.min(95, Math.round(mm * 22 + 12)) };
+      });
+    } else {
+      const cur = resolveActive(allProps);
+      const sel = (allProps || []).find(p => p.property_id === cur);
+      const p0 = sel && sel.latitude ? sel : ((allProps || []).find(x => x.latitude) || {});
+      const lat = p0.latitude || 6.4478, lon = p0.longitude || 3.5476;
+      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation,precipitation_probability&timezone=Africa%2FLagos&forecast_hours=48`);
+      const j = await r.json();
+      hours = j.hourly.time.map((t, i) => ({ t: new Date(t), mm: j.hourly.precipitation[i] || 0, prob: j.hourly.precipitation_probability[i] || 0 }));
+    }
+    const pts = hours.map(hh => {
+      const mmFactor = Math.min(100, hh.mm * 18); // hourly mm saturates faster than daily
+      const chance = Math.round(Math.min(96, Math.max(2, vulnerability * 0.4 + mmFactor * 0.45 + hh.prob * 0.15)));
+      return { ...hh, chance, level: chance >= 65 ? 'high' : chance >= 35 ? 'moderate' : 'low' };
+    });
+    // peak window: contiguous hours at the highest level present
+    const maxC = Math.max(...pts.map(p => p.chance));
+    const peakThresh = Math.max(35, maxC - 10);
+    let ws = -1, we = -1;
+    pts.forEach((p, i) => { if (p.chance >= peakThresh) { if (ws < 0) ws = i; we = i; } });
+    // svg
+    const w = 680, h = 200, padL = 34, padR = 10, padT = 26, padB = 26;
+    const x = i => padL + (i * (w - padL - padR)) / (pts.length - 1);
+    const y = v => padT + (1 - v / 100) * (h - padT - padB);
+    const seg = (a, b, color) => `<path d="${pts.slice(a, b + 1).map((p, k) => `${k ? 'L' : 'M'}${x(a + k).toFixed(1)},${y(p.chance).toFixed(1)}`).join(' ')}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>`;
+    let segs = '', si = 0;
+    for (let i = 1; i <= pts.length; i++) {
+      if (i === pts.length || pts[i].level !== pts[si].level) { segs += seg(si, Math.min(i, pts.length - 1), FC_COLOR[pts[si].level]); si = i; }
+    }
+    const area = `M${pts.map((p, i) => `${i ? 'L' : ''}${x(i).toFixed(1)},${y(p.chance).toFixed(1)}`).join(' ')} L${x(pts.length - 1)},${y(0)} L${x(0)},${y(0)} Z`;
+    const grid = [25, 50, 75].map(g => `<line x1="${padL}" y1="${y(g)}" x2="${w - padR}" y2="${y(g)}" stroke="var(--line)" stroke-width="1"/><text x="${padL - 5}" y="${y(g) + 3}" fill="var(--ink-3)" font-size="10" text-anchor="end">${g}%</text>`).join('');
+    const xt = pts.map((p, i) => ({ p, i })).filter(({ p, i }) => p.t.getHours() % 6 === 0 && i % 3 === 0);
+    const xlabels = xt.map(({ p, i }) => `<text x="${x(i)}" y="${h - 8}" fill="var(--ink-3)" font-size="10" text-anchor="middle">${p.t.getHours() === 0 ? p.t.toLocaleDateString('en-GB', { weekday: 'short' }) : p.t.getHours() + ':00'}</text>`).join('');
+    const windowBand = ws >= 0 && we > ws ? `<rect x="${x(ws)}" y="${padT}" width="${(x(we) - x(ws)).toFixed(1)}" height="${h - padT - padB}" fill="var(--alert)" fill-opacity=".07"/>
+      <line x1="${x(ws)}" y1="${padT}" x2="${x(ws)}" y2="${h - padB}" stroke="var(--alert)" stroke-width="1" stroke-dasharray="3 3" opacity=".6"/>
+      <line x1="${x(we)}" y1="${padT}" x2="${x(we)}" y2="${h - padB}" stroke="var(--alert)" stroke-width="1" stroke-dasharray="3 3" opacity=".6"/>
+      <text x="${(x(ws) + x(we)) / 2}" y="${padT - 8}" fill="var(--alert)" font-size="10.5" font-weight="600" text-anchor="middle">Peak risk window</text>` : '';
+    const peak = pts[ws >= 0 ? Math.round((ws + we) / 2) : 0];
+    const windowLbl = ws >= 0 ? `${pts[ws].t.toLocaleDateString('en-GB', { weekday: 'long' })} ${pts[ws].t.getHours()}:00–${pts[we].t.getHours()}:00` : '';
+    const totRain = Math.round(pts.slice(Math.max(0, ws), we + 1).reduce((sm, p) => sm + p.mm, 0));
+    const insight = maxC >= 35
+      ? `Risk peaks <b>${windowLbl}</b> (${maxC}%) — ~${totRain}mm expected in that window against your current drainage health.`
+      : `No significant risk build-up in the next 48 hours — rainfall stays light against your current drainage health.`;
+    const legend = ['low', 'moderate', 'high'].map(l => `<span><i style="display:inline-block;width:14px;height:3px;background:${FC_COLOR[l]};border-radius:2px;vertical-align:middle;margin-right:5px"></i>${FC_WORD[l]} ${l === 'low' ? '(0–34%)' : l === 'moderate' ? '(35–64%)' : '(65%+)'}</span>`).join('');
+    return `
+      <div class="panel panel-pad mb-20">
+        <div class="row-between mb-10"><h3 style="margin:0">Next 48 hours</h3><span class="muted" style="font-size:12px">Hourly flood chance</span></div>
+        <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto" role="img" aria-label="Hourly flood risk, next 48 hours">
+          ${grid}${windowBand}
+          <path d="${area}" fill="var(--brand)" fill-opacity=".05"/>
+          ${segs}${xlabels}
+        </svg>
+        <div style="display:flex;gap:16px;margin-top:6px;font-size:11px;color:var(--ink-3);flex-wrap:wrap">${legend}</div>
+        <div style="margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--surface-2);font-size:13px;color:var(--ink-2);line-height:1.5">${insight}</div>
+      </div>`;
+  }
+
   async function forecast(view) {
     const allProps = await getMyProperties();
     view.innerHTML = `
@@ -1364,6 +1458,8 @@ const Screens = (function () {
         <div class="fc-grid">${rows.map(fcDayCell).join('')}</div>
       </div>
 
+      <div id="fc-hourly"></div>
+
       <div class="cols">
         <div class="panel panel-pad">
           <h3 style="margin:0 0 14px">Contributing factors</h3>
@@ -1375,6 +1471,7 @@ const Screens = (function () {
         </div>
       </div>
       <p class="muted" style="margin-top:14px">How this works: each day blends your drainage health (40%), forecast rainfall volume (45%), and rain probability (15%). Forecast data: Open-Meteo, updated hourly. Improving your drainage score lowers every day's risk.</p>`;
+    try { document.getElementById('fc-hourly').innerHTML = await hourlyRiskChart(allProps, vulnerability); } catch (_) {}
   }
 
   // ---------------- REPORTS & DOCUMENTS ----------------
@@ -1479,7 +1576,7 @@ const Screens = (function () {
       <div class="panel panel-pad">
         <h3 style="font-family:var(--ff-d);font-size:16px;margin-bottom:4px">Water level trend</h3>
         <p style="color:var(--ink-3);font-size:12px;margin-bottom:16px">${rangeLabel}</p>
-        ${UI.lineChart(d.series || [])}
+        ${UI.lineChart(d.series || [], { threshold: { v: 70, label: 'Alert' } })}
       </div>`;
   }
   function setSensorRange(h, sensorId) { _sensorRange = h; }

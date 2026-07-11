@@ -127,7 +127,7 @@ const Demo = (function () {
     const now = Date.now();
     const series = Array.from({ length: 24 }, (_, i) => {
       const base = 25 + Math.sin(i / 3) * 12 + (i > 16 ? (i - 16) * 2 : 0);
-      return { t: new Date(now - (23 - i) * 3600e3).toISOString(), avg: Math.round(base), peak: Math.round(base + 8) };
+      return { t: new Date(now - (23 - i) * 3600e3).toISOString(), avg: Math.round(base), peak: Math.round(base + 8), flow: Math.round((9 + Math.sin(i / 2.5) * 4 + (i > 16 ? (i - 16) * 1.2 : 0)) * 10) / 10 };
     });
     const names = ['Main Gate', 'North Culvert', 'East Channel', 'South Drain'];
     const log = Array.from({ length: 20 }, (_, i) => ({
@@ -158,6 +158,10 @@ const Demo = (function () {
   const outcomes = {
     protected_since: '2026-06-20', days_since_flood: 20, flood_free_basis: 'monitoring_start',
     clearings: 2, dispatches: 2, refills: 1, incidents_prevented: 3, maintenance_visits: 2,
+    recent_events: [
+      { event_type: 'silt_clearing', label: 'Clearing', occurred_at: new Date(Date.now() - 52 * 864e5).toISOString() },
+      { event_type: 'silt_clearing', label: 'Clearing + refill', occurred_at: new Date(Date.now() - 21 * 864e5).toISOString() },
+    ],
   };
   // 90-day health series: rough start, dips when East Channel silted, climbing since clearings
   const healthHistory = (() => {

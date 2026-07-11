@@ -185,29 +185,56 @@ const UI = (function () {
   // Self-contained SVG chart. series: [{t, avg, peak, flow}]. opts.metrics: which lines to draw.
   function lineChart(series, opts = {}) {
     if (!series || series.length < 2) return '<div style="color:var(--ink-3);font-size:13px;padding:20px 0">Not enough data to chart yet.</div>';
-    const metric = opts.metric || 'level'; // 'level' or 'flow'
-    const w = 640, h = 180, pad = 24;
+    const metric = opts.metric || 'level';
+    const w = 640, h = 200, padL = 34, padR = 10, padT = 12, padB = 26;
     const key = metric === 'flow' ? 'flow' : 'avg';
-    const vals = series.map(d => d[key] != null ? d[key] : 0);
-    const peaks = metric === 'flow' ? vals : series.map(d => d.peak != null ? d.peak : d.avg);
-    const max = Math.max(...peaks, metric === 'flow' ? 20 : 50), min = 0;
-    const x = i => pad + (i * (w - pad * 2)) / (series.length - 1);
-    const y = v => h - pad - ((v - min) / (max - min)) * (h - pad * 2);
-    const line = vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
-    const area = `${line} L${x(series.length - 1).toFixed(1)} ${h - pad} L${x(0).toFixed(1)} ${h - pad} Z`;
+    const vals = series.map(d => d[key] != null ? Number(d[key]) : null);
+    if (vals.every(v => v == null || v === 0)) return '<div style="color:var(--ink-3);font-size:13px;padding:20px 0">No ' + (metric === 'flow' ? 'flow' : 'level') + ' readings in this window yet.</div>';
+    const nums = vals.map(v => v || 0);
+    const peaks = metric === 'flow' ? nums : series.map(d => d.peak != null ? Number(d.peak) : Number(d.avg) || 0);
+    const thr = opts.threshold; // {v, label}
+    const hi = Math.max(...peaks, thr ? thr.v : 0, metric === 'flow' ? 20 : 50);
+    const max = Math.ceil(hi / 10) * 10, min = 0;
+    const x = i => padL + (i * (w - padL - padR)) / (series.length - 1);
+    const y = v => padT + (1 - (v - min) / (max - min)) * (h - padT - padB);
+    const path = arr => arr.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+    const line = path(nums);
+    const area = `${line} L${x(series.length - 1).toFixed(1)} ${y(0)} L${x(0).toFixed(1)} ${y(0)} Z`;
     const showPeak = metric !== 'flow';
-    const peakLine = showPeak ? peaks.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ') : '';
-    const unit = metric === 'flow' ? '' : '%';
-    const grid = (metric === 'flow' ? [0, 10, 20] : [0, 25, 50]).map(g => `<line x1="${pad}" y1="${y(g)}" x2="${w - pad}" y2="${y(g)}" stroke="var(--line)" stroke-width="1"/><text x="2" y="${y(g) + 3}" fill="var(--ink-3)" font-size="10">${g}${unit}</text>`).join('');
-    return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto" preserveAspectRatio="none">
+    const unit = metric === 'flow' ? ' L/s' : '%';
+    // y gridlines at quarters
+    const steps = [0, .25, .5, .75, 1].map(f => Math.round(max * f));
+    const grid = [...new Set(steps)].map(g => `<line x1="${padL}" y1="${y(g)}" x2="${w - padR}" y2="${y(g)}" stroke="var(--line)" stroke-width="1"/><text x="${padL - 6}" y="${y(g) + 3}" fill="var(--ink-3)" font-size="10" text-anchor="end">${g}</text>`).join('');
+    // x time labels (5 ticks) from series[i].t
+    let xlabels = '';
+    if (series[0] && series[0].t) {
+      const ticks = [0, .25, .5, .75, 1].map(f => Math.round((series.length - 1) * f));
+      xlabels = [...new Set(ticks)].map(i => {
+        const d = new Date(series[i].t);
+        const lbl = isNaN(d) ? '' : d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        return `<text x="${x(i)}" y="${h - 8}" fill="var(--ink-3)" font-size="10" text-anchor="middle">${lbl}</text>`;
+      }).join('');
+    }
+    const thrLine = thr ? `<line x1="${padL}" y1="${y(thr.v)}" x2="${w - padR}" y2="${y(thr.v)}" stroke="var(--alert)" stroke-width="1.5" stroke-dasharray="2 4" opacity=".8"/><text x="${w - padR}" y="${y(thr.v) - 4}" fill="var(--alert)" font-size="10" text-anchor="end">${thr.label || 'Alert'} ${thr.v}${unit}</text>` : '';
+    const last = nums[nums.length - 1];
+    const dot = `<circle cx="${x(nums.length - 1)}" cy="${y(last)}" r="4" fill="var(--brand)" stroke="var(--surface)" stroke-width="2"/>`;
+    const legend = `<div style="display:flex;gap:16px;margin-top:6px;font-size:11px;color:var(--ink-3);flex-wrap:wrap">
+      <span><i style="display:inline-block;width:14px;height:3px;background:var(--brand);border-radius:2px;vertical-align:middle;margin-right:5px"></i>${metric === 'flow' ? 'Flow rate (L/s)' : 'Average level'}</span>
+      ${showPeak ? '<span><i style="display:inline-block;width:14px;border-top:2px dashed var(--warn);vertical-align:middle;margin-right:5px"></i>Peak level</span>' : ''}
+      ${thr ? `<span><i style="display:inline-block;width:14px;border-top:2px dotted var(--alert);vertical-align:middle;margin-right:5px"></i>${thr.label || 'Alert'} threshold</span>` : ''}
+      <span style="margin-left:auto;color:var(--ink)">Now: <b>${last}${unit}</b></span>
+    </div>`;
+    return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto">
       <defs><linearGradient id="ch" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="var(--brand)" stop-opacity="0.25"/><stop offset="1" stop-color="var(--brand)" stop-opacity="0"/>
+        <stop offset="0" stop-color="var(--brand)" stop-opacity="0.22"/><stop offset="1" stop-color="var(--brand)" stop-opacity="0"/>
       </linearGradient></defs>
-      ${grid}
+      ${grid}${xlabels}
       <path d="${area}" fill="url(#ch)"/>
-      ${showPeak ? `<path d="${peakLine}" fill="none" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.7"/>` : ''}
+      ${showPeak ? `<path d="${path(peaks)}" fill="none" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.75"/>` : ''}
+      ${thrLine}
       <path d="${line}" fill="none" stroke="var(--brand)" stroke-width="2.5" stroke-linejoin="round"/>
-    </svg>`;
+      ${dot}
+    </svg>${legend}`;
   }
 
   function fmtTime(d) {
