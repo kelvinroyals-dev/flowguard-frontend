@@ -1044,7 +1044,7 @@ const Screens = (function () {
         <div class="crumb" onclick="App.go('properties')">← My properties</div>
         <h1 id="pd-name">Loading…</h1><div class="sub" id="pd-loc"></div>
       </div>
-      <div id="pd-actions" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end"><button class="btn ghost" onclick="App.go('properties')">Back</button></div></div>
+      <div id="pd-actions" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end"></div></div>
       ${demoBanner()}
       <div id="pd-body">${UI.loading(3)}</div>`;
 
@@ -1239,7 +1239,7 @@ const Screens = (function () {
     let days;
     if (Demo.isOn()) {
       const d = i => new Date(Date.now() + i * 864e5);
-      const mm = [0.4, 5.8, 1.2, 0, 0, 12.5, 22.0, 8.4, 3.1, 0, 0.8, 15.6, 27.2, 6.0, 1.5, 0];
+      const mm = [2.1, 9.4, 14.2, 4.0, 6.5, 24.5, 33.0, 12.4, 8.1, 3.0, 5.8, 27.6, 38.2, 11.0, 6.5, 2.0];
       days = Array.from({ length: horizon }, (_, i) => ({ date: d(i), mm: mm[i % mm.length], prob: Math.min(95, Math.round(mm[i % mm.length] * 4 + 15)) }));
     } else {
       const cur = resolveActive(allProps);
@@ -1314,10 +1314,12 @@ const Screens = (function () {
       hours = Array.from({ length: 48 }, (_, i) => {
         const t = new Date(now.getTime() + i * 3600e3);
         const hr = t.getHours();
-        // storm building tomorrow afternoon
-        const tomorrowPm = i >= 24 && hr >= 12 && hr <= 19;
-        const mm = tomorrowPm ? 2.4 + Math.sin((hr - 12) / 7 * Math.PI) * 2.6 : Math.max(0, Math.sin(i / 9) * 0.7);
-        return { t, mm: Math.round(mm * 10) / 10, prob: Math.min(95, Math.round(mm * 22 + 12)) };
+        const stormToday = i < 24 && hr >= 15 && hr <= 20;
+        const stormTomorrow = i >= 24 && hr >= 12 && hr <= 19;
+        const mm = stormTomorrow ? 3.5 + Math.sin((hr - 12) / 7 * Math.PI) * 3.2
+                 : stormToday ? 1.6 + Math.sin((hr - 15) / 5 * Math.PI) * 1.4
+                 : Math.max(0, Math.sin(i / 9) * 0.9);
+        return { t, mm: Math.round(mm * 10) / 10, prob: Math.min(96, Math.round(mm * 20 + 14)) };
       });
     } else {
       const cur = resolveActive(allProps);
@@ -1329,37 +1331,43 @@ const Screens = (function () {
       hours = j.hourly.time.map((t, i) => ({ t: new Date(t), mm: j.hourly.precipitation[i] || 0, prob: j.hourly.precipitation_probability[i] || 0 }));
     }
     const pts = hours.map(hh => {
-      const mmFactor = Math.min(100, hh.mm * 18); // hourly mm saturates faster than daily
+      const mmFactor = Math.min(100, hh.mm * 18);
       const chance = Math.round(Math.min(96, Math.max(2, vulnerability * 0.4 + mmFactor * 0.45 + hh.prob * 0.15)));
       return { ...hh, chance, level: chance >= 65 ? 'high' : chance >= 35 ? 'moderate' : 'low' };
     });
-    // peak window: contiguous hours at the highest level present
     const maxC = Math.max(...pts.map(p => p.chance));
     const peakThresh = Math.max(35, maxC - 10);
     let ws = -1, we = -1;
     pts.forEach((p, i) => { if (p.chance >= peakThresh) { if (ws < 0) ws = i; we = i; } });
-    // svg
-    const w = 680, h = 200, padL = 34, padR = 10, padT = 26, padB = 26;
+
+    const w = 720, h = 250, padL = 40, padR = 14, padT = 40, padB = 30;
     const x = i => padL + (i * (w - padL - padR)) / (pts.length - 1);
     const y = v => padT + (1 - v / 100) * (h - padT - padB);
-    const seg = (a, b, color) => `<path d="${pts.slice(a, b + 1).map((p, k) => `${k ? 'L' : 'M'}${x(a + k).toFixed(1)},${y(p.chance).toFixed(1)}`).join(' ')}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>`;
+    const seg = (a2, b2, color) => `<path d="${pts.slice(a2, b2 + 1).map((p, k) => `${k ? 'L' : 'M'}${x(a2 + k).toFixed(1)},${y(p.chance).toFixed(1)}`).join(' ')}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
     let segs = '', si = 0;
     for (let i = 1; i <= pts.length; i++) {
       if (i === pts.length || pts[i].level !== pts[si].level) { segs += seg(si, Math.min(i, pts.length - 1), FC_COLOR[pts[si].level]); si = i; }
     }
+    const markers = pts.map((p, i) => i % 2 === 0 ? `<circle cx="${x(i).toFixed(1)}" cy="${y(p.chance).toFixed(1)}" r="2.6" fill="${FC_COLOR[p.level]}"/>` : '').join('');
     const area = `M${pts.map((p, i) => `${i ? 'L' : ''}${x(i).toFixed(1)},${y(p.chance).toFixed(1)}`).join(' ')} L${x(pts.length - 1)},${y(0)} L${x(0)},${y(0)} Z`;
-    const grid = [25, 50, 75].map(g => `<line x1="${padL}" y1="${y(g)}" x2="${w - padR}" y2="${y(g)}" stroke="var(--line)" stroke-width="1"/><text x="${padL - 5}" y="${y(g) + 3}" fill="var(--ink-3)" font-size="10" text-anchor="end">${g}%</text>`).join('');
-    const xt = pts.map((p, i) => ({ p, i })).filter(({ p, i }) => p.t.getHours() % 6 === 0 && i % 3 === 0);
-    const xlabels = xt.map(({ p, i }) => `<text x="${x(i)}" y="${h - 8}" fill="var(--ink-3)" font-size="10" text-anchor="middle">${p.t.getHours() === 0 ? p.t.toLocaleDateString('en-GB', { weekday: 'short' }) : p.t.getHours() + ':00'}</text>`).join('');
-    const windowBand = ws >= 0 && we > ws ? `<rect x="${x(ws)}" y="${padT}" width="${(x(we) - x(ws)).toFixed(1)}" height="${h - padT - padB}" fill="var(--alert)" fill-opacity=".07"/>
-      <line x1="${x(ws)}" y1="${padT}" x2="${x(ws)}" y2="${h - padB}" stroke="var(--alert)" stroke-width="1" stroke-dasharray="3 3" opacity=".6"/>
-      <line x1="${x(we)}" y1="${padT}" x2="${x(we)}" y2="${h - padB}" stroke="var(--alert)" stroke-width="1" stroke-dasharray="3 3" opacity=".6"/>
-      <text x="${(x(ws) + x(we)) / 2}" y="${padT - 8}" fill="var(--alert)" font-size="10.5" font-weight="600" text-anchor="middle">Peak risk window</text>` : '';
-    const peak = pts[ws >= 0 ? Math.round((ws + we) / 2) : 0];
-    const windowLbl = ws >= 0 ? `${pts[ws].t.toLocaleDateString('en-GB', { weekday: 'long' })} ${pts[ws].t.getHours()}:00–${pts[we].t.getHours()}:00` : '';
-    const totRain = Math.round(pts.slice(Math.max(0, ws), we + 1).reduce((sm, p) => sm + p.mm, 0));
+    const grid = [0, 25, 50, 75, 100].map(g => `<line x1="${padL}" y1="${y(g)}" x2="${w - padR}" y2="${y(g)}" stroke="var(--line)" stroke-width="1"/><text x="${padL - 7}" y="${y(g) + 3.5}" fill="var(--ink-3)" font-size="10.5" text-anchor="end">${g}%</text>`).join('');
+    const xlabels = pts.map((p, i) => {
+      const hr = p.t.getHours();
+      if (hr % 6 !== 0) return '';
+      const lbl = hr === 0 ? p.t.toLocaleDateString('en-GB', { weekday: 'short' }) : `${hr}:00`;
+      return `<text x="${x(i).toFixed(1)}" y="${h - 8}" fill="var(--ink-3)" font-size="10.5" text-anchor="middle" ${hr === 0 ? 'font-weight="600"' : ''}>${lbl}</text>`;
+    }).join('');
+    const windowLbl = ws >= 0 ? `${pts[ws].t.getHours()}:00 – ${pts[Math.min(we + 1, pts.length - 1)].t.getHours()}:00` : '';
+    const windowBand = ws >= 0 && we > ws ? `
+      <rect x="${x(ws)}" y="${y(100)}" width="${(x(we) - x(ws)).toFixed(1)}" height="${(y(0) - y(100)).toFixed(1)}" fill="var(--alert)" fill-opacity=".06"/>
+      <line x1="${x(ws)}" y1="${y(100)}" x2="${x(ws)}" y2="${y(0)}" stroke="var(--alert)" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>
+      <line x1="${x(we)}" y1="${y(100)}" x2="${x(we)}" y2="${y(0)}" stroke="var(--alert)" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>
+      <text x="${(x(ws) + x(we)) / 2}" y="${padT - 24}" fill="var(--alert)" font-size="12.5" font-weight="700" text-anchor="middle">Peak risk window</text>
+      <text x="${(x(ws) + x(we)) / 2}" y="${padT - 10}" fill="var(--alert)" font-size="11" text-anchor="middle">${windowLbl}</text>` : '';
+    const peakDayLbl = ws >= 0 ? pts[ws].t.toLocaleDateString('en-GB', { weekday: 'long' }) : '';
+    const totRain = ws >= 0 ? Math.round(pts.slice(ws, we + 1).reduce((sm, p) => sm + p.mm, 0)) : 0;
     const insight = maxC >= 35
-      ? `Risk peaks <b>${windowLbl}</b> (${maxC}%) — ~${totRain}mm expected in that window against your current drainage health.`
+      ? `Risk peaks <b>${peakDayLbl} ${windowLbl}</b> (${maxC}%) — ~${totRain}mm expected in that window against your current drainage health.`
       : `No significant risk build-up in the next 48 hours — rainfall stays light against your current drainage health.`;
     const legend = ['low', 'moderate', 'high'].map(l => `<span><i style="display:inline-block;width:14px;height:3px;background:${FC_COLOR[l]};border-radius:2px;vertical-align:middle;margin-right:5px"></i>${FC_WORD[l]} ${l === 'low' ? '(0–34%)' : l === 'moderate' ? '(35–64%)' : '(65%+)'}</span>`).join('');
     return `
@@ -1367,8 +1375,11 @@ const Screens = (function () {
         <div class="row-between mb-10"><h3 style="margin:0">Next 48 hours</h3><span class="muted" style="font-size:12px">Hourly flood chance</span></div>
         <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto" role="img" aria-label="Hourly flood risk, next 48 hours">
           ${grid}${windowBand}
-          <path d="${area}" fill="var(--brand)" fill-opacity=".05"/>
-          ${segs}${xlabels}
+          <defs><linearGradient id="fcarea" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="var(--warn)" stop-opacity=".14"/><stop offset="1" stop-color="var(--ok)" stop-opacity=".04"/>
+          </linearGradient></defs>
+          <path d="${area}" fill="url(#fcarea)"/>
+          ${segs}${markers}${xlabels}
         </svg>
         <div style="display:flex;gap:16px;margin-top:6px;font-size:11px;color:var(--ink-3);flex-wrap:wrap">${legend}</div>
         <div style="margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--surface-2);font-size:13px;color:var(--ink-2);line-height:1.5">${insight}</div>

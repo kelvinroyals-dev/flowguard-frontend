@@ -26,16 +26,16 @@ const Demo = (function () {
   const _now = Date.now();
   const _ago = mins => new Date(_now - mins * 60e3).toISOString();
   const sensors = [
-    { property_id: 'PROP-DEMO-1', sensor_id: 'S-01', name: 'Main Gate', zone: 'entrance', status: 'active', device_variant: 'basic', level: 28, flow_rate: 12.4, silt_level: 18, battery_percent: 88, signal_strength: 82, last_ping: _ago(2), ping_interval: 'Every 15 min', temperature: 27.4, has_data: true, trend: [40, 55, 35, 60, 45, 50, 28], enzyme: null },
-    { property_id: 'PROP-DEMO-1', sensor_id: 'S-02', name: 'North Culvert', zone: 'north', status: 'active', device_variant: 'bio_dispenser', level: 19, flow_rate: 8.1, silt_level: 42, battery_percent: 71, signal_strength: 64, last_ping: _ago(1), ping_interval: 'Every 15 min', temperature: 26.9, has_data: true, trend: [30, 25, 40, 20, 35, 28, 19],
+    { property_id: 'PROP-DEMO-1', sensor_id: 'S-01', name: 'Main Gate', zone: 'entrance', status: 'active', device_variant: 'basic', level: 52, flow_rate: 16.8, silt_level: 38, battery_percent: 88, signal_strength: 82, last_ping: _ago(2), ping_interval: 'Every 15 min', temperature: 27.4, has_data: true, trend: [58, 70, 52, 74, 61, 66, 52], enzyme: null },
+    { property_id: 'PROP-DEMO-1', sensor_id: 'S-02', name: 'North Culvert', zone: 'north', status: 'active', device_variant: 'bio_dispenser', level: 44, flow_rate: 11.3, silt_level: 58, battery_percent: 71, signal_strength: 64, last_ping: _ago(1), ping_interval: 'Every 15 min', temperature: 26.9, has_data: true, trend: [50, 44, 58, 40, 52, 47, 44],
       enzyme: { level_percent: 64, status: 'dispensing', capacity_ml: 5000, days_left: 21 } },
-    { property_id: 'PROP-DEMO-1', sensor_id: 'S-03', name: 'East Channel', zone: 'east', status: 'active', device_variant: 'bio_dispenser', level: 41, flow_rate: 18.7, silt_level: 71, battery_percent: 54, signal_strength: 77, last_ping: _ago(3), ping_interval: 'Every 15 min', temperature: 28.1, has_data: true, trend: [50, 60, 70, 55, 65, 72, 41],
+    { property_id: 'PROP-DEMO-1', sensor_id: 'S-03', name: 'East Channel', zone: 'east', status: 'active', device_variant: 'bio_dispenser', level: 78, flow_rate: 24.6, silt_level: 84, battery_percent: 54, signal_strength: 77, last_ping: _ago(3), ping_interval: 'Every 15 min', temperature: 28.1, has_data: true, trend: [66, 74, 85, 70, 80, 88, 78],
       enzyme: { level_percent: 11, status: 'due_replacement', capacity_ml: 5000, days_left: 3 } },
-    { property_id: 'PROP-DEMO-1', sensor_id: 'S-04', name: 'South Drain', zone: 'south', status: 'active', device_variant: 'basic', level: 23, flow_rate: 9.6, silt_level: 25, battery_percent: 92, signal_strength: 58, last_ping: _ago(4), ping_interval: 'Every 15 min', temperature: 27.0, has_data: true, trend: [35, 30, 45, 38, 33, 40, 23], enzyme: null },
-    { property_id: 'PROP-DEMO-1', sensor_id: 'S-05', name: 'West Outfall', zone: 'west', status: 'active', device_variant: 'bio_dispenser', level: 33, flow_rate: 14.2, silt_level: 30, battery_percent: 79, signal_strength: 71, last_ping: _ago(2), ping_interval: 'Every 15 min', temperature: 26.5, has_data: true, trend: [28, 34, 30, 38, 32, 36, 33],
+    { property_id: 'PROP-DEMO-1', sensor_id: 'S-04', name: 'South Drain', zone: 'south', status: 'active', device_variant: 'basic', level: 49, flow_rate: 13.1, silt_level: 41, battery_percent: 92, signal_strength: 58, last_ping: _ago(4), ping_interval: 'Every 15 min', temperature: 27.0, has_data: true, trend: [52, 46, 60, 54, 49, 56, 49], enzyme: null },
+    { property_id: 'PROP-DEMO-1', sensor_id: 'S-05', name: 'West Outfall', zone: 'west', status: 'active', device_variant: 'bio_dispenser', level: 57, flow_rate: 18.4, silt_level: 46, battery_percent: 79, signal_strength: 71, last_ping: _ago(2), ping_interval: 'Every 15 min', temperature: 26.5, has_data: true, trend: [50, 57, 52, 61, 55, 59, 57],
       enzyme: { level_percent: 78, status: 'loaded', capacity_ml: 5000, days_left: 34 } },
-    { property_id: 'PROP-DEMO-1', sensor_id: 'S-06', name: 'Central Junction', zone: 'central', status: 'active', device_variant: 'basic', level: 37, flow_rate: 16.0, silt_level: 48, battery_percent: 66, signal_strength: 69, last_ping: _ago(5), ping_interval: 'Every 15 min', temperature: 27.8, has_data: true, trend: [42, 38, 45, 40, 35, 39, 37], enzyme: null },
-    { property_id: 'PROP-DEMO-1', sensor_id: 'S-07', name: 'Lakeside Inlet', zone: 'north', status: 'active', device_variant: 'bio_dispenser', level: 26, flow_rate: 10.5, silt_level: 22, battery_percent: 45, signal_strength: 52, last_ping: _ago(6), ping_interval: 'Every 15 min', temperature: 26.2, has_data: true, trend: [30, 28, 32, 25, 27, 29, 26],
+    { property_id: 'PROP-DEMO-1', sensor_id: 'S-06', name: 'Central Junction', zone: 'central', status: 'active', device_variant: 'basic', level: 61, flow_rate: 20.2, silt_level: 64, battery_percent: 66, signal_strength: 69, last_ping: _ago(5), ping_interval: 'Every 15 min', temperature: 27.8, has_data: true, trend: [63, 58, 66, 60, 55, 60, 61], enzyme: null },
+    { property_id: 'PROP-DEMO-1', sensor_id: 'S-07', name: 'Lakeside Inlet', zone: 'north', status: 'active', device_variant: 'bio_dispenser', level: 48, flow_rate: 14.7, silt_level: 35, battery_percent: 45, signal_strength: 52, last_ping: _ago(6), ping_interval: 'Every 15 min', temperature: 26.2, has_data: true, trend: [51, 48, 53, 45, 47, 50, 48],
       enzyme: { level_percent: 45, status: 'dispensing', capacity_ml: 5000, days_left: 14 } },
     { property_id: 'PROP-DEMO-1', sensor_id: 'S-08', name: 'Marina Culvert', zone: 'east', status: 'offline', device_variant: 'basic', level: null, flow_rate: null, silt_level: null, battery_percent: 8, signal_strength: null, last_ping: _ago(220), ping_interval: 'Every 15 min', temperature: null, has_data: false, trend: [], enzyme: null }
   ];
@@ -44,7 +44,7 @@ const Demo = (function () {
   const _online = sensors.filter(s => s.status === 'active').length;
   const _levels = sensors.filter(s => s.level != null).map(s => s.level);
   const floodRisk = {
-    has_data: true, risk_index: 27, level: 'low',
+    has_data: true, risk_index: 58, level: 'moderate',
     peak_level: Math.max(..._levels), avg_level: Math.round(_levels.reduce((a, b) => a + b, 0) / _levels.length),
     sensors_online: _online, sensors_total: sensors.length, reading_count: _levels.length
   };
@@ -75,7 +75,7 @@ const Demo = (function () {
 
   const alerts = [
     { property_id: 'PROP-DEMO-1', type: 'critical', severity: 'critical', status: 'active', title: 'Marina Culvert node offline', description: 'Node S-08 stopped reporting ~3.5 hrs ago — battery critically low (8%)', created_at: '3 hours ago' },
-    { property_id: 'PROP-DEMO-1', type: 'critical', severity: 'critical', status: 'active', title: 'East Channel silt high', description: 'Silt at 71% — clearing recommended', created_at: '12 min ago' },
+    { property_id: 'PROP-DEMO-1', type: 'critical', severity: 'critical', status: 'active', title: 'East Channel silt high', description: 'Silt at 84% — clearing urgently recommended', created_at: '12 min ago' },
     { property_id: 'PROP-DEMO-1', type: 'warning', severity: 'warning', status: 'active', title: 'Bio-enzyme low — East Channel', description: 'Cartridge at 11%, refill due in ~3 days', created_at: '40 min ago' },
     { property_id: 'PROP-DEMO-1', type: 'warning', severity: 'warning', status: 'active', title: 'Light rain expected', description: 'Tomorrow, 14:00–18:00 · drainage clear', created_at: '1 hour ago' },
     { property_id: 'PROP-DEMO-1', type: 'info', severity: 'info', status: 'resolved', title: 'Sensor check passed', description: '7 of 8 nodes reporting normally', created_at: '2 hours ago', resolved_at: '2026-07-07' },
@@ -91,11 +91,11 @@ const Demo = (function () {
 
   const reports = [
     { report_id: 'RPT-1', title: 'Initial drainage inspection', property_name: 'Sunrise Court Estate', status: 'sent', sent_to_client_at: '2026-07-08', created_at: '2026-07-08',
-      drainage_condition_score: 72, flood_risk_level: 'moderate',
+      drainage_condition_score: 61, flood_risk_level: 'high',
       findings: 'Primary channels are clear and flowing well. Two secondary drains along the east perimeter show early silt accumulation (approx. 30% capacity reduction). Gate-area gulley is functioning but would benefit from a debris screen.',
       recommendations: 'Schedule silt clearing for the east perimeter drains within 3 weeks. Install a debris screen at the main gate gulley before peak rainfall. Continue monthly sensor monitoring.' },
     { report_id: 'RPT-2', title: 'Channel capacity assessment', property_name: 'Sunrise Court Estate', status: 'sent', sent_to_client_at: '2026-07-08', created_at: '2026-07-08',
-      drainage_condition_score: 58, flood_risk_level: 'high',
+      drainage_condition_score: 47, flood_risk_level: 'high',
       findings: 'Main outfall channel is operating near capacity during heavy rainfall. Downstream constriction identified at the road culvert crossing.',
       recommendations: 'Prioritise clearing of the road culvert. Consider a Tier-2 upgrade for automated flow monitoring at the outfall.' },
     { report_id: 'RPT-3', title: 'Monthly monitoring summary — June', property_name: 'Palm Gardens', status: 'in_progress', created_at: '2026-06-30' }
@@ -156,8 +156,8 @@ const Demo = (function () {
   ];
 
   const outcomes = {
-    protected_since: '2026-06-20', days_since_flood: 20, flood_free_basis: 'monitoring_start',
-    clearings: 2, dispatches: 2, refills: 1, incidents_prevented: 3, maintenance_visits: 2,
+    protected_since: '2026-06-20', days_since_flood: 34, flood_free_basis: 'last_incident',
+    clearings: 3, dispatches: 4, refills: 2, incidents_prevented: 5, maintenance_visits: 3,
     recent_events: [
       { event_type: 'silt_clearing', label: 'Clearing', occurred_at: new Date(Date.now() - 52 * 864e5).toISOString() },
       { event_type: 'silt_clearing', label: 'Clearing + refill', occurred_at: new Date(Date.now() - 21 * 864e5).toISOString() },
@@ -165,17 +165,17 @@ const Demo = (function () {
   };
   // 90-day health series: rough start, dips when East Channel silted, climbing since clearings
   const healthHistory = (() => {
-    const out = []; let score = 58;
+    const out = []; let score = 45;
     for (let i = 89; i >= 0; i--) {
       const day = new Date(Date.now() - i * 864e5);
-      if (i === 60) score = 54;         // silt buildup found
-      else if (i === 52) score = 63;    // first clearing
-      else if (i === 30) score = 60;    // rainy spell strain
-      else if (i === 21) score = 68;    // second clearing + refill
-      else if (i === 3) score = 71;
+      if (i === 60) score = 41;         // silt buildup found
+      else if (i === 52) score = 50;    // first clearing
+      else if (i === 30) score = 47;    // rainy spell strain
+      else if (i === 21) score = 56;    // second clearing + refill
+      else if (i === 3) score = 63;
       else score += (Math.sin(i * 1.7) * 0.8);
-      score = Math.max(45, Math.min(78, score));
-      out.push({ score: Math.round(i === 0 ? 73 : score), recorded_at: day.toISOString().slice(0, 10) });
+      score = Math.max(36, Math.min(70, score));
+      out.push({ score: Math.round(i === 0 ? 66 : score), recorded_at: day.toISOString().slice(0, 10) });
     }
     return out;
   })();
