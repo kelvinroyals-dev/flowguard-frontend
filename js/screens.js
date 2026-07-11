@@ -151,6 +151,62 @@ const Screens = (function () {
       </div>`;
   }
 
+  // ---- Outcomes: the value narrative (what FlowGuard has done for this property) ----
+  function outcomesBlock(o, p) {
+    if (!o) return '';
+    const stat = (v, l) => `<div class="oc-stat"><b>${v}</b><span>${l}</span></div>`;
+    return `
+      <div class="panel panel-pad mb-20">
+        <div class="row-between mb-10">
+          <h3 style="margin:0">Protection outcomes</h3>
+          <span class="muted" style="font-size:12px">Protected since ${UI.fmtDate(o.protected_since || p.created_at)}</span>
+        </div>
+        <div class="oc-grid">
+          <div class="oc-hero">
+            <b>${o.days_since_flood != null ? o.days_since_flood : '—'}</b>
+            <span>days flood-free</span>
+            <small class="muted">${o.flood_free_basis === 'last_incident' ? 'since the last incident' : 'since monitoring began'}</small>
+          </div>
+          <div class="oc-stats">
+            ${stat(o.clearings || 0, 'silt clearings')}
+            ${stat(o.dispatches || 0, 'dispatches')}
+            ${stat(o.incidents_prevented || 0, 'incidents prevented')}
+            ${stat(o.refills || 0, 'enzyme refills')}
+            ${stat(o.maintenance_visits || 0, 'maintenance visits')}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ---- Health trend: 90-day score history ----
+  function healthTrendBlock(hist) {
+    if (!hist || hist.length < 2) return '';
+    const vals = hist.map(h => Number(h.score));
+    const first = vals[0], last = vals[vals.length - 1];
+    const delta = last - first;
+    const color = last >= 75 ? 'var(--ok)' : last >= 50 ? 'var(--warn)' : 'var(--alert)';
+    const w = 640, h = 120, pad = 8;
+    const max = Math.max(...vals, 100), min = Math.min(...vals, 0);
+    const x = i => pad + (i * (w - pad * 2)) / (vals.length - 1);
+    const y = v => h - pad - ((v - min) * (h - pad * 2)) / (max - min || 1);
+    const path = vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    return `
+      <div class="panel panel-pad mb-20">
+        <div class="row-between mb-10">
+          <h3 style="margin:0">Health trend</h3>
+          <span style="font-weight:600;font-size:13px;color:${delta >= 0 ? 'var(--ok)' : 'var(--alert)'}">${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)} pts · 90 days</span>
+        </div>
+        <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto" preserveAspectRatio="none" role="img" aria-label="Drainage health trend">
+          <path d="${path} L${x(vals.length - 1).toFixed(1)},${h - pad} L${x(0).toFixed(1)},${h - pad} Z" fill="${color}" fill-opacity=".08"/>
+          <path d="${path}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        <div class="row-between" style="margin-top:6px">
+          <span class="muted" style="font-size:12px">${UI.fmtDate(hist[0].recorded_at)}</span>
+          <b style="font-size:13px;color:${color}">Now: ${last}/100</b>
+        </div>
+      </div>`;
+  }
+
   // ---- Lagos flood-prone zone context (from FlowGuard's verified zone list) ----
   const FLOOD_ZONES = [
     ['lekki', 'Lekki', 'high'], ['ajah', 'Ajah', 'high'], ['victoria island', 'Victoria Island', 'high'],
@@ -248,6 +304,14 @@ const Screens = (function () {
 
     // ---- Property health score (computed from data already loaded) ----
     const health = computeHealth(reports, risk, alerts);
+    let healthDelta = null;
+    try {
+      const cur = resolveActive(allProps);
+      let hist = [];
+      if (Demo.isOn()) hist = Demo.data.healthHistory || [];
+      else if (cur) { const rh = await apiRequest(`/properties/${cur}/health-history?days=30`); hist = (rh && rh.data) || []; }
+      if (hist.length >= 2) healthDelta = Number(hist[hist.length - 1].score) - Number(hist[0].score);
+    } catch (_) {}
     renderForecastWidget(allProps, health); // 14-day risk calendar (async, fills #ov-weather)
 
     // ---- Monitoring section (gauge + sensors together) ----
@@ -264,7 +328,7 @@ const Screens = (function () {
           <div class="minw0">
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">
               <h3 style="font-family:var(--ff-d);font-size:18px;font-weight:600;margin:0">${msg}</h3>
-              ${health ? `<span class="health-chip ${health.kind}" title="Drainage ${health.rep != null ? health.rep : '—'} · Sensors ${health.sens != null ? health.sens + '%' : '—'} · ${health.openAlerts} open alert${health.openAlerts === 1 ? '' : 's'}">Estate health ${health.score}/100 · ${health.label}</span>` : ''}
+              ${health ? `<span class="health-chip ${health.kind}" title="Drainage ${health.rep != null ? health.rep : '—'} · Sensors ${health.sens != null ? health.sens + '%' : '—'} · ${health.openAlerts} open alert${health.openAlerts === 1 ? '' : 's'}">Estate health ${health.score}/100 · ${health.label}${healthDelta != null ? ` <span style="color:${healthDelta >= 0 ? 'var(--ok)' : 'var(--alert)'}">${healthDelta >= 0 ? '▲' : '▼'}${Math.abs(healthDelta)}</span>` : ''}</span>` : ''}
             </div>
             <p style="color:var(--ink-2);font-size:14px;margin-bottom:16px;max-width:440px">Peak level today ${risk.peak_level}% · ${risk.sensors_online} of ${risk.sensors_total} sensors reporting. We'll alert you the moment anything changes.</p>
             <div class="sensor-carousel">
@@ -978,13 +1042,17 @@ const Screens = (function () {
     }));
 
     // pull per-property extras in parallel (honest fallback)
-    let invoices = [], inspection = null;
+    let invoices = [], inspection = null, outcomes = null, healthHist = [];
     if (Demo.isOn()) {
       invoices = Demo.data.invoices.slice(0, 2);
       inspection = { status: 'scheduled', scheduled_date: '2026-07-18' };
+      outcomes = Demo.data.outcomes;
+      healthHist = Demo.data.healthHistory;
     } else {
       try { const ri = await apiRequest(`/properties/${propertyId}/invoices`); invoices = (ri && ri.data) || []; } catch (_) {}
       try { const rn = await apiRequest(`/properties/${propertyId}/inspection`); inspection = rn && rn.data; } catch (_) {}
+      try { const ro = await apiRequest(`/properties/${propertyId}/outcomes`); outcomes = ro && ro.data; } catch (_) {}
+      try { const rh = await apiRequest(`/properties/${propertyId}/health-history?days=90`); healthHist = (rh && rh.data) || []; } catch (_) {}
     }
 
     document.getElementById('pd-body').innerHTML = `
@@ -995,6 +1063,8 @@ const Screens = (function () {
       </div>
 
       ${reportedIssuesBlock(p)}
+      ${outcomesBlock(outcomes, p)}
+      ${healthTrendBlock(healthHist)}
       ${zoneContextBlock(p)}
       ${propertyProfileBlock(p)}
 

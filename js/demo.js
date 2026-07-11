@@ -155,6 +155,27 @@ const Demo = (function () {
     { type: 'property', title: 'Bayo Akinwale registered a new property', sub: 'Sunrise Court Estate · Lekki, Lagos', when: '20 Jun' }
   ];
 
-  return { isOn, set, data: { activity, floodRisk, sensors, properties, invoices, alerts, timeline, reports, services, tickets, history, contract } };
+  const outcomes = {
+    protected_since: '2026-06-20', days_since_flood: 20, flood_free_basis: 'monitoring_start',
+    clearings: 2, dispatches: 2, refills: 1, incidents_prevented: 3, maintenance_visits: 2,
+  };
+  // 90-day health series: rough start, dips when East Channel silted, climbing since clearings
+  const healthHistory = (() => {
+    const out = []; let score = 58;
+    for (let i = 89; i >= 0; i--) {
+      const day = new Date(Date.now() - i * 864e5);
+      if (i === 60) score = 54;         // silt buildup found
+      else if (i === 52) score = 63;    // first clearing
+      else if (i === 30) score = 60;    // rainy spell strain
+      else if (i === 21) score = 68;    // second clearing + refill
+      else if (i === 3) score = 71;
+      else score += (Math.sin(i * 1.7) * 0.8);
+      score = Math.max(45, Math.min(78, score));
+      out.push({ score: Math.round(i === 0 ? 73 : score), recorded_at: day.toISOString().slice(0, 10) });
+    }
+    return out;
+  })();
+
+  return { isOn, set, data: { activity, outcomes, healthHistory, floodRisk, sensors, properties, invoices, alerts, timeline, reports, services, tickets, history, contract } };
 })();
 window.Demo = Demo;

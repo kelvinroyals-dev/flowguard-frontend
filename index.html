@@ -471,6 +471,16 @@ button:focus:not(:focus-visible){outline:none}
 .fc-mini-cell:hover{background:var(--surface-2)}
 .fc-mini-cell .fcd{font-size:11px;font-weight:600;color:var(--ink-3);text-transform:uppercase}
 @media(max-width:1100px){.ov-cols{grid-template-columns:1fr}.ov-side{position:static}}
+.oc-grid{display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:center}
+.oc-hero{text-align:center;padding:14px;border-radius:14px;background:var(--surface-2)}
+.oc-hero b{display:block;font-family:var(--ff-d);font-size:40px;font-weight:600;color:var(--ok);line-height:1.1}
+.oc-hero span{display:block;font-size:13px;font-weight:600;color:var(--ink);margin-top:2px}
+.oc-hero small{display:block;margin-top:2px;font-size:11px}
+.oc-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+.oc-stat{padding:10px 12px;border:1px solid var(--line);border-radius:12px}
+.oc-stat b{display:block;font-family:var(--ff-d);font-size:20px;font-weight:600}
+.oc-stat span{font-size:12px;color:var(--ink-3)}
+@media(max-width:700px){.oc-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
