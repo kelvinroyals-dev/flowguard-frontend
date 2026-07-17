@@ -262,10 +262,11 @@ const App = (function () {
 
   // ---- Support tickets ----
   function setTicketFilter(f) { Screens.setTicketFilter(f); go('support'); }
-  function openTicket(presetCat, subj, prio) {
+  function openTicket(presetCat, subj, prio, desc) {
     const cats = Screens.TICKET_CATS;
     const opts = Object.keys(cats).map(k => `<option value="${k}" ${k === presetCat ? 'selected' : ''}>${cats[k]}</option>`).join('');
     const presetSubj = subj || (presetCat === 'dispatch' ? 'Bio-enzyme cartridge refill request' : '');
+    const presetDesc = desc || '';
     const bg = document.createElement('div');
     bg.className = 'modal-bg';
     bg.innerHTML = `
@@ -276,7 +277,7 @@ const App = (function () {
           <div class="field"><label>Category</label><select id="tk-cat">${opts}</select></div>
           <div class="field"><label>Priority</label>
             <select id="tk-prio"><option value="low" ${prio==='low'?'selected':''}>Low</option><option value="normal" ${!prio||prio==='normal'?'selected':''}>Normal</option><option value="high" ${prio==='high'?'selected':''}>High</option><option value="urgent" ${prio==='urgent'?'selected':''}>Urgent — flooding now</option></select></div>
-          <div class="field"><label>Details</label><textarea id="tk-desc" rows="4" placeholder="Describe the issue or request…"></textarea></div>
+          <div class="field"><label>Details</label><textarea id="tk-desc" rows="4" placeholder="Describe the issue or request…">${presetDesc}</textarea></div>
           <div id="tk-err" class="hint hidden c-alert"></div>
         </div>
         <div class="modal-f">

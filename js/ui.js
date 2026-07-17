@@ -96,6 +96,22 @@ const UI = (function () {
     const sigLabel = signal == null ? '—' : signal >= 70 ? 'Strong' : signal >= 40 ? 'Fair' : 'Weak';
     const lastPing = s.last_ping ? fmtRelative(s.last_ping) : '—';
 
+    // Surface a contextual "Request support" CTA whenever a sensor needs
+    // attention — offline, cartridge depleted, low battery, high silt/level,
+    // or weak signal. The ticket opens pre-filled with the sensor + issue.
+    const nm = s.name || s.sensor_id;
+    const q = str => String(str == null ? '' : str).replace(/['"\\\n]/g, ' ').replace(/\s+/g, ' ').trim();
+    let issue = null;
+    if (offline) issue = { cat: 'sensor', prio: 'high', subj: `Offline sensor: ${nm}`, desc: `${nm} (${s.sensor_id}) is offline — last seen ${lastPing}. Please arrange a field visit to restore monitoring.` };
+    else if (isBio && s.enzyme && ['depleted', 'due_replacement'].includes(s.enzyme.status)) issue = { cat: 'dispatch', prio: 'normal', subj: `Cartridge refill: ${nm}`, desc: `The bio-enzyme cartridge on ${nm} (${s.sensor_id}) needs replacement (${s.enzyme.status.replace('_', ' ')}). Please schedule a refill.` };
+    else if (s.level != null && s.level >= 70) issue = { cat: 'emergency', prio: 'urgent', subj: `High water level: ${nm}`, desc: `Water level is ${Math.round(s.level)}% on ${nm} (${s.sensor_id}) — at or above the alert threshold. Please advise or dispatch.` };
+    else if (batt != null && batt <= 20) issue = { cat: 'sensor', prio: 'normal', subj: `Low battery: ${nm}`, desc: `${nm} (${s.sensor_id}) battery is at ${batt}%. Please service it before it drops offline.` };
+    else if (siltPct != null && siltPct >= 70) issue = { cat: 'dispatch', prio: 'high', subj: `Silt clearing: ${nm}`, desc: `Silt is high on ${nm} (${s.sensor_id}). Please schedule clearing before the next heavy rain.` };
+    else if (signal != null && signal < 40) issue = { cat: 'sensor', prio: 'low', subj: `Weak signal: ${nm}`, desc: `${nm} (${s.sensor_id}) has a weak signal — readings may be intermittent. Please check the device.` };
+    const issueBtn = issue
+      ? `<button class="btn sm ghost sensor-report" style="width:100%;margin-top:10px" onclick="event.stopPropagation();App.openTicket('${issue.cat}','${q(issue.subj)}','${issue.prio}','${q(issue.desc)}')">Request support</button>`
+      : '';
+
     return `
       <div class="sensor sensor-clickable${offline ? ' sensor-offline' : ''}" onclick="App.openSensor('${esc(s.sensor_id)}')">
         <div class="sh">
@@ -122,6 +138,7 @@ const UI = (function () {
              </div>
              <div class="sensor-ping">Last ping ${lastPing}</div>
              ${isBio ? enzymeBlock(s.enzyme) : '<div class="enzyme-none">Standard sensor</div>'}`}
+        ${issueBtn}
       </div>`;
   }
 

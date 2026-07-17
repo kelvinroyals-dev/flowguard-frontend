@@ -618,16 +618,31 @@ const Screens = (function () {
       try { const r = await apiRequest('/monitoring/history?hours=24'); _monHist = (r && r.data) || { series: [], log: [] }; } catch (_) { _monHist = { series: [], log: [] }; }
     }
 
-    // refill banner
-    const needsRefill = _monSensors.filter(s => s.enzyme && ['due_replacement', 'depleted', 'low'].includes(s.enzyme.status));
-    if (needsRefill.length) {
-      document.getElementById('mon-refill').innerHTML = `<div class="refill-banner">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.7s6 6.3 6 10.3a6 6 0 01-12 0c0-4 6-10.3 6-10.3z"/></svg>
-        <div><b>${needsRefill.length} bio-enzyme ${needsRefill.length === 1 ? 'unit needs' : 'units need'} refilling</b>
-        <span>${needsRefill.map(s => UI.esc(s.name)).join(', ')} — schedule a Heavy-Plant Dispatch refill.</span></div>
-        <button class="btn" onclick="App.openTicket('dispatch')">Request refill</button>
+    // Action banners: offline nodes and bio-enzyme refills — each with a
+    // pre-filled "Request support" CTA.
+    const q = str => String(str == null ? '' : str).replace(/['"\\\n]/g, ' ').replace(/\s+/g, ' ').trim();
+    let banners = '';
+    const offlineNodes = _monSensors.filter(s => s.status === 'offline');
+    if (offlineNodes.length) {
+      const names = offlineNodes.map(s => s.name || s.sensor_id).join(', ');
+      banners += `<div class="refill-banner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+        <div><b>${offlineNodes.length} sensor${offlineNodes.length === 1 ? '' : 's'} offline</b>
+        <span>${UI.esc(names)} — not reporting. Request a field visit to restore monitoring.</span></div>
+        <button class="btn" onclick="App.openTicket('sensor','${q('Offline sensors: ' + names)}','high','${q('These sensors are offline and not reporting: ' + names + '. Please arrange a field visit to restore monitoring.')}')">Request support</button>
       </div>`;
     }
+    const needsRefill = _monSensors.filter(s => s.enzyme && ['due_replacement', 'depleted', 'low'].includes(s.enzyme.status));
+    if (needsRefill.length) {
+      const names = needsRefill.map(s => s.name || s.sensor_id).join(', ');
+      banners += `<div class="refill-banner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.7s6 6.3 6 10.3a6 6 0 01-12 0c0-4 6-10.3 6-10.3z"/></svg>
+        <div><b>${needsRefill.length} bio-enzyme ${needsRefill.length === 1 ? 'unit needs' : 'units need'} refilling</b>
+        <span>${UI.esc(names)} — schedule a Heavy-Plant Dispatch refill.</span></div>
+        <button class="btn" onclick="App.openTicket('dispatch','${q('Bio-enzyme refill: ' + names)}','normal','${q('Please schedule a bio-enzyme cartridge refill for: ' + names + '.')}')">Request refill</button>
+      </div>`;
+    }
+    document.getElementById('mon-refill').innerHTML = banners;
 
     // filter chips (counts)
     const zones = [...new Set(_monSensors.map(s => s.zone).filter(Boolean))];
@@ -1559,6 +1574,8 @@ const Screens = (function () {
     const silt = d.silt_level;
     const siltLabel = silt == null ? '—' : silt >= 70 ? 'High' : silt >= 40 ? 'Moderate' : 'Low';
     const siltColor = silt == null ? 'var(--ink-3)' : silt >= 70 ? 'var(--alert)' : silt >= 40 ? 'var(--warn)' : 'var(--ok)';
+    const q = str => String(str == null ? '' : str).replace(/['"\\\n]/g, ' ').replace(/\s+/g, ' ').trim();
+    const reportDesc = `Regarding ${d.name || d.sensor_id} (${d.sensor_id}) — status ${d.status}, level ${d.level != null ? Math.round(d.level) + '%' : 'n/a'}, battery ${battPct != null ? battPct + '%' : 'n/a'}. Please advise.`;
     const healthRows = [
       ['Battery', battPct != null ? `${battPct}%${d.battery_voltage ? ` (${d.battery_voltage}V)` : ''}` : '—', battColor],
       ['Signal strength', sig != null ? `${sigLabel}${sig != null ? ` (${sig}%)` : ''}` : '—', 'var(--ink)'],
@@ -1576,7 +1593,10 @@ const Screens = (function () {
       </div>
 
       <div class="panel panel-pad mb-20">
-        <h3 style="font-family:var(--ff-d);font-size:16px;margin:0 0 12px">Device health</h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 12px;gap:10px">
+          <h3 style="font-family:var(--ff-d);font-size:16px;margin:0">Device health</h3>
+          <button class="btn ghost sm" onclick="App.openTicket('sensor','${q('Issue with ' + (d.name || d.sensor_id))}','${d.status === 'offline' || (d.level != null && d.level >= 70) ? 'high' : 'normal'}','${q(reportDesc)}')">Report an issue</button>
+        </div>
         <div class="profile-grid">
           ${healthRows.map(([k, v, c]) => `<div class="pf-row"><div class="pf-k">${k}</div><div class="pf-v" style="color:${c}">${v}</div></div>`).join('')}
         </div>
@@ -1585,7 +1605,7 @@ const Screens = (function () {
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
           <h3 style="font-family:var(--ff-d);font-size:16px;margin:0">Bio-enzyme cartridge</h3>
           ${['due_replacement', 'depleted', 'low'].includes(d.enzyme.status)
-            ? `<button class="btn" onclick="App.openTicket('dispatch')">Request refill</button>` : ''}
+            ? `<button class="btn" onclick="App.openTicket('dispatch','${q('Cartridge refill: ' + (d.name || d.sensor_id))}','normal','${q('The bio-enzyme cartridge on ' + (d.name || d.sensor_id) + ' (' + d.sensor_id + ') needs replacement. Please schedule a refill.')}')">Request refill</button>` : ''}
         </div>
         ${UI.enzymeDetail(d.enzyme)}
       </div>` : ''}
