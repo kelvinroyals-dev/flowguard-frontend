@@ -77,28 +77,58 @@ const App = (function () {
           <div class="inv-line"><span>Type</span><b>${UI.esc((inv.invoice_type || 'Service'))}</b></div>
           <div class="inv-line"><span>Issued</span><b>${UI.fmtDate(inv.issue_date)}</b></div>
           <div class="inv-line"><span>Due date</span><b>${UI.fmtDate(inv.due_date)}</b></div>
+          <div class="inv-line"><span>Subtotal</span><b>${UI.fmtNaira(inv.subtotal != null ? inv.subtotal : inv.total_amount)}</b></div>
+          ${inv.vat_amount != null ? `<div class="inv-line"><span>VAT (${inv.vat_rate != null ? inv.vat_rate : 7.5}%)</span><b>${UI.fmtNaira(inv.vat_amount)}</b></div>` : ''}
+          <div class="inv-line"><span>Total</span><b>${UI.fmtNaira(inv.total_amount)}</b></div>
+          ${!paid && inv.balance_due != null ? `<div class="inv-line"><span>Balance due</span><b>${UI.fmtNaira(inv.balance_due)}</b></div>` : ''}
           ${paid ? `<div class="inv-line"><span>Paid on</span><b>${UI.fmtDate(inv.paid_date || inv.issue_date)}</b></div>` : ''}
           ${inv.description ? `<div class="inv-line"><span>Notes</span><b>${UI.esc(inv.description)}</b></div>` : ''}
         </div>
         <div class="modal-f">
           <button class="btn ghost" onclick="this.closest('.modal-bg').remove()">Close</button>
-          ${paid ? '' : `<button class="btn" onclick="App.payInvoice('${UI.esc(inv.invoice_id)}', this)">Pay now</button>`}
+          <button class="btn ghost" onclick="App.downloadInvoicePdf('${UI.esc(inv.invoice_id)}', this)">Download PDF</button>
+          ${paid ? '' : `<button class="btn" onclick="App.notifyPayment('${UI.esc(inv.invoice_id)}', this)">I've paid — notify us</button>`}
         </div>
       </div>`;
     document.body.appendChild(bg);
     bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
   }
 
-  async function payInvoice(id, btn) {
-    btn.disabled = true; btn.textContent = 'Processing…';
+  // No payment gateway is wired yet, so a client can't self-mark an invoice paid
+  // (that's a finance action). Instead we notify finance to confirm receipt —
+  // this raises a ticket that lands in the ops Support inbox.
+  async function notifyPayment(id, btn) {
+    btn.disabled = true; btn.textContent = 'Sending…';
     try {
-      if (!Demo.isOn()) await apiRequest(`/billing/invoices/${id}/mark-paid`, { method: 'POST' });
-      document.querySelector('.modal-bg').remove();
-      UI.toast('Payment recorded', 'success');
+      if (!Demo.isOn()) await apiRequest(`/billing/invoices/${id}/notify-payment`, { method: 'POST', body: {} });
+      const m = document.querySelector('.modal-bg'); if (m) m.remove();
+      UI.toast("Thanks — we'll confirm your payment and update the invoice shortly", 'success');
       go('billing');
     } catch (e) {
-      UI.toast(e.message || 'Payment failed', 'error');
-      btn.disabled = false; btn.textContent = 'Pay now';
+      UI.toast(e.message || 'Could not send notification', 'error');
+      btn.disabled = false; btn.textContent = "I've paid — notify us";
+    }
+  }
+
+  // Download the invoice PDF (authenticated blob — same as ops).
+  async function downloadInvoicePdf(id, btn) {
+    const label = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Preparing…'; }
+    try {
+      const base = window.API_BASE || 'https://api.flowguard.ng/api/v1';
+      const token = localStorage.getItem('token') || '';
+      const r = await fetch(`${base}/billing/invoices/${id}/pdf`, { headers: { Authorization: 'Bearer ' + token } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const ct = r.headers.get('content-type') || '';
+      if (!ct.includes('pdf')) throw new Error('unexpected response');
+      const blob = await r.blob();
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = id + '.pdf';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+    } catch (e) {
+      UI.toast('Could not download PDF' + (e.message ? ': ' + e.message : ''), 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = label; }
     }
   }
 
@@ -612,7 +642,7 @@ const App = (function () {
   }
 
   return { go, openProperty, openEditProperty, activeProperty, setActiveProperty, setFcRange, openSensor, setSensorRange, monSearch, monFilter, monMetric, viewReport, downloadReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings, changePassword,
-           openTicketDetail, sendReply, openInvoice, payInvoice, selectServices, confirmServices, deactivateAccount, confirmDeactivate,
+           openTicketDetail, sendReply, openInvoice, notifyPayment, downloadInvoicePdf, selectServices, confirmServices, deactivateAccount, confirmDeactivate,
            setNotifFilter, markRead, markAllRead, deleteNotif, setTicketFilter, openTicket, submitTicket, init };
 })();
 window.App = App;
