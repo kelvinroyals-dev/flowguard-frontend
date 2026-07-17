@@ -476,6 +476,12 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff);-webkit-font-sm
         const data = await response.json();
 
         if (data.success) {
+          // New clients start in demo mode (sample data) and get the guided tour
+          // on their first sign-in, so the dashboard is never empty or confusing.
+          try {
+            localStorage.setItem('flowguard_demo_mode', 'true');
+            localStorage.setItem('flowguard_tour_pending', 'true');
+          } catch (_) {}
           // Show success state
           document.getElementById('signup-form').style.display = 'none';
           document.getElementById('steps-bar').style.display = 'none';
