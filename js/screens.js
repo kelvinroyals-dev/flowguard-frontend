@@ -505,16 +505,21 @@ const Screens = (function () {
       return;
     }
     // pick the property furthest along
-    const order = ['submitted', 'inspection_scheduled', 'inspection_ongoing', 'report_ready', 'payment_pending', 'active', 'monitoring_active'];
+    const order = ['submitted', 'inspection_scheduled', 'inspection_ongoing', 'report_ready', 'quote_sent', 'payment_pending', 'payment_completed', 'deployment_scheduled', 'active', 'monitoring_active'];
     const p = [...props].sort((a, b) => order.indexOf(b.status) - order.indexOf(a.status))[0];
     const map = {
       submitted: { s: 'progress', b: 'Area submitted', t: `We've received ${p.property_name || 'your area'} and will schedule an inspection soon.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
       inspection_scheduled: { s: 'progress', b: 'Inspection scheduled', t: `Our team will assess ${p.property_name || 'your area'} shortly.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
       inspection_ongoing: { s: 'progress', b: 'Inspection underway', t: `Our team is assessing ${p.property_name || 'your area'} right now.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
       report_ready: { s: 'active', b: 'Your report is ready', t: 'Your inspection report is available to review.', cta: 'View report', act: `App.go('reports')` },
+      quote_sent: { s: 'active', b: 'Quote ready', t: `Your service quote for ${p.property_name || 'your area'} is ready to review and accept.`, cta: 'View billing', act: `App.go('billing')` },
       payment_pending: { s: 'progress', b: 'Payment pending', t: 'Complete payment to activate monitoring for your area.', cta: 'View billing', act: `App.go('billing')` },
+      payment_completed: { s: 'active', b: 'Payment confirmed', t: 'Thank you — we\'re scheduling the installation of your Sentinel devices.', cta: 'View details', act: `App.openProperty('${p.property_id}')` },
+      deployment_scheduled: { s: 'progress', b: 'Deployment scheduled', t: `Your Sentinel devices are scheduled for installation at ${p.property_name || 'your area'}.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
       active: { s: 'active', b: 'Monitoring active', t: `${p.property_name || 'Your area'} is being monitored 24/7. Everything's handled.`, cta: 'View monitoring', act: `App.go('monitoring')` },
-      monitoring_active: { s: 'active', b: 'Monitoring active', t: `${p.property_name || 'Your area'} is being monitored 24/7. Everything's handled.`, cta: 'View monitoring', act: `App.go('monitoring')` }
+      monitoring_active: { s: 'active', b: 'Monitoring active', t: `${p.property_name || 'Your area'} is being monitored 24/7. Everything's handled.`, cta: 'View monitoring', act: `App.go('monitoring')` },
+      suspended: { s: 'progress', b: 'Monitoring paused', t: `Monitoring for ${p.property_name || 'your area'} is currently paused. Contact us if this is unexpected.`, cta: 'Contact support', act: `App.go('support')` },
+      cancelled: { s: 'progress', b: 'Service cancelled', t: `Service for ${p.property_name || 'this area'} has been cancelled.`, cta: 'Contact support', act: `App.go('support')` }
     };
     const m = map[p.status] || map.submitted;
     const ic = m.s === 'active'
