@@ -8,16 +8,31 @@
    ============================================================ */
 const Demo = (function () {
   const KEY = 'flowguard_demo_mode';
+  // AUTO marks demo that WE switched on (new signup, so the dashboard isn't
+  // empty during the tour) rather than a choice the client made. Only auto demo
+  // is switched off again once they have real properties — an explicit choice
+  // is never overridden.
+  const AUTO = 'flowguard_demo_auto';
 
-  function isOn() {
-    return localStorage.getItem(KEY) === 'true';
-  }
+  function isOn()   { return localStorage.getItem(KEY) === 'true'; }
+  function isAuto() { return localStorage.getItem(AUTO) === 'true'; }
 
+  // Explicit user action (Settings toggle) — clears the auto flag so their
+  // choice sticks.
   async function set(on) {
     localStorage.setItem(KEY, on ? 'true' : 'false');
+    localStorage.setItem(AUTO, 'false');
     // best-effort backend sync (non-blocking, honest failure)
     try { await apiRequest('/preferences', { method: 'PUT', body: { show_demo_data: on } }); }
     catch (_) { /* offline is fine; localStorage is source of truth for the toggle */ }
+  }
+
+  // Automatic enable/disable (signup, or once real properties exist).
+  async function setAuto(on) {
+    localStorage.setItem(KEY, on ? 'true' : 'false');
+    localStorage.setItem(AUTO, on ? 'true' : 'false');
+    try { await apiRequest('/preferences', { method: 'PUT', body: { show_demo_data: on } }); }
+    catch (_) { /* non-blocking */ }
   }
 
   // ---- Sample data (only used when the toggle is ON) ----
@@ -180,6 +195,6 @@ const Demo = (function () {
     return out;
   })();
 
-  return { isOn, set, data: { activity, outcomes, healthHistory, floodRisk, sensors, properties, invoices, alerts, timeline, reports, services, tickets, history, contract } };
+  return { isOn, isAuto, set, setAuto, data: { activity, outcomes, healthHistory, floodRisk, sensors, properties, invoices, alerts, timeline, reports, services, tickets, history, contract } };
 })();
 window.Demo = Demo;

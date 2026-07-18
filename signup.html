@@ -480,6 +480,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--ff);-webkit-font-sm
           // on their first sign-in, so the dashboard is never empty or confusing.
           try {
             localStorage.setItem('flowguard_demo_mode', 'true');
+            localStorage.setItem('flowguard_demo_auto', 'true');  // we enabled it, not the client
             localStorage.setItem('flowguard_tour_pending', 'true');
           } catch (_) {}
           // Show success state

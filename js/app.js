@@ -262,6 +262,18 @@ const App = (function () {
 
   // ---- Support tickets ----
   function setTicketFilter(f) { Screens.setTicketFilter(f); go('support'); }
+  // Demo mode that WE switched on for a brand-new client must step aside as soon
+  // as they have a real property — otherwise the sample sensors mask the real
+  // state of a property that's still 'submitted' (and has no devices yet).
+  // A client's own choice in Settings is never overridden.
+  async function reconcileDemo() {
+    try {
+      if (!Demo.isOn() || !Demo.isAuto()) return;
+      const r = await apiRequest('/properties');
+      if (((r && r.data) || []).length) await Demo.setAuto(false);
+    } catch (_) { /* can't tell → leave demo as-is */ }
+  }
+
   function openTicket(presetCat, subj, prio, desc) {
     const cats = Screens.TICKET_CATS;
     const opts = Object.keys(cats).map(k => `<option value="${k}" ${k === presetCat ? 'selected' : ''}>${cats[k]}</option>`).join('');
@@ -508,6 +520,9 @@ const App = (function () {
         return;
       }
       await apiRequest('/properties', { method: 'POST', body });
+      // They now have a real property — step out of the sample data we turned on
+      // at signup so the dashboard reflects their actual state.
+      if (Demo.isOn() && Demo.isAuto()) await Demo.setAuto(false);
       document.querySelector('.modal-bg').remove();
       UI.toast('Area registered', 'success');
       go('properties');
@@ -605,7 +620,7 @@ const App = (function () {
 
     // restore the screen from the URL hash (refresh / email deep-link),
     // otherwise land on overview
-    refreshUser().finally(() => routeFromHash());
+    reconcileDemo().finally(() => refreshUser().finally(() => routeFromHash()));
     refreshRailSelector();
 
     // respond to browser back/forward and in-app hash changes

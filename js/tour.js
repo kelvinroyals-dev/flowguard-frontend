@@ -180,7 +180,7 @@
     injectReplayButton();
     // Auto-launch for new clients (flag set at signup) once the app has rendered.
     if (localStorage.getItem(PENDING) === 'true') {
-      try { if (window.Demo && Demo.isOn && !Demo.isOn()) Demo.set(true); } catch (_) {}
+      try { if (window.Demo && Demo.isOn && !Demo.isOn()) Demo.setAuto(true); } catch (_) {}
       setTimeout(() => start(), 900);
     }
   }
