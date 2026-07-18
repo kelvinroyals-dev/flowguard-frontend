@@ -268,9 +268,13 @@ const App = (function () {
   // A client's own choice in Settings is never overridden.
   async function reconcileDemo() {
     try {
-      if (!Demo.isOn() || !Demo.isAuto()) return;
+      if (!Demo.isOn()) return;
+      const legacy = Demo.isLegacyAuto();            // pre-dates the auto flag
+      if (!Demo.isAuto() && !legacy) return;         // explicit client choice → respect it
       const r = await apiRequest('/properties');
-      if (((r && r.data) || []).length) await Demo.setAuto(false);
+      const hasReal = (((r && r.data) || []).length) > 0;
+      if (hasReal) await Demo.setAuto(false);        // real data exists → leave demo
+      else if (legacy) await Demo.setAuto(true);     // adopt the legacy session as auto-demo
     } catch (_) { /* can't tell → leave demo as-is */ }
   }
 

@@ -16,6 +16,10 @@ const Demo = (function () {
 
   function isOn()   { return localStorage.getItem(KEY) === 'true'; }
   function isAuto() { return localStorage.getItem(AUTO) === 'true'; }
+  // Sessions that pre-date the AUTO flag: demo is on but we never recorded who
+  // switched it on. Treat those as auto once (a one-time migration) so they also
+  // step aside for real data; afterwards the flag is always written explicitly.
+  function isLegacyAuto() { return isOn() && localStorage.getItem(AUTO) === null; }
 
   // Explicit user action (Settings toggle) — clears the auto flag so their
   // choice sticks.
@@ -195,6 +199,6 @@ const Demo = (function () {
     return out;
   })();
 
-  return { isOn, isAuto, set, setAuto, data: { activity, outcomes, healthHistory, floodRisk, sensors, properties, invoices, alerts, timeline, reports, services, tickets, history, contract } };
+  return { isOn, isAuto, isLegacyAuto, set, setAuto, data: { activity, outcomes, healthHistory, floodRisk, sensors, properties, invoices, alerts, timeline, reports, services, tickets, history, contract } };
 })();
 window.Demo = Demo;
