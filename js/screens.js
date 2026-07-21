@@ -1220,13 +1220,15 @@ const Screens = (function () {
     const read = n.read || n.is_read;
     const kind = n.type === 'warning' ? 'warn' : n.type === 'critical' || n.type === 'alert' ? 'alert' : 'ok';
     const ic = kind === 'ok' ? icons.check : icons.warn;
-    return `<div class="evt ${kind}" style="${read ? 'opacity:.6' : ''}">
+    const dest = (n.link || '').replace('#', '');
+    const nav = dest ? `onclick="App.go('${UI.esc(dest)}')" style="cursor:pointer;${read ? 'opacity:.6' : ''}"` : `style="${read ? 'opacity:.6' : ''}"`;
+    return `<div class="evt ${kind}" ${nav}>
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ic}</svg></div>
       <div style="flex:1"><b>${UI.esc(n.title || 'Notification')}</b><small>${UI.esc(n.message || n.description || '')}</small></div>
       <span class="t">${UI.esc(n.created_at || '')}</span>
       <div style="display:flex;gap:8px;margin-left:10px">
-        ${!read ? `<button class="chip clickable-outline" onclick="App.markRead('${UI.esc(n.id)}')">Mark read</button>` : ''}
-        <button class="chip clickable-outline" onclick="App.deleteNotif('${UI.esc(n.id)}')">Delete</button>
+        ${!read ? `<button class="chip clickable-outline" onclick="event.stopPropagation();App.markRead('${UI.esc(n.id)}')">Mark read</button>` : ''}
+        <button class="chip clickable-outline" onclick="event.stopPropagation();App.deleteNotif('${UI.esc(n.id)}')">Delete</button>
       </div>
     </div>`;
   }
