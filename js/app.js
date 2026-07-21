@@ -268,6 +268,15 @@ const App = (function () {
   // A client's own choice in Settings is never overridden.
   async function reconcileDemo() {
     try {
+      // Fresh device (no local demo choice yet): adopt the server's onboarding
+      // state so demo + tour follow the client across devices.
+      if (localStorage.getItem('flowguard_demo_mode') === null) {
+        const pr = await apiRequest('/preferences').then(r => r && r.data).catch(() => null);
+        if (pr && pr.show_demo_data && !pr.onboarding_completed) {
+          localStorage.setItem('flowguard_tour_pending', 'true');
+          await Demo.setAuto(true);
+        }
+      }
       if (!Demo.isOn()) return;
       const legacy = Demo.isLegacyAuto();            // pre-dates the auto flag
       if (!Demo.isAuto() && !legacy) return;         // explicit client choice → respect it

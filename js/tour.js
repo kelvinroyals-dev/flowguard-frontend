@@ -161,7 +161,12 @@
     document.removeEventListener('keydown', _keyHandler);
     window.removeEventListener('resize', _resizeHandler);
     window.removeEventListener('scroll', _resizeHandler, true);
-    if (clearFlag) { try { localStorage.removeItem(PENDING); } catch (_) {} }
+    if (clearFlag) {
+      try { localStorage.removeItem(PENDING); } catch (_) {}
+      // Record completion server-side so the tour doesn't relaunch on the
+      // client's other devices.
+      try { if (window.apiRequest) window.apiRequest('/preferences', { method: 'PUT', body: { onboarding_completed: true } }); } catch (_) {}
+    }
   }
 
   // Replay button in the sidebar (Account group).
