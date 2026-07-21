@@ -371,17 +371,17 @@ const App = (function () {
     go(current); // re-render current screen with new data source
   }
 
-  // ---- Register area modal ----
+  // ---- Register property modal ----
   function openRegister(edit) {
     const bg = document.createElement('div');
     bg.className = 'modal-bg';
     bg.innerHTML = `
       <div class="modal modal-wide">
-        <div class="modal-h"><h2>${edit ? 'Edit property details' : 'Register an area'}</h2><button onclick="this.closest('.modal-bg').remove()" aria-label="Close">×</button></div>
+        <div class="modal-h"><h2>${edit ? 'Edit property details' : 'Register a property'}</h2><button onclick="this.closest('.modal-bg').remove()" aria-label="Close">×</button></div>
         <div class="modal-b">
 
-          <div class="form-section-t">Area details</div>
-          <div class="field"><label>Area name <span class="req">*</span></label><input id="rg-name" placeholder="e.g. Sunrise Court Estate"></div>
+          <div class="form-section-t">Property details</div>
+          <div class="field"><label>Property name <span class="req">*</span></label><input id="rg-name" placeholder="e.g. Sunrise Court Estate"></div>
           <div class="field-row">
             <div class="field"><label>Property type</label>
               <select id="rg-type">
@@ -433,7 +433,7 @@ const App = (function () {
         </div>
         <div class="modal-f">
           <button class="btn ghost" onclick="this.closest('.modal-bg').remove()">Cancel</button>
-          <button class="btn" id="rg-submit" ${edit ? `data-edit="${edit.property_id}"` : ''} onclick="App.submitRegister(this)">${edit ? 'Save changes' : 'Submit area'}</button>
+          <button class="btn" id="rg-submit" ${edit ? `data-edit="${edit.property_id}"` : ''} onclick="App.submitRegister(this)">${edit ? 'Save changes' : 'Submit property'}</button>
         </div>
       </div>`;
     document.body.appendChild(bg);
@@ -482,7 +482,7 @@ const App = (function () {
     const desc = val('rg-desc');
     const err = g('rg-err');
     if (!name || !city || !desc) {
-      err.textContent = 'Please add an area name, city, and the drainage concern.';
+      err.textContent = 'Please add a property name, city, and the drainage concern.';
       err.classList.remove('hidden'); return;
     }
     btn.disabled = true; btn.textContent = 'Submitting…';
@@ -537,12 +537,12 @@ const App = (function () {
       // at signup so the dashboard reflects their actual state.
       if (Demo.isOn() && Demo.isAuto()) await Demo.setAuto(false);
       document.querySelector('.modal-bg').remove();
-      UI.toast('Area registered', 'success');
+      UI.toast('Property registered', 'success');
       go('properties');
     } catch (e) {
       err.textContent = e.message || 'Could not submit. Please try again.';
       err.classList.remove('hidden');
-      btn.disabled = false; btn.textContent = 'Submit area';
+      btn.disabled = false; btn.textContent = 'Submit property';
     }
   }
 

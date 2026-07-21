@@ -102,7 +102,7 @@ const Demo = (function () {
   ];
 
   const timeline = [
-    { status: 'done', title: 'Area submitted', sub: 'Sunrise Court Estate · Lekki, Lagos', when: '5 Jul' },
+    { status: 'done', title: 'Property submitted', sub: 'Sunrise Court Estate · Lekki, Lagos', when: '5 Jul' },
     { status: 'done', title: 'Inspection completed', sub: 'Drainage assessed, plan approved', when: '8 Jul' },
     { status: 'now', title: 'Monitoring active', sub: '8 nodes across the estate, reporting every 15 min', when: 'Now' },
     { status: 'pending', title: 'First maintenance', sub: 'Bio-treatment + channel clearing', when: '18 Jul' }

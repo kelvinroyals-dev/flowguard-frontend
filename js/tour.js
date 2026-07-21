@@ -28,7 +28,7 @@
       html: `Predicts flood risk from the weather forecast <i>and</i> the condition of your drains.<br><br><span class="tg-band ok">Low</span> routine — nothing to do.<br><span class="tg-band warn">Moderate</span> keep an eye out over the next day.<br><span class="tg-band bad">High</span> act early — a pre-clean is recommended, and we schedule preventive work so a storm doesn't catch you out.` },
 
     { tab: 'properties', title: 'Properties — what we protect',
-      html: `Your registered estates and the drainage assets we monitor for each — canals, catch basins, pump stations. Add a new area here and we'll assess it.` },
+      html: `Your registered properties and the drainage assets we monitor for each — canals, catch basins, pump stations. Add a new property here and we'll assess it.` },
 
     { tab: 'alerts', title: 'Alerts — what needs you',
       html: `When a reading turns risky, it shows up here with what happened and what we're doing.<br><br><span class="tg-band bad">Red</span> act now — we're dispatching a crew; keep the area clear.<br><span class="tg-band warn">Amber</span> monitor — no action needed yet.<br><br>A quiet Alerts screen is a good sign.` },

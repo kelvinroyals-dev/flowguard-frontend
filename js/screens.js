@@ -270,7 +270,7 @@ const Screens = (function () {
         <div class="greeting"><h1>${greeting()}, ${UI.esc(name)}</h1><div class="sub"><span id="ov-date">${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span> · <span id="ov-sub">Here's the latest on your drainage network.</span></div></div>
         <div class="top-actions">
           <button class="icon-btn" aria-label="Notifications" onclick="App.go('notifications')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons.bell}</svg></button>
-          <button class="btn" onclick="App.openRegister()">+ Add area</button>
+          <button class="btn" onclick="App.openRegister()">+ Add property</button>
         </div>
       </div>
       ${demoBanner()}
@@ -368,7 +368,7 @@ const Screens = (function () {
         ${UI.state('awaiting',
           total ? 'Awaiting sensor data' : 'Monitoring starts after setup',
           total ? 'Your sensors are registered but haven\'t reported readings yet. Live flood-risk data appears here once they come online.'
-                : 'Once your area is inspected and sensors are installed, your live flood-risk index and water levels appear here.',
+                : 'Once your property is inspected and sensors are installed, your live flood-risk index and water levels appear here.',
           Demo.isOn() ? null : 'Explore with demo data', 'onclick="App.toggleDemo(true)"').replace('card', '')}
       </div>`;
     }
@@ -482,7 +482,7 @@ const Screens = (function () {
         detail: hasActive ? 'Included in your plan' : 'Begins after activation' },
       { key: 'dispatch', name: 'Heavy-Plant Dispatch', desc: 'Clearing & maintenance crews', icon: 'truck',
         status: hasActive ? 'active' : 'pending',
-        detail: hasActive ? 'On-call for your area' : 'Available after activation' }
+        detail: hasActive ? 'On-call for your property' : 'Available after activation' }
     ];
   }
 
@@ -499,7 +499,7 @@ const Screens = (function () {
     if (!props || !props.length) {
       el.innerHTML = `<div class="journey stage-pending">
         <div class="jic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg></div>
-        <div class="jtext"><b>Welcome to FlowGuard</b><small>Register your first drainage area to begin monitoring.</small></div>
+        <div class="jtext"><b>Welcome to FlowGuard</b><small>Register your first property to begin monitoring.</small></div>
         <div class="jcta"><button onclick="App.openRegister()">Get started</button></div>
       </div>`;
       return;
@@ -508,18 +508,18 @@ const Screens = (function () {
     const order = ['submitted', 'inspection_scheduled', 'inspection_ongoing', 'report_ready', 'quote_sent', 'payment_pending', 'payment_completed', 'deployment_scheduled', 'active', 'monitoring_active'];
     const p = [...props].sort((a, b) => order.indexOf(b.status) - order.indexOf(a.status))[0];
     const map = {
-      submitted: { s: 'progress', b: 'Area submitted', t: `We've received ${p.property_name || 'your area'} and will schedule an inspection soon.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
-      inspection_scheduled: { s: 'progress', b: 'Inspection scheduled', t: `Our team will assess ${p.property_name || 'your area'} shortly.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
-      inspection_ongoing: { s: 'progress', b: 'Inspection underway', t: `Our team is assessing ${p.property_name || 'your area'} right now.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
+      submitted: { s: 'progress', b: 'Property submitted', t: `We've received ${p.property_name || 'your property'} and will schedule an inspection soon.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
+      inspection_scheduled: { s: 'progress', b: 'Inspection scheduled', t: `Our team will assess ${p.property_name || 'your property'} shortly.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
+      inspection_ongoing: { s: 'progress', b: 'Inspection underway', t: `Our team is assessing ${p.property_name || 'your property'} right now.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
       report_ready: { s: 'active', b: 'Your report is ready', t: 'Your inspection report is available to review.', cta: 'View report', act: `App.go('reports')` },
-      quote_sent: { s: 'active', b: 'Quote ready', t: `Your service quote for ${p.property_name || 'your area'} is ready to review and accept.`, cta: 'View billing', act: `App.go('billing')` },
-      payment_pending: { s: 'progress', b: 'Payment pending', t: 'Complete payment to activate monitoring for your area.', cta: 'View billing', act: `App.go('billing')` },
+      quote_sent: { s: 'active', b: 'Quote ready', t: `Your service quote for ${p.property_name || 'your property'} is ready to review and accept.`, cta: 'View billing', act: `App.go('billing')` },
+      payment_pending: { s: 'progress', b: 'Payment pending', t: 'Complete payment to activate monitoring for your property.', cta: 'View billing', act: `App.go('billing')` },
       payment_completed: { s: 'active', b: 'Payment confirmed', t: 'Thank you — we\'re scheduling the installation of your Sentinel devices.', cta: 'View details', act: `App.openProperty('${p.property_id}')` },
-      deployment_scheduled: { s: 'progress', b: 'Deployment scheduled', t: `Your Sentinel devices are scheduled for installation at ${p.property_name || 'your area'}.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
-      active: { s: 'active', b: 'Monitoring active', t: `${p.property_name || 'Your area'} is being monitored 24/7. Everything's handled.`, cta: 'View monitoring', act: `App.go('monitoring')` },
-      monitoring_active: { s: 'active', b: 'Monitoring active', t: `${p.property_name || 'Your area'} is being monitored 24/7. Everything's handled.`, cta: 'View monitoring', act: `App.go('monitoring')` },
-      suspended: { s: 'progress', b: 'Monitoring paused', t: `Monitoring for ${p.property_name || 'your area'} is currently paused. Contact us if this is unexpected.`, cta: 'Contact support', act: `App.go('support')` },
-      cancelled: { s: 'progress', b: 'Service cancelled', t: `Service for ${p.property_name || 'this area'} has been cancelled.`, cta: 'Contact support', act: `App.go('support')` }
+      deployment_scheduled: { s: 'progress', b: 'Deployment scheduled', t: `Your Sentinel devices are scheduled for installation at ${p.property_name || 'your property'}.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
+      active: { s: 'active', b: 'Monitoring active', t: `${p.property_name || 'Your property'} is being monitored 24/7. Everything's handled.`, cta: 'View monitoring', act: `App.go('monitoring')` },
+      monitoring_active: { s: 'active', b: 'Monitoring active', t: `${p.property_name || 'Your property'} is being monitored 24/7. Everything's handled.`, cta: 'View monitoring', act: `App.go('monitoring')` },
+      suspended: { s: 'progress', b: 'Monitoring paused', t: `Monitoring for ${p.property_name || 'your property'} is currently paused. Contact us if this is unexpected.`, cta: 'Contact support', act: `App.go('support')` },
+      cancelled: { s: 'progress', b: 'Service cancelled', t: `Service for ${p.property_name || 'this property'} has been cancelled.`, cta: 'Contact support', act: `App.go('support')` }
     };
     const m = map[p.status] || map.submitted;
     const ic = m.s === 'active'
@@ -568,7 +568,7 @@ const Screens = (function () {
       const p = props[0];
       const order = ['submitted', 'inspection_scheduled', 'inspection_completed', 'monitoring_active'];
       const labels = {
-        submitted: { title: 'Area submitted', sub: `${p.property_name || p.city || 'Property'}` },
+        submitted: { title: 'Property submitted', sub: `${p.property_name || p.city || 'Property'}` },
         inspection_scheduled: { title: 'Inspection scheduled', sub: 'Awaiting site visit' },
         inspection_completed: { title: 'Inspection completed', sub: 'Monitoring plan approved' },
         monitoring_active: { title: 'Monitoring active', sub: 'Sensors reporting' }
@@ -727,7 +727,7 @@ const Screens = (function () {
   async function properties(view) {
     view.innerHTML = `
       <div class="top"><div><h1>My properties</h1><div class="sub">Areas you've registered for monitoring</div></div>
-      <button class="btn" onclick="App.openRegister()">+ Add area</button></div>
+      <button class="btn" onclick="App.openRegister()">+ Add property</button></div>
       ${demoBanner()}
       <div id="prop-portfolio"></div>
       <div id="prop-list">${UI.loading(3)}</div>`;
@@ -785,7 +785,7 @@ const Screens = (function () {
   function propertyRow(p, score) {
     const scoreColor = score == null ? 'var(--ink-3)' : score >= 70 ? 'var(--ok)' : score >= 50 ? 'var(--warn)' : 'var(--alert)';
     return `<tr class="rowlink" onclick="App.openProperty('${UI.esc(p.property_id)}')">
-      <td data-label="Property"><b>${UI.esc(p.property_name || 'Unnamed area')}</b></td>
+      <td data-label="Property"><b>${UI.esc(p.property_name || 'Unnamed property')}</b></td>
       <td class="muted" data-label="Location">${UI.esc([p.city, p.state].filter(Boolean).join(', ') || '—')}</td>
       <td class="muted" data-label="Type">${UI.esc(UI.prettyType(p.property_type))}</td>
       <td data-label="Score"><b style="color:${scoreColor}">${score != null ? score + '/100' : '—'}</b></td>
@@ -1075,7 +1075,7 @@ const Screens = (function () {
       try { const r = await apiRequest(`/properties/${propertyId}`); p = r && r.data; }
       catch (e) { document.getElementById('pd-body').innerHTML = UI.state('error', 'Could not load property', e.message || 'Please try again.', 'Back to properties', "onclick=\"App.go('properties')\""); return; }
     }
-    if (!p) { document.getElementById('pd-body').innerHTML = UI.state('error', 'Property not found', 'This area may have been removed.'); return; }
+    if (!p) { document.getElementById('pd-body').innerHTML = UI.state('error', 'Property not found', 'This property may have been removed.'); return; }
 
     document.getElementById('pd-name').textContent = p.property_name || 'Property';
     document.getElementById('pd-loc').textContent = [p.city, p.state].filter(Boolean).join(', ') + ' · ' + UI.prettyType(p.property_type);
@@ -1145,7 +1145,7 @@ const Screens = (function () {
                </div>` : ''}`
             : (STATUS_FLOW.indexOf(p.status) >= STATUS_FLOW.indexOf('inspection_scheduled')
                 ? UI.state('awaiting', 'Inspection scheduled', 'Your inspection is being arranged. Team and timing details will appear here shortly.').replace('card', '')
-                : UI.state('awaiting', 'No inspection yet', 'An inspection will be scheduled after your area is reviewed.').replace('card', ''))}
+                : UI.state('awaiting', 'No inspection yet', 'An inspection will be scheduled after your property is reviewed.').replace('card', ''))}
           <h3 style="margin-top:22px">Recent invoices</h3>
           ${invoices.length
             ? `<div class="rows">${invoices.map(inv => {
@@ -1176,7 +1176,7 @@ const Screens = (function () {
     }
     // always available
     btns.push(`<button class="btn ghost" onclick="App.openEditProperty('${UI.esc(p.property_id)}')">Edit details</button>`);
-    btns.push(`<button class="btn ghost" onclick="App.openRegister()">Register another area</button>`);
+    btns.push(`<button class="btn ghost" onclick="App.openRegister()">Register another property</button>`);
     return btns.join('');
   }
 
