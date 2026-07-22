@@ -509,7 +509,7 @@ const Screens = (function () {
     const p = [...props].sort((a, b) => order.indexOf(b.status) - order.indexOf(a.status))[0];
     const map = {
       submitted: { s: 'progress', b: 'Property submitted', t: `We've received ${p.property_name || 'your property'} and will schedule an inspection soon.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
-      inspection_scheduled: { s: 'progress', b: 'Inspection scheduled', t: `Our team will assess ${p.property_name || 'your property'} shortly.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
+      inspection_scheduled: { s: 'progress', b: 'Inspection scheduled', t: p.inspection_date ? `Our team will assess ${p.property_name || 'your property'} on ${UI.fmtDate(p.inspection_date)}.` : `Our team will assess ${p.property_name || 'your property'} shortly — we'll confirm the date soon.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
       inspection_ongoing: { s: 'progress', b: 'Inspection underway', t: `Our team is assessing ${p.property_name || 'your property'} right now.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
       report_ready: { s: 'active', b: 'Your report is ready', t: 'Your inspection report is available to review.', cta: 'View report', act: `App.go('reports')` },
       quote_sent: { s: 'active', b: 'Quote ready', t: `Your service quote for ${p.property_name || 'your property'} is ready to review and accept.`, cta: 'View billing', act: `App.go('billing')` },
