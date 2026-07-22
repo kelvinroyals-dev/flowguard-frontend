@@ -3,157 +3,187 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Client Login — FlowGuard</title>
+<title>Sign in — FlowGuard</title>
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="favicon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
-/* Portal design system — matches index.html */
-:root{
-  --bg:#eef2f4; --surface:#ffffff; --surface-2:#f7fafb; --line:#e2e9ed; --line-2:#d3dde2;
-  --ink:#12222b; --ink-2:#4a626d; --ink-3:#8399a4;
-  --brand:#0891b2; --brand-2:#06b6d4; --brand-deep:#0e5b6e; --brand-soft:#e0f5fa;
-  --ok:#10b981; --ok-bg:#e6f7f1; --warn:#f59e0b; --warn-bg:#fef4e2; --alert:#ef4444; --alert-bg:#fdeceb;
-  --r:20px; --rs:13px; --rx:9px;
-  --sh:0 2px 4px rgba(18,34,43,.03), 0 12px 32px rgba(18,34,43,.06);
-  --sh-sm:0 1px 2px rgba(18,34,43,.05);
-  --ff:'Inter',sans-serif; --ff-d:'Space Grotesk',sans-serif;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--ink);font-family:var(--ff);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;position:relative;overflow-x:hidden}
-/* subtle brand wash behind everything */
-body::before{content:"";position:fixed;inset:0;background:radial-gradient(1000px 500px at 50% -10%, var(--brand-soft), transparent 70%);pointer-events:none;z-index:0}
+  :root{
+    --bg:#fafbfc; --card:#ffffff; --border:#e7eaed; --border-strong:#d7dbdf;
+    --ink:#12181f; --text-1:#151b22; --text-2:#5b6670; --text-3:#98a2ab;
+    --red:#e5483c; --red-dark:#c93d32; --red-tint:#fdeceb;
+    --teal:#0d9488; --teal-light:#f0fdfa; --cyan:#16a8d3; --primary:var(--teal);
+    --green:#1f9d5b; --green-tint:#e8f7ef;
+    --shadow-card:0 1px 2px rgba(15,23,30,.04), 0 10px 30px rgba(15,23,30,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    min-height:100vh;overflow-x:hidden;background-color:#fff;
+    background-image:
+      radial-gradient(at 0% 0%, hsla(174,77%,95%,1) 0, transparent 50%),
+      radial-gradient(at 50% 0%, hsla(187,60%,96%,1) 0, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(174,77%,95%,1) 0, transparent 50%);
+    color:var(--text-1);font-family:'Plus Jakarta Sans',sans-serif;-webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'JetBrains Mono',monospace}
+  a{color:inherit}
 
-/* flowing water design at bottom — original, untouched */
-.wave-strip {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      height: 80px;
-      overflow: hidden;
-      z-index: 0;
-      opacity: 0.7;
-    }
-    .wave-strip svg {
-      width: 200%; height: 100%;
-      animation: wave-scroll 14s linear infinite;
-    }
-    @keyframes wave-scroll {
-      from { transform: translateX(0); }
-      to   { transform: translateX(-50%); }
-    }
+  /* top utility bar */
+  .util-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:28px 44px 8px;flex-wrap:wrap;position:relative;z-index:10}
+  .util-logo{display:flex;align-items:center;gap:10px}
+  .util-logo img{height:30px;width:auto;display:block}
+  .util-right{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--text-2)}
+  .ghost-btn{font-size:13px;font-weight:700;color:var(--text-1);border:1px solid var(--border-strong);padding:8px 20px;border-radius:10px;background:var(--card);cursor:pointer;text-decoration:none;transition:all .2s ease}
+  .ghost-btn:hover{background:var(--bg);border-color:var(--text-3)}
 
-.page-wrap{position:relative;z-index:1;width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center}
-.brand-header{text-align:center;margin-bottom:26px}
-.brand-header .logo{height:44px;width:auto;margin:0 auto 14px;display:block}
-.brand-name{font-family:var(--ff-d);font-size:24px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
-.brand-tagline{font-size:12.5px;font-weight:500;text-transform:uppercase;letter-spacing:.09em;color:var(--brand);margin-top:4px}
-/* corner logo — top-left on desktop */
-.corner-logo{position:fixed;top:28px;left:32px;z-index:2;display:block}
-.corner-logo img{height:38px;width:auto;display:block}
-@media(max-width:640px){
-  .corner-logo{position:static;text-align:center;margin:0 auto 20px}
-  .corner-logo img{height:40px;margin:0 auto}
-}
+  .shell{max-width:1180px;margin:0 auto;padding:0 44px 60px;position:relative;z-index:1}
+  .main-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:72px;align-items:center;min-height:74vh}
 
-.card{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:32px 30px}
-.card-title{font-family:var(--ff-d);font-size:22px;font-weight:600;letter-spacing:-.01em}
-.card-sub{color:var(--ink-2);font-size:14px;margin:6px 0 24px}
+  /* left marketing */
+  .marketing{padding-top:8px}
+  .badge-label{display:inline-block;font-size:12px;font-weight:800;letter-spacing:1.5px;color:var(--primary);text-transform:uppercase;margin-bottom:22px}
+  .headline{font-size:46px;line-height:1.08;font-weight:800;letter-spacing:-.02em;color:var(--ink);max-width:540px;margin-bottom:20px}
+  .headline .accent{color:var(--primary)}
+  .lede{font-size:17px;line-height:1.6;color:var(--text-2);max-width:460px;margin-bottom:32px}
+  .trust{display:flex;flex-direction:column;gap:14px}
+  .trust-item{display:flex;align-items:center;gap:12px;font-size:14.5px;font-weight:600;color:var(--text-1)}
+  .trust-item .tick{width:26px;height:26px;border-radius:8px;background:var(--teal-light);color:var(--teal);display:grid;place-items:center;flex:none}
+  .trust-item .tick svg{width:15px;height:15px}
 
-.field{margin-bottom:16px}
-.field label{display:block;font-size:13px;font-weight:500;margin-bottom:6px;color:var(--ink-2)}
-.field input{width:100%;padding:12px 14px;border:1px solid var(--line-2);border-radius:var(--rx);background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:14px;transition:.15s}
-.field input:focus{outline:none;border-color:var(--brand);background:var(--surface);box-shadow:0 0 0 3px var(--brand-soft)}
-.pw-wrap{position:relative}
-.pw-wrap input{padding-right:44px}
-.pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--ink-3);cursor:pointer;padding:8px;display:grid;place-items:center}
-.pw-toggle:hover{color:var(--brand)}
-.pw-toggle svg{width:20px;height:20px}
+  /* right form */
+  .form-col{display:flex;justify-content:center}
+  .login-card{width:100%;max-width:420px;background:var(--card);border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow-card);padding:34px 32px}
+  .form-title{font-size:26px;font-weight:800;letter-spacing:-.01em;color:var(--ink)}
+  .form-sub{color:var(--text-2);font-size:14.5px;margin:8px 0 26px;line-height:1.5}
 
-.form-footer-row{display:flex;justify-content:space-between;align-items:center;margin:6px 0 20px}
-.remember-label{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink-2);cursor:pointer}
-.remember-label input{width:16px;height:16px;accent-color:var(--brand)}
-.forgot-link{color:var(--brand);font-size:13.5px;font-weight:500;text-decoration:none}
-.forgot-link:hover{text-decoration:underline}
+  .ff{margin-bottom:18px;text-align:left}
+  .ff label{display:block;font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-1)}
+  .wrap-in{position:relative;display:flex;align-items:center}
+  .wrap-in .lead{position:absolute;left:14px;width:18px;height:18px;color:var(--text-3);pointer-events:none}
+  .wrap-in input{width:100%;padding:13px 14px 13px 42px;border:1px solid var(--border-strong);border-radius:12px;background:#fff;color:var(--text-1);font-family:inherit;font-size:14.5px;transition:.15s}
+  .wrap-in input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,148,136,.14)}
+  .pw-eye{position:absolute;right:8px;background:none;border:none;color:var(--text-3);cursor:pointer;padding:8px;display:grid;place-items:center}
+  .pw-eye:hover{color:var(--teal)}
+  .pw-eye svg{width:19px;height:19px}
 
-.btn-primary{width:100%;padding:13px;border-radius:100px;background:var(--brand);color:#fff;border:none;font-family:var(--ff-d);font-size:15px;font-weight:600;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;gap:8px}
-.btn-primary:hover:not(:disabled){background:var(--brand-deep)}
-.btn-primary:disabled{opacity:.7;cursor:default}
-.btn-inner{display:flex;align-items:center;justify-content:center;gap:8px}
-.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+  .footer-row{display:flex;justify-content:space-between;align-items:center;margin:2px 0 22px}
+  .remember-label{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--text-2);cursor:pointer}
+  .remember-label input{width:16px;height:16px;accent-color:var(--teal)}
+  .forgot-link{color:var(--teal);font-size:13.5px;font-weight:600;text-decoration:none}
+  .forgot-link:hover{text-decoration:underline}
 
-#alert-area{margin-top:14px}
-.alert{display:flex;align-items:flex-start;gap:9px;padding:11px 14px;border-radius:var(--rx);font-size:13.5px;line-height:1.4}
-.alert svg{width:16px;height:16px;flex-shrink:0;margin-top:1px}
-.alert-error{background:var(--alert-bg);color:#b42318}
-.alert-success{background:var(--ok-bg);color:#087443}
+  .btn-primary{width:100%;padding:14px;border-radius:12px;background:var(--teal);color:#fff;border:none;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;gap:8px}
+  .btn-primary:hover:not(:disabled){background:#0b7d72}
+  .btn-primary:disabled{opacity:.7;cursor:default}
+  .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
 
-.divider{display:flex;align-items:center;gap:12px;margin:22px 0;color:var(--ink-3);font-size:12.5px}
-.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
-.social-row{display:flex;gap:10px}
-.social-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;border:1px solid var(--line-2);border-radius:var(--rx);background:var(--surface);color:var(--ink-2);font-size:13.5px;font-weight:500;cursor:pointer;transition:.15s;text-decoration:none}
-.social-btn:hover{background:var(--bg);border-color:var(--brand)}
-.social-btn svg,.social-btn img{width:18px;height:18px}
+  #alert-area{margin-top:14px}
+  .alert{display:flex;align-items:flex-start;gap:9px;padding:11px 14px;border-radius:10px;font-size:13.5px;line-height:1.4}
+  .alert svg{width:16px;height:16px;flex-shrink:0;margin-top:1px}
+  .alert-error{background:var(--red-tint);color:var(--red-dark)}
+  .alert-success{background:var(--green-tint);color:#0f7a44}
 
-.signup-row{text-align:center;margin-top:22px;font-size:14px;color:var(--ink-2)}
-.signup-row a{color:var(--brand);font-weight:600;text-decoration:none}
-.signup-row a:hover{text-decoration:underline}
+  .signup-row{text-align:center;margin-top:22px;font-size:14px;color:var(--text-2)}
+  .signup-row a{color:var(--teal);font-weight:700;text-decoration:none}
+  .signup-row a:hover{text-decoration:underline}
+
+  .security-box{display:flex;gap:12px;align-items:flex-start;margin-top:22px;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:14px}
+  .security-box .icn{width:30px;height:30px;border-radius:8px;background:#fff;border:1px solid var(--border);color:var(--teal);display:grid;place-items:center;flex:none}
+  .security-box .icn svg{width:16px;height:16px}
+  .security-box .t{font-size:13px;font-weight:700;color:var(--text-1)}
+  .security-box .s{font-size:12px;color:var(--text-2);line-height:1.5;margin-top:2px}
+
+  @media(max-width:900px){
+    .shell{padding:0 22px 48px}
+    .main-grid{grid-template-columns:1fr;gap:8px;min-height:auto}
+    .marketing{display:none}
+    .util-bar{padding:22px 22px 6px}
+    .form-col{padding-top:14px}
+  }
 </style>
 </head>
 <body>
 
-  <div class="wave-strip" aria-hidden="true">
-    <svg viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M0,40 C120,20 240,60 360,40 C480,20 600,60 720,40 C840,20 960,60 1080,40 C1200,20 1320,60 1440,40 L1440,80 L0,80 Z" fill="#16a8d3"/>
-      <path d="M0,55 C120,35 240,70 360,55 C480,35 600,70 720,55 C840,35 960,70 1080,55 C1200,35 1320,70 1440,55 L1440,80 L0,80 Z" fill="#0d7fa0" opacity="0.6"/>
-    </svg>
+  <div class="util-bar">
+    <a class="util-logo" href="login.html"><img src="fg-logo-light.png" alt="FlowGuard"></a>
+    <div class="util-right"><span>New to FlowGuard?</span><a class="ghost-btn" href="signup.html">Create account</a></div>
   </div>
 
-  <a href="login.html" class="corner-logo"><img src="fg-logo-light.png" alt="FlowGuard"></a>
+  <div class="shell">
+    <div class="main-grid">
 
-  <main class="page-wrap">
-    <div class="card">
-      <div class="card-title">Welcome</div>
-      <div class="card-sub">Sign in to access your service dashboard</div>
-
-      <form id="login-form" novalidate>
-        <div class="field">
-          <label for="email">Email address</label>
-          <input type="email" id="email" name="email" autocomplete="email" placeholder="you@company.com" required />
+      <!-- LEFT: marketing -->
+      <div class="marketing">
+        <div class="badge-label">Early Warning System</div>
+        <h1 class="headline">Welcome back to <span class="accent">FlowGuard</span></h1>
+        <p class="lede">Sign in to see your live flood-risk index, water levels and alerts — and stay ahead of every rain.</p>
+        <div class="trust">
+          <div class="trust-item"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> 24/7 drainage monitoring</div>
+          <div class="trust-item"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> Real-time flood alerts to your phone</div>
+          <div class="trust-item"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span> Data encrypted &amp; NDPA-compliant</div>
         </div>
-        <div class="field">
-          <label for="password">Password</label>
-          <div class="pw-wrap">
-            <input type="password" id="password" name="password" autocomplete="current-password" placeholder="Enter your password" required />
-            <button type="button" class="pw-toggle" id="pw-toggle" aria-label="Toggle password visibility">
-              <svg id="eye-show" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-              <svg id="eye-hide" style="display:none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
-            </button>
+      </div>
+
+      <!-- RIGHT: form -->
+      <div class="form-col">
+        <div class="login-card">
+          <div class="form-title">Sign in</div>
+          <div class="form-sub">Access your service dashboard.</div>
+
+          <form id="login-form" novalidate>
+            <div class="ff">
+              <label for="email">Email address</label>
+              <div class="wrap-in">
+                <svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>
+                <input type="email" id="email" name="email" autocomplete="email" placeholder="you@company.com" required>
+              </div>
+            </div>
+
+            <div class="ff">
+              <label for="password">Password</label>
+              <div class="wrap-in">
+                <svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                <input type="password" id="password" name="password" autocomplete="current-password" placeholder="Enter your password" required>
+                <button type="button" class="pw-eye" id="pw-toggle" aria-label="Toggle password visibility">
+                  <svg id="eye-show" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                  <svg id="eye-hide" style="display:none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="footer-row">
+              <label class="remember-label" for="remember"><input type="checkbox" id="remember" name="remember"> Remember me</label>
+              <a href="forgot-password.html" class="forgot-link">Forgot password?</a>
+            </div>
+
+            <button type="submit" class="btn-primary" id="submit-btn"><span id="btn-content">Sign in</span></button>
+            <div id="alert-area"></div>
+          </form>
+
+          <div class="security-box">
+            <div class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+            <div>
+              <div class="t">Secure sign-in</div>
+              <div class="s">Your session is encrypted end-to-end.</div>
+            </div>
           </div>
-        </div>
 
-        <div class="form-footer-row">
-          <label class="remember-label" for="remember"><input type="checkbox" id="remember" name="remember"> Remember me</label>
-          <a href="forgot-password.html" class="forgot-link">Forgot password?</a>
+          <div class="signup-row">Don't have an account? <a href="signup.html">Create one →</a></div>
         </div>
+      </div>
 
-        <button type="submit" class="btn-primary" id="submit-btn"><span class="btn-inner" id="btn-content">Sign In</span></button>
-        <div id="alert-area"></div>
-      </form>
     </div>
-
-    <div class="signup-row">Don't have an account? <a href="signup.html">Request a site audit →</a></div>
-  </main>
+  </div>
 
   <script>
     const pwInput=document.getElementById('password'),pwToggle=document.getElementById('pw-toggle'),eyeShow=document.getElementById('eye-show'),eyeHide=document.getElementById('eye-hide');
     pwToggle.addEventListener('click',()=>{const h=pwInput.type==='password';pwInput.type=h?'text':'password';eyeShow.style.display=h?'none':'block';eyeHide.style.display=h?'block':'none';});
     function showAlert(type,message){const area=document.getElementById('alert-area');area.innerHTML='';const icon=type==='error'?'<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>':'<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';const div=document.createElement('div');div.className='alert alert-'+type;div.innerHTML=icon+'<span>'+message+'</span>';area.appendChild(div);if(type==='error')setTimeout(()=>div.remove(),6000);}
-    function setLoading(loading){const btn=document.getElementById('submit-btn'),content=document.getElementById('btn-content');btn.disabled=loading;content.innerHTML=loading?'<div class="spinner"></div><span>Signing in…</span>':'Sign In';}
+    function setLoading(loading){const btn=document.getElementById('submit-btn'),content=document.getElementById('btn-content');btn.disabled=loading;content.innerHTML=loading?'<div class="spinner"></div><span>Signing in…</span>':'Sign in';}
     document.getElementById('login-form').addEventListener('submit',async function(e){
       e.preventDefault();
       const email=document.getElementById('email').value.trim(),password=document.getElementById('password').value;
@@ -165,11 +195,14 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(1000px
         if(data.success){
           localStorage.setItem('token',data.data.token);
           localStorage.setItem('user',JSON.stringify(data.data.user));
-          showAlert('success','Login successful — redirecting…');
+          showAlert('success','Signed in — redirecting…');
           setTimeout(()=>{
             const role=data.data.user.role;
-            const OPS_ROLES=['admin','operations','super_admin','operations_manager','dispatcher','field_lead','analyst','finance'];
-            window.location.href=OPS_ROLES.includes(role)?'https://neon.flowguard.ng':'index.html';
+            const FIELD_ROLES=['field_lead','field_team'];
+            const OPS_ROLES=['admin','operations','super_admin','operations_manager','dispatcher','analyst','finance'];
+            if(FIELD_ROLES.includes(role)) window.location.href='https://neon.flowguard.ng/field.html';
+            else if(OPS_ROLES.includes(role)) window.location.href='https://neon.flowguard.ng';
+            else window.location.href='index.html';
           },800);
         }else{setLoading(false);showAlert('error',data.error||'Invalid email or password. Please try again.');}
       }catch(err){console.error('Login error:',err);setLoading(false);showAlert('error','Connection failed. Please check your internet and try again.');}
