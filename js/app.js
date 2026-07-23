@@ -41,6 +41,10 @@ const App = (function () {
     const navTab = tab === 'propertyDetail' ? 'properties' : tab === 'sensorDetail' ? 'monitoring' : tab === 'ticketDetail' ? 'support' : tab;
     document.querySelectorAll('.rail .navbtn').forEach(b =>
       b.classList.toggle('on', b.dataset.tab === navTab));
+    // the bell is re-rendered per screen — re-apply the unread badge, and if the
+    // user just opened notifications, the count will have cleared on next poll.
+    setTimeout(updateNotifBadge, 0);
+    if (tab === 'notifications') setTimeout(pollNotifs, 800);
     const view = document.getElementById('view');
     view.scrollTop = 0;
     if (tab === 'propertyDetail') { Screens.propertyDetail(view, arg); return; }
@@ -638,11 +642,32 @@ const App = (function () {
     reconcileDemo().finally(() => refreshUser().finally(() => routeFromHash()));
     refreshRailSelector();
 
+    // Notification bell: poll so new notifications appear without a page refresh.
+    pollNotifs();
+    setInterval(pollNotifs, 45000);
+
     // respond to browser back/forward and in-app hash changes
     window.addEventListener('hashchange', () => {
       if (_suppressHashChange) { _suppressHashChange = false; return; }
       routeFromHash();
     });
+  }
+
+  // ── Notification bell (unread badge + background poll) ──────────────
+  let _unreadNotif = 0;
+  async function pollNotifs() {
+    try {
+      const r = await apiRequest('/notifications');
+      const items = (r && r.data) || [];
+      _unreadNotif = items.filter(n => !(n.read || n.is_read)).length;
+    } catch (_) {}
+    updateNotifBadge();
+  }
+  function updateNotifBadge() {
+    const b = document.getElementById('nav-notif-badge');
+    if (!b) return;
+    if (_unreadNotif > 0) { b.textContent = _unreadNotif > 99 ? '99+' : _unreadNotif; b.style.display = ''; }
+    else b.style.display = 'none';
   }
 
   // Parse location.hash -> screen. Supports #overview, #properties,

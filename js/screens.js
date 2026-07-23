@@ -269,7 +269,7 @@ const Screens = (function () {
       <div class="top">
         <div class="greeting"><h1>${greeting()}, ${UI.esc(name)}</h1><div class="sub"><span id="ov-date">${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span> · <span id="ov-sub">Here's the latest on your drainage network.</span></div></div>
         <div class="top-actions">
-          <button class="icon-btn" aria-label="Notifications" onclick="App.go('notifications')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons.bell}</svg></button>
+          <button class="icon-btn" aria-label="Notifications" onclick="App.go('notifications')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons.bell}</svg><span class="badge" id="nav-notif-badge" style="display:none">0</span></button>
           <button class="btn" onclick="App.openRegister()">+ Add property</button>
         </div>
       </div>
@@ -1226,8 +1226,17 @@ const Screens = (function () {
     const read = n.read || n.is_read;
     const kind = n.type === 'warning' ? 'warn' : n.type === 'critical' || n.type === 'alert' ? 'alert' : 'ok';
     const ic = kind === 'ok' ? icons.check : icons.warn;
-    const dest = (n.link || '').replace('#', '');
-    const nav = dest ? `onclick="App.go('${UI.esc(dest)}')" style="cursor:pointer;${read ? 'opacity:.6' : ''}"` : `style="${read ? 'opacity:.6' : ''}"`;
+    // '#tab' opens the list; '#tab/RECORD-ID' opens the specific record.
+    const raw = (n.link || '').replace(/^#/, '');
+    const slash = raw.indexOf('/');
+    let goCall = '';
+    if (slash > 0) {
+      const tab = raw.slice(0, slash), rid = raw.slice(slash + 1);
+      const detail = (tab === 'ticket' || tab === 'support') ? 'ticketDetail'
+                   : (tab === 'property' || tab === 'properties') ? 'propertyDetail' : null;
+      goCall = detail ? `App.go('${detail}','${UI.esc(rid)}')` : `App.go('${UI.esc(tab)}')`;
+    } else if (raw) { goCall = `App.go('${UI.esc(raw)}')`; }
+    const nav = goCall ? `onclick="${goCall}" style="cursor:pointer;${read ? 'opacity:.6' : ''}"` : `style="${read ? 'opacity:.6' : ''}"`;
     return `<div class="evt ${kind}" ${nav}>
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ic}</svg></div>
       <div style="flex:1"><b>${UI.esc(n.title || 'Notification')}</b><small>${UI.esc(n.message || n.description || '')}</small></div>
