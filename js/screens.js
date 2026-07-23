@@ -876,11 +876,17 @@ const Screens = (function () {
       el.innerHTML = UI.state('error', "Couldn't load your invoices", 'Please check your connection and try again.', 'Retry', "onclick=\"App.go('billing')\"");
     } else if (invoices && invoices.length) {
       el.innerHTML = `<div class="rows">${invoices.map(inv => {
-        const paid = (inv.payment_status || inv.status) === 'paid';
+        const ps = String(inv.payment_status || inv.status || '').toLowerCase();
+        const paid = ps === 'paid';
+        const partial = ps === 'partial';
+        const bal = inv.balance_due != null ? Number(inv.balance_due) : null;
+        const sub = paid ? 'Paid ' + UI.fmtDate(inv.paid_date || inv.issue_date)
+          : partial ? 'Part-paid · ' + UI.fmtNaira(bal != null ? bal : inv.total_amount) + ' due'
+          : 'Due ' + UI.fmtDate(inv.due_date);
         return `<div class="row clickable" onclick="App.openInvoice('${UI.esc(inv.invoice_id || '')}')">
           <div class="rmain"><b>${UI.esc(cap(inv.invoice_type || 'Service'))} — ${UI.fmtDate(inv.issue_date)}</b>
-            <small>${paid ? 'Paid ' + UI.fmtDate(inv.paid_date || inv.issue_date) : 'Due ' + UI.fmtDate(inv.due_date)}</small></div>
-          <div class="rright" style="display:flex;gap:10px;align-items:center"><div class="amt">${UI.fmtNaira(inv.total_amount)}</div>${UI.chip(paid ? 'ok' : 'warn', paid ? 'Paid' : 'Due')}<span style="color:var(--brand);font-size:13px;font-weight:600">View →</span></div>
+            <small>${sub}</small></div>
+          <div class="rright" style="display:flex;gap:10px;align-items:center"><div class="amt">${UI.fmtNaira(inv.total_amount)}</div>${UI.chip(paid ? 'ok' : 'warn', paid ? 'Paid' : partial ? 'Part-paid' : 'Due')}<span style="color:var(--brand);font-size:13px;font-weight:600">View →</span></div>
         </div>`;
       }).join('')}</div>`;
     } else {
@@ -1155,9 +1161,10 @@ const Screens = (function () {
           <h3 style="margin-top:22px">Recent invoices</h3>
           ${invoices.length
             ? `<div class="rows">${invoices.map(inv => {
-                const paid = (inv.payment_status || inv.status) === 'paid';
+                const ps = String(inv.payment_status || inv.status || '').toLowerCase();
+                const paid = ps === 'paid', partial = ps === 'partial';
                 return `<div class="row"><div class="rmain"><b>${UI.fmtNaira(inv.total_amount)}</b><small>${UI.fmtDate(inv.issue_date)}</small></div>
-                  <div class="rright">${UI.chip(paid ? 'ok' : 'warn', paid ? 'Paid' : 'Due')}</div></div>`;
+                  <div class="rright">${UI.chip(paid ? 'ok' : 'warn', paid ? 'Paid' : partial ? 'Part-paid' : 'Due')}</div></div>`;
               }).join('')}</div>`
             : `<p class="muted">No invoices yet.</p>`}
         </div>
