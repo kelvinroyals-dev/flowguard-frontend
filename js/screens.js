@@ -1810,7 +1810,9 @@ const Screens = (function () {
       return;
     }
     const roleOpts = sel => roles.map(r => `<option value="${r.key}" ${r.key === sel ? 'selected' : ''}>${UI.esc(r.label)}</option>`).join('');
-    const selStyle = 'style="padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font-family:var(--ff);font-size:13px;max-width:200px"';
+    const selStyle = 'style="padding:9px 10px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface-2);color:var(--ink);font-family:var(--ff);font-size:13px;max-width:200px"';
+    // A proper role pill (the neutral UI.chip has no background, so it looked unstyled).
+    const rolePill = lbl => `<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:100px;background:var(--brand-soft);color:var(--brand-deep);font-size:11px;font-weight:600"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>${UI.esc(lbl)}</span>`;
     const rows = members.map(m => {
       const badges = [
         m.is_account_owner ? UI.chip('ok', 'Owner') : '',
@@ -1821,7 +1823,7 @@ const Screens = (function () {
       const canEdit = !m.is_account_owner && !m.is_you;
       const roleCell = canEdit
         ? `<select ${selStyle} onchange="App.setMemberRole(${m.id}, this.value)">${roleOpts(m.client_role)}</select>`
-        : UI.chip('', m.client_role_label || '—');
+        : rolePill(m.client_role_label || '—');
       const actionCell = canEdit
         ? (m.is_active
             ? `<button class="btn ghost" style="color:var(--alert)" onclick="App.toggleMember(${m.id}, false)">Deactivate</button>`
@@ -1839,7 +1841,7 @@ const Screens = (function () {
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
           <div class="field"><label>Full name</label><input id="tm-name" placeholder="Jane Doe"></div>
           <div class="field"><label>Email</label><input id="tm-email" type="email" placeholder="jane@company.com"></div>
-          <div class="field"><label>Role</label><select id="tm-role" style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font-family:var(--ff);font-size:14px">${roleOpts('member')}</select></div>
+          <div class="field"><label>Role</label><select id="tm-role" style="width:100%;padding:12px 14px;border:1px solid var(--line-2);border-radius:var(--rx);background:var(--surface-2);color:var(--ink);font-family:var(--ff);font-size:14px">${roleOpts('member')}</select></div>
         </div>
         <button class="btn" style="margin-top:14px" onclick="App.inviteTeammate()">Send invite</button>
         <p class="muted" style="margin-top:8px;font-size:12px">They'll receive an email to set a password and join your account.</p>
