@@ -23,6 +23,9 @@ const App = (function () {
   }
 
   function go(tab, arg) {
+    // Route guard for permission-gated screens (defence in depth — backend enforces too).
+    if (tab === 'team' && !can('manage_team')) tab = 'overview';
+    if (tab === 'billing' && !can('view_billing')) tab = 'overview';
     current = tab;
     window.scrollTo(0, 0);
     // persist active screen in the URL hash so a refresh restores it
@@ -93,7 +96,7 @@ const App = (function () {
         <div class="modal-f">
           <button class="btn ghost" onclick="this.closest('.modal-bg').remove()">Close</button>
           <button class="btn ghost" onclick="App.downloadInvoicePdf('${UI.esc(inv.invoice_id)}', this)">Download PDF</button>
-          ${paid ? '' : `<button class="btn" onclick="App.notifyPayment('${UI.esc(inv.invoice_id)}', this)">I've paid — notify us</button>`}
+          ${(paid || !can('manage_billing')) ? '' : `<button class="btn" onclick="App.notifyPayment('${UI.esc(inv.invoice_id)}', this)">I've paid — notify us</button>`}
         </div>
       </div>`;
     document.body.appendChild(bg);
@@ -606,6 +609,30 @@ const App = (function () {
   }
 
   // ---- Save platform settings (end) ----
+  // ---- Client-portal RBAC (mirrors backend utils/clientPermissions.js) ----
+  // Permissions come from /profile (merged into the cached user by refreshUser).
+  // Fail OPEN only for legacy sessions that predate roles (no permissions array at
+  // all) so existing single-seat owners aren't locked out before they re-auth.
+  function can(perm) {
+    const u = Auth.getUser() || {};
+    if (!Array.isArray(u.permissions)) return true;   // legacy session — treat as owner
+    return u.permissions.includes(perm);
+  }
+  function myRoleLabel() { const u = Auth.getUser() || {}; return u.client_role_label || (u.is_account_owner ? 'Platform admin' : null); }
+
+  // Show/hide nav + elements by permission. Elements can declare data-perm="key".
+  function applyPermissions() {
+    // Nav items that map to a permission (others are visible to every member).
+    const navPerm = { billing: 'view_billing', team: 'manage_team' };
+    document.querySelectorAll('.rail .navbtn[data-tab]').forEach(b => {
+      const need = navPerm[b.dataset.tab];
+      if (need) b.style.display = can(need) ? '' : 'none';
+    });
+    document.querySelectorAll('[data-perm]').forEach(el => {
+      el.style.display = can(el.dataset.perm) ? '' : 'none';
+    });
+  }
+
   function setMe() {
     const u = Auth.getUser() || {};
     const nm = (u.fullName || u.full_name || 'U').trim();
@@ -614,6 +641,7 @@ const App = (function () {
     const name = document.getElementById('meName');
     if (av) av.textContent = initials;
     if (name) name.textContent = (u.fullName || u.full_name || 'Account').split(' ')[0];
+    applyPermissions();
   }
 
   // ---- Boot ----
@@ -683,6 +711,27 @@ const App = (function () {
     go('overview');
   }
 
+  // ---- Team & roles actions (client org RBAC) ----
+  async function inviteTeammate() {
+    const name = (document.getElementById('tm-name') || {}).value || '';
+    const email = (document.getElementById('tm-email') || {}).value || '';
+    const role = (document.getElementById('tm-role') || {}).value || 'member';
+    if (!name.trim() || !email.trim()) { UI.toast('Add a name and email first', 'error'); return; }
+    try {
+      const r = await apiRequest('/client-team/invite', { method: 'POST', body: { full_name: name.trim(), email: email.trim(), client_role: role } });
+      UI.toast(r && r.data && r.data.emailed ? 'Invite sent' : 'Teammate added — email pending', 'success');
+      go('team');
+    } catch (e) { UI.toast(e.message || 'Could not send invite', 'error'); }
+  }
+  async function setMemberRole(id, role) {
+    try { await apiRequest('/client-team/' + id + '/role', { method: 'PUT', body: { client_role: role } }); UI.toast('Role updated', 'success'); go('team'); }
+    catch (e) { UI.toast(e.message || 'Could not update role', 'error'); go('team'); }
+  }
+  async function toggleMember(id, active) {
+    try { await apiRequest('/client-team/' + id + '/status', { method: 'PUT', body: { is_active: active } }); UI.toast(active ? 'Member reactivated' : 'Member deactivated', 'success'); go('team'); }
+    catch (e) { UI.toast(e.message || 'Could not update member', 'error'); go('team'); }
+  }
+
   async function refreshUser() {
     try {
       const r = await apiRequest('/profile');
@@ -699,7 +748,8 @@ const App = (function () {
 
   return { go, openProperty, openEditProperty, activeProperty, setActiveProperty, setFcRange, openSensor, setSensorRange, monSearch, monFilter, monMetric, viewReport, downloadReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings, changePassword,
            openTicketDetail, sendReply, openInvoice, notifyPayment, downloadInvoicePdf, selectServices, confirmServices, deactivateAccount, confirmDeactivate,
-           setNotifFilter, markRead, markAllRead, deleteNotif, setTicketFilter, openTicket, submitTicket, init };
+           setNotifFilter, markRead, markAllRead, deleteNotif, setTicketFilter, openTicket, submitTicket,
+           can, inviteTeammate, setMemberRole, toggleMember, init };
 })();
 window.App = App;
 document.addEventListener('DOMContentLoaded', App.init);

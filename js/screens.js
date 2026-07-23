@@ -270,7 +270,7 @@ const Screens = (function () {
         <div class="greeting"><h1>${greeting()}, ${UI.esc(name)}</h1><div class="sub"><span id="ov-date">${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span> · <span id="ov-sub">Here's the latest on your drainage network.</span></div></div>
         <div class="top-actions">
           <button class="icon-btn" aria-label="Notifications" onclick="App.go('notifications')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons.bell}</svg><span class="badge" id="nav-notif-badge" style="display:none">0</span></button>
-          <button class="btn" onclick="App.openRegister()">+ Add property</button>
+          ${App.can('manage_properties') ? '<button class="btn" onclick="App.openRegister()">+ Add property</button>' : ''}
         </div>
       </div>
       ${demoBanner()}
@@ -733,7 +733,7 @@ const Screens = (function () {
   async function properties(view) {
     view.innerHTML = `
       <div class="top"><div><h1>My properties</h1><div class="sub">Areas you've registered for monitoring</div></div>
-      <button class="btn" onclick="App.openRegister()">+ Add property</button></div>
+      ${App.can('manage_properties') ? '<button class="btn" onclick="App.openRegister()">+ Add property</button>' : ''}</div>
       ${demoBanner()}
       <div id="prop-portfolio"></div>
       <div id="prop-list">${UI.loading(3)}</div>`;
@@ -1178,18 +1178,20 @@ const Screens = (function () {
   function detailActions(p) {
     const s = p.status;
     const btns = [];
+    const canProps = App.can('manage_properties');
+    const canBilling = App.can('view_billing');
     if (s === 'report_ready' || s === 'quote_sent' || s === 'payment_pending') {
-      btns.push(`<button class="btn" onclick="App.selectServices('${UI.esc(p.property_id)}')">Choose service tier</button>`);
-      btns.push(`<button class="btn ghost" onclick="App.go('billing')">View billing</button>`);
+      if (canProps) btns.push(`<button class="btn" onclick="App.selectServices('${UI.esc(p.property_id)}')">Choose service tier</button>`);
+      if (canBilling) btns.push(`<button class="btn ghost" onclick="App.go('billing')">View billing</button>`);
     } else if (s === 'active' || s === 'monitoring_active') {
       btns.push(`<button class="btn" onclick="App.go('monitoring')">View live monitoring</button>`);
-      btns.push(`<button class="btn ghost" onclick="App.go('billing')">View billing</button>`);
+      if (canBilling) btns.push(`<button class="btn ghost" onclick="App.go('billing')">View billing</button>`);
     } else if (s === 'submitted' || s === 'inspection_scheduled' || s === 'inspection_ongoing') {
       btns.push(`<button class="btn ghost" onclick="App.go('support')">Contact support</button>`);
     }
     // always available
-    btns.push(`<button class="btn ghost" onclick="App.openEditProperty('${UI.esc(p.property_id)}')">Edit details</button>`);
-    btns.push(`<button class="btn ghost" onclick="App.openRegister()">Register another property</button>`);
+    if (canProps) btns.push(`<button class="btn ghost" onclick="App.openEditProperty('${UI.esc(p.property_id)}')">Edit details</button>`);
+    if (canProps) btns.push(`<button class="btn ghost" onclick="App.openRegister()">Register another property</button>`);
     return btns.join('');
   }
 
@@ -1784,13 +1786,74 @@ const Screens = (function () {
             <label class="switch"><input type="checkbox" id="set-demo" ${on(Demo.isOn())} onchange="App.toggleDemo(this.checked)"><span class="slider"></span></label></div>
           <hr style="border:none;border-top:1px solid var(--line);margin:18px 0">
           <h3>Account</h3>
+          ${(() => { const u = Auth.getUser() || {}; const rl = u.client_role_label; return rl ? `<div class="set-row" style="border:none;padding:0 0 10px"><div><b>Your role</b><small>What you can do in this account</small></div>${UI.chip('ok', rl)}</div>` : ''; })()}
           <button class="btn ghost" style="width:100%;margin-bottom:8px;justify-content:flex-start" onclick="App.go('account')">Profile & password →</button>
+          ${App.can('manage_team') ? `<button class="btn ghost" style="width:100%;margin-bottom:8px;justify-content:flex-start" onclick="App.go('team')">Team & roles →</button>` : ''}
           <button class="btn ghost" style="width:100%;margin-bottom:8px;justify-content:flex-start" onclick="Auth.logout()">Sign out</button>
-          <button class="btn ghost" style="width:100%;justify-content:flex-start;color:var(--alert)" onclick="App.deactivateAccount()">Deactivate account</button>
+          ${App.can('manage_account') ? `<button class="btn ghost" style="width:100%;justify-content:flex-start;color:var(--alert)" onclick="App.deactivateAccount()">Deactivate account</button>` : ''}
         </div>
       </div>`;
   }
 
-  return { overview, monitoring, forecast, getMyProperties, propertySelector, sensorDetail, properties, propertyDetail, billing, alerts, notifications, reports, support, ticketDetail, settings, account, setNotifFilter, setTicketFilter, setFcRange, setSensorRange, monSearch, monFilter, monMetric, TICKET_CATS };
+  // ---- TEAM & ROLES (client organisation RBAC) ----
+  async function team(view) {
+    view.innerHTML = `
+      <div class="top"><div><h1>Team &amp; roles</h1><div class="sub">Invite teammates and control what they can access</div></div></div>
+      <div id="team-body"><div class="card"><p class="muted">Loading team…</p></div></div>`;
+    let members = [], roles = [];
+    try {
+      const [mRes, rRes] = await Promise.all([apiRequest('/client-team'), apiRequest('/client-team/roles')]);
+      members = (mRes && mRes.data) || [];
+      roles = (rRes && rRes.data) || [];
+    } catch (e) {
+      document.getElementById('team-body').innerHTML = UI.state('error', "Couldn't load your team", e.message || 'Please try again.', 'Retry', "onclick=\"App.go('team')\"");
+      return;
+    }
+    const roleOpts = sel => roles.map(r => `<option value="${r.key}" ${r.key === sel ? 'selected' : ''}>${UI.esc(r.label)}</option>`).join('');
+    const selStyle = 'style="padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font-family:var(--ff);font-size:13px;max-width:200px"';
+    const rows = members.map(m => {
+      const badges = [
+        m.is_account_owner ? UI.chip('ok', 'Owner') : '',
+        m.is_you ? UI.chip('warn', 'You') : '',
+        m.invited_pending ? UI.chip('warn', 'Invite pending') : '',
+        (!m.is_active) ? UI.chip('alert', 'Deactivated') : '',
+      ].filter(Boolean).join(' ');
+      const canEdit = !m.is_account_owner && !m.is_you;
+      const roleCell = canEdit
+        ? `<select ${selStyle} onchange="App.setMemberRole(${m.id}, this.value)">${roleOpts(m.client_role)}</select>`
+        : UI.chip('', m.client_role_label || '—');
+      const actionCell = canEdit
+        ? (m.is_active
+            ? `<button class="btn ghost" style="color:var(--alert)" onclick="App.toggleMember(${m.id}, false)">Deactivate</button>`
+            : `<button class="btn ghost" onclick="App.toggleMember(${m.id}, true)">Reactivate</button>`)
+        : '<span class="muted">—</span>';
+      return `<tr>
+        <td data-label="Member"><b>${UI.esc(m.full_name || '—')}</b><div class="muted" style="font-size:12px">${UI.esc(m.email)}</div>${badges ? `<div style="margin-top:5px;display:flex;gap:5px;flex-wrap:wrap">${badges}</div>` : ''}</td>
+        <td data-label="Role">${roleCell}</td>
+        <td data-label="" style="text-align:right">${actionCell}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('team-body').innerHTML = `
+      <div class="card">
+        <div class="section-t">Invite a teammate</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+          <div class="field"><label>Full name</label><input id="tm-name" placeholder="Jane Doe"></div>
+          <div class="field"><label>Email</label><input id="tm-email" type="email" placeholder="jane@company.com"></div>
+          <div class="field"><label>Role</label><select id="tm-role" style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font-family:var(--ff);font-size:14px">${roleOpts('member')}</select></div>
+        </div>
+        <button class="btn" style="margin-top:14px" onclick="App.inviteTeammate()">Send invite</button>
+        <p class="muted" style="margin-top:8px;font-size:12px">They'll receive an email to set a password and join your account.</p>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="section-t">Team members</div>
+        <table class="data-table"><thead><tr><th>Member</th><th>Role</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="section-t">What each role can do</div>
+        ${roles.map(r => `<div style="padding:9px 0;border-top:1px solid var(--line)"><b>${UI.esc(r.label)}</b><div class="muted" style="font-size:13px;margin-top:2px">${UI.esc(r.desc || '')}</div></div>`).join('')}
+      </div>`;
+  }
+
+  return { overview, monitoring, forecast, getMyProperties, propertySelector, sensorDetail, properties, propertyDetail, billing, alerts, notifications, reports, support, ticketDetail, settings, account, team, setNotifFilter, setTicketFilter, setFcRange, setSensorRange, monSearch, monFilter, monMetric, TICKET_CATS };
 })();
 window.Screens = Screens;
