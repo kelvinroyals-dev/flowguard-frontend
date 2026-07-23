@@ -511,7 +511,8 @@ const Screens = (function () {
       submitted: { s: 'progress', b: 'Property submitted', t: `We've received ${p.property_name || 'your property'} and will schedule an inspection soon.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
       inspection_scheduled: { s: 'progress', b: 'Inspection scheduled', t: p.inspection_date ? `Our team will assess ${p.property_name || 'your property'} on ${UI.fmtDate(p.inspection_date)}.` : `Our team will assess ${p.property_name || 'your property'} shortly — we'll confirm the date soon.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
       inspection_ongoing: { s: 'progress', b: 'Inspection underway', t: `Our team is assessing ${p.property_name || 'your property'} right now.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
-      report_ready: { s: 'active', b: 'Your report is ready', t: 'Your inspection report is available to review.', cta: 'View report', act: `App.go('reports')` },
+      awaiting_approval: { s: 'progress', b: 'Awaiting approval', t: `The inspection of ${p.property_name || 'your property'} is complete — your report is being reviewed and will be available shortly.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
+      report_ready: { s: 'active', b: 'Your report is ready', t: 'Your inspection report is approved and available to download.', cta: 'View report', act: `App.go('reports')` },
       quote_sent: { s: 'active', b: 'Quote ready', t: `Your service quote for ${p.property_name || 'your property'} is ready to review and accept.`, cta: 'View billing', act: `App.go('billing')` },
       payment_pending: { s: 'progress', b: 'Payment pending', t: 'Complete payment to activate monitoring for your property.', cta: 'View billing', act: `App.go('billing')` },
       payment_completed: { s: 'active', b: 'Payment confirmed', t: 'Thank you — we\'re scheduling the installation of your Sentinel devices.', cta: 'View details', act: `App.openProperty('${p.property_id}')` },
@@ -521,7 +522,12 @@ const Screens = (function () {
       suspended: { s: 'progress', b: 'Monitoring paused', t: `Monitoring for ${p.property_name || 'your property'} is currently paused. Contact us if this is unexpected.`, cta: 'Contact support', act: `App.go('support')` },
       cancelled: { s: 'progress', b: 'Service cancelled', t: `Service for ${p.property_name || 'this property'} has been cancelled.`, cta: 'Contact support', act: `App.go('support')` }
     };
-    const m = map[p.status] || map.submitted;
+    // A completed inspection whose report ops hasn't approved yet is "Awaiting
+    // approval" to the client — never "Report ready" (that's ops-internal until
+    // the report is approved, which flips the property to report_ready).
+    let eff = p.status;
+    if (p.inspection_status === 'completed' && order.indexOf(p.status) < order.indexOf('report_ready')) eff = 'awaiting_approval';
+    const m = map[eff] || map.submitted;
     const ic = m.s === 'active'
       ? '<path d="M20 6L9 17l-5-5"/>'
       : '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>';
