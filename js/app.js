@@ -35,8 +35,10 @@ const App = (function () {
     }
     const railEl = document.getElementById('rail');
     if (railEl) railEl.classList.remove('open');
-    // nav active state (property/notifications map to their parent nav where relevant)
-    const navTab = tab === 'propertyDetail' ? 'properties' : tab === 'sensorDetail' ? 'monitoring' : tab === 'ticketDetail' ? 'support' : tab === 'notifications' ? 'alerts' : tab;
+    // nav active state. Detail views map to their parent nav item. Notifications
+    // is a global, platform-wide view — NOT part of Alerts (alerts are threshold/
+    // incident events), so it highlights no module rather than lighting up Alerts.
+    const navTab = tab === 'propertyDetail' ? 'properties' : tab === 'sensorDetail' ? 'monitoring' : tab === 'ticketDetail' ? 'support' : tab;
     document.querySelectorAll('.rail .navbtn').forEach(b =>
       b.classList.toggle('on', b.dataset.tab === navTab));
     const view = document.getElementById('view');
