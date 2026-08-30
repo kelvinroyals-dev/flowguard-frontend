@@ -1612,8 +1612,7 @@ const Screens = (function () {
       const box = document.getElementById(briefDomId('portfolio'));
       if (daily && daily.briefing && box && !box.innerHTML.trim()) {
         const when = daily.generated_at ? new Date(daily.generated_at).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '';
-        const note = daily.ai ? `${UI.esc(daily.provider || 'AI')} · ${UI.esc(daily.model || '')}` : 'Automated summary';
-        box.innerHTML = `<div class="muted" style="white-space:pre-wrap;line-height:1.55;font-size:13px;margin-top:8px;color:var(--ink-2)">${UI.esc(daily.briefing)}</div><div class="muted" style="font-size:11px;margin-top:6px;opacity:.7">Morning briefing${when ? ' · ' + when : ''} · ${note}</div>`;
+        box.innerHTML = `<div class="muted" style="white-space:pre-wrap;line-height:1.55;font-size:13px;margin-top:8px;color:var(--ink-2)">${UI.esc(daily.briefing)}</div><div class="muted" style="font-size:11px;margin-top:6px;opacity:.7">Morning briefing${when ? ' · ' + when : ''}</div>`;
       }
     } catch (_) { /* no stored briefing yet — the Brief me button still works */ }
   }
@@ -1627,8 +1626,7 @@ const Screens = (function () {
       const body = id === 'portfolio' ? { scope: 'portfolio' } : { property_id: id };
       const r = await apiRequest('/client-forecast/brief', { method: 'POST', body });
       const d = (r && r.data) || {};
-      const note = d.ai ? `${UI.esc(d.provider || 'AI')} · ${UI.esc(d.model || '')}` : 'Automated summary';
-      box.innerHTML = `<div class="muted" style="white-space:pre-wrap;line-height:1.55;font-size:13px;margin-top:8px;color:var(--ink-2)">${UI.esc(d.briefing || '')}</div><div class="muted" style="font-size:11px;margin-top:6px;opacity:.7">${note}</div>`;
+      box.innerHTML = `<div class="muted" style="white-space:pre-wrap;line-height:1.55;font-size:13px;margin-top:8px;color:var(--ink-2)">${UI.esc(d.briefing || '')}</div>`;
     } catch (e) {
       box.innerHTML = `<div class="muted" style="font-size:12px;margin-top:8px">Couldn't generate a briefing right now.</div>`;
     }
