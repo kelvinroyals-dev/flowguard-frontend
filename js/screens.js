@@ -1510,6 +1510,8 @@ const Screens = (function () {
         ${kpi('Drainage health', health ? `${health.score}<span style="font-size:14px;color:var(--ink-3);margin-left:3px">/100</span>` : '—', health ? 'Powers this forecast' : 'Assuming mid vulnerability')}
       </div>
 
+      <div id="fc-nearterm"></div>
+
       <div class="panel panel-pad mb-20">
         <div class="row-between mb-10"><h3 style="margin:0">${horizon}-day risk outlook</h3><span class="muted">${_fcRange > 16 ? '16-day forecast horizon (max reliable)' : 'Daily flood chance'}</span></div>
         <div class="fc-grid">${rows.map(fcDayCell).join('')}</div>
@@ -1529,6 +1531,95 @@ const Screens = (function () {
       </div>
       <p class="muted" style="margin-top:14px">How this works: each day blends your drainage health (40%), forecast rainfall volume (45%), and rain probability (15%). Forecast data: Open-Meteo, updated hourly. Improving your drainage score lowers every day's risk.</p>`;
     try { document.getElementById('fc-hourly').innerHTML = await hourlyRiskChart(allProps, vulnerability); } catch (_) {}
+    if (!Demo.isOn()) renderNearTerm();
+  }
+
+  // ── Sensor-driven near-term risk (our engine, not the weather outlook) ──────
+  // Calls the scoped backend /client-forecast/horizons: a now/+1h/+3h/+6h
+  // projection built from THIS account's live nodes (water-level momentum +
+  // silt + forecast rainfall), plus an on-demand AI briefing. Hidden silently
+  // if the account has no live nodes or the role lacks view_monitoring.
+  const NT_COLOR = v => v >= 60 ? 'var(--alert)' : v >= 35 ? 'var(--warn)' : 'var(--ok)';
+  const NT_WORD = v => v >= 80 ? 'Critical' : v >= 60 ? 'High' : v >= 35 ? 'Moderate' : 'Low';
+  const briefDomId = id => 'fc-brief-' + String(id).replace(/[^a-z0-9]/gi, '_');
+
+  function ntHorizonStrip(e) {
+    const h = e.horizons || {};
+    const cell = (lbl, v) => `<div style="text-align:center;min-width:44px"><div class="muted" style="font-size:11px">${lbl}</div><div style="font-family:var(--ff-d);font-weight:700;font-size:17px;color:${NT_COLOR(v)}">${v == null ? '—' : v}</div></div>`;
+    const arr = '<div class="muted" style="font-size:13px">→</div>';
+    return `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${cell('Now', h.now)}${arr}${cell('+1h', h.h1)}${arr}${cell('+3h', h.h3)}${arr}${cell('+6h', h.h6)}</div>`;
+  }
+
+  function ntEstateCard(e) {
+    const top = (e.drivers || [])[0];
+    const cw = e.critical_window ? `<div class="muted" style="font-size:12px;margin-top:6px">⏱ Critical risk projected around <b>${UI.esc(e.critical_window.label)}</b></div>` : '';
+    const anom = e.anomaly ? `<div style="font-size:12px;margin-top:6px;color:var(--alert)">⚠ ${UI.esc(e.anomaly.note || 'Anomaly detected')}</div>` : '';
+    const driver = top ? `<div class="muted" style="font-size:12px;margin-top:6px">Main driver: ${UI.esc(top.label)}</div>` : '';
+    return `<div style="padding:14px 0;border-top:1px solid var(--line)">
+      <div class="row-between" style="align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px"><b style="font-size:14px">${UI.esc(e.name)}</b>${UI.chip(e.current_risk >= 60 ? 'alert' : e.current_risk >= 35 ? 'warn' : 'ok', NT_WORD(e.current_risk))}</div>
+          ${driver}${cw}${anom}
+          <div class="muted" style="font-size:12px;margin-top:6px">Recommended: ${UI.esc(e.recommendation || '—')}</div>
+        </div>
+        ${ntHorizonStrip(e)}
+      </div>
+      <div style="margin-top:10px">
+        <button class="btn sm ghost" onclick="Screens.explainClientRisk('${UI.esc(e.property_id)}', this)">Explain this</button>
+        <div id="${briefDomId(e.property_id)}"></div>
+      </div>
+    </div>`;
+  }
+
+  async function renderNearTerm() {
+    const el = document.getElementById('fc-nearterm');
+    if (!el) return;
+    el.innerHTML = `<div class="panel panel-pad mb-20">${UI.loading(2)}</div>`;
+    let data;
+    try { const r = await apiRequest('/client-forecast/horizons'); data = r && r.data; }
+    catch (_) { el.innerHTML = ''; return; }              // no access / error → hide
+    if (!data || !Array.isArray(data.estates) || !data.estates.length) { el.innerHTML = ''; return; }
+
+    const p = data.portfolio || {};
+    const chips = [];
+    if (p.critical_now) chips.push(UI.chip('alert', `${p.critical_now} critical now`));
+    if (p.entering_high_3h) chips.push(UI.chip('warn', `${p.entering_high_3h} entering high (3h)`));
+    if (p.preventive_recommended) chips.push(UI.chip('warn', `${p.preventive_recommended} preventive due`));
+    if (p.anomalies) chips.push(UI.chip('alert', `${p.anomalies} anomaly`));
+    if (!chips.length) chips.push(UI.chip('ok', 'All estates stable'));
+    const rain = data.rain_next_3h_mm != null ? `<span class="muted" style="font-size:12px">~${data.rain_next_3h_mm}mm rain next 3h</span>` : '';
+
+    const shown = data.estates.slice(0, 6);
+    const more = data.estates.length > shown.length ? `<div class="muted" style="font-size:12px;margin-top:10px">+${data.estates.length - shown.length} more estate${data.estates.length - shown.length > 1 ? 's' : ''}</div>` : '';
+
+    el.innerHTML = `<div class="panel panel-pad mb-20">
+      <div class="row-between mb-10" style="flex-wrap:wrap;gap:8px">
+        <div><h3 style="margin:0">Live risk — next 6 hours</h3><div class="muted" style="font-size:12px;margin-top:2px">Sensor-driven projection from your nodes · water-level momentum + silt + forecast rainfall</div></div>
+        <button class="btn sm" onclick="Screens.explainClientRisk('portfolio', this)">Brief me</button>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">${chips.join(' ')} ${rain}</div>
+      <div id="${briefDomId('portfolio')}"></div>
+      ${shown.map(ntEstateCard).join('')}
+      ${more}
+      <p class="muted" style="margin-top:12px;font-size:11.5px">Rule-based projection (not a trained model): current risk blended with forecast rainfall and live water-level momentum. AI briefings phrase these figures in plain language.</p>
+    </div>`;
+  }
+
+  async function explainClientRisk(id, btn) {
+    const box = document.getElementById(briefDomId(id));
+    if (!box) return;
+    if (btn) { btn.disabled = true; btn.dataset._t = btn.textContent; btn.textContent = 'Analysing…'; }
+    box.innerHTML = `<div style="margin-top:8px">${UI.loading(1)}</div>`;
+    try {
+      const body = id === 'portfolio' ? { scope: 'portfolio' } : { property_id: id };
+      const r = await apiRequest('/client-forecast/brief', { method: 'POST', body });
+      const d = (r && r.data) || {};
+      const note = d.ai ? `${UI.esc(d.provider || 'AI')} · ${UI.esc(d.model || '')}` : 'Automated summary';
+      box.innerHTML = `<div class="muted" style="white-space:pre-wrap;line-height:1.55;font-size:13px;margin-top:8px;color:var(--ink-2)">${UI.esc(d.briefing || '')}</div><div class="muted" style="font-size:11px;margin-top:6px;opacity:.7">${note}</div>`;
+    } catch (e) {
+      box.innerHTML = `<div class="muted" style="font-size:12px;margin-top:8px">Couldn't generate a briefing right now.</div>`;
+    }
+    if (btn) { btn.disabled = false; btn.textContent = btn.dataset._t || 'Explain this'; }
   }
 
   // ---------------- REPORTS & DOCUMENTS ----------------
@@ -1856,6 +1947,6 @@ const Screens = (function () {
       </div>`;
   }
 
-  return { overview, monitoring, forecast, getMyProperties, propertySelector, sensorDetail, properties, propertyDetail, billing, alerts, notifications, reports, support, ticketDetail, settings, account, team, setNotifFilter, setTicketFilter, setFcRange, setSensorRange, monSearch, monFilter, monMetric, TICKET_CATS };
+  return { overview, monitoring, forecast, explainClientRisk, getMyProperties, propertySelector, sensorDetail, properties, propertyDetail, billing, alerts, notifications, reports, support, ticketDetail, settings, account, team, setNotifFilter, setTicketFilter, setFcRange, setSensorRange, monSearch, monFilter, monMetric, TICKET_CATS };
 })();
 window.Screens = Screens;
