@@ -1603,6 +1603,19 @@ const Screens = (function () {
       ${more}
       <p class="muted" style="margin-top:12px;font-size:11.5px">Rule-based projection (not a trained model): current risk blended with forecast rainfall and live water-level momentum. AI briefings phrase these figures in plain language.</p>
     </div>`;
+
+    // Auto-fill the portfolio box with this morning's stored briefing (if any),
+    // so it's visible on load. "Brief me" regenerates a fresh one on demand.
+    try {
+      const dr = await apiRequest('/client-forecast/daily');
+      const daily = dr && dr.data;
+      const box = document.getElementById(briefDomId('portfolio'));
+      if (daily && daily.briefing && box && !box.innerHTML.trim()) {
+        const when = daily.generated_at ? new Date(daily.generated_at).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+        const note = daily.ai ? `${UI.esc(daily.provider || 'AI')} · ${UI.esc(daily.model || '')}` : 'Automated summary';
+        box.innerHTML = `<div class="muted" style="white-space:pre-wrap;line-height:1.55;font-size:13px;margin-top:8px;color:var(--ink-2)">${UI.esc(daily.briefing)}</div><div class="muted" style="font-size:11px;margin-top:6px;opacity:.7">Morning briefing${when ? ' · ' + when : ''} · ${note}</div>`;
+      }
+    } catch (_) { /* no stored briefing yet — the Brief me button still works */ }
   }
 
   async function explainClientRisk(id, btn) {
