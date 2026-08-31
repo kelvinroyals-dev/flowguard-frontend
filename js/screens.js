@@ -1923,9 +1923,12 @@ const Screens = (function () {
         (!m.is_active) ? UI.chip('alert', 'Deactivated') : '',
       ].filter(Boolean).join(' ');
       const canEdit = !m.is_account_owner && !m.is_you;
+      // Why a row is locked, so a static pill doesn't read as "broken".
+      const lockReason = m.is_account_owner ? 'Account owner — always Platform admin'
+        : m.is_you ? "You can't change your own role" : '';
       const roleCell = canEdit
         ? `<select ${selStyle} onchange="App.setMemberRole(${m.id}, this.value)">${roleOpts(m.client_role)}</select>`
-        : rolePill(m.client_role_label || '—');
+        : `${rolePill(m.client_role_label || '—')}${lockReason ? `<div class="muted" style="font-size:11px;margin-top:4px;display:flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>${UI.esc(lockReason)}</div>` : ''}`;
       const actionCell = canEdit
         ? (m.is_active
             ? `<button class="btn ghost" style="color:var(--alert)" onclick="App.toggleMember(${m.id}, false)">Deactivate</button>`
