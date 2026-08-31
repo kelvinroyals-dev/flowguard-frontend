@@ -24,8 +24,12 @@ const App = (function () {
 
   function go(tab, arg) {
     // Route guard for permission-gated screens (defence in depth — backend enforces too).
-    if (tab === 'team' && !can('manage_team')) tab = 'overview';
-    if (tab === 'billing' && !can('view_billing')) tab = 'overview';
+    const routePerm = {
+      team: 'manage_team', billing: 'view_billing',
+      monitoring: 'view_monitoring', forecast: 'view_monitoring',
+      alerts: 'view_alerts', reports: 'view_reports',
+    };
+    if (routePerm[tab] && !can(routePerm[tab])) tab = 'overview';
     current = tab;
     window.scrollTo(0, 0);
     // persist active screen in the URL hash so a refresh restores it
@@ -238,9 +242,22 @@ const App = (function () {
     }
   }
 
-  function viewReport(id) {
-    // Reports open in a modal (placeholder until a report-detail endpoint exists)
-    UI.toast('Report viewing opens the full document — coming with the reports backend.', 'info');
+  async function viewReport(id) {
+    // Open the approved report PDF inline in a new tab (same source as download).
+    if (!id) return;
+    try {
+      UI.toast('Opening your report…', 'info');
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${window.API_BASE}/field-reports/${id}/pdf`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (!res.ok) throw new Error('open failed');
+      const url = URL.createObjectURL(await res.blob());
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+      UI.toast("Couldn't open the report. Try downloading it instead.", 'error');
+    }
   }
   async function downloadReport(id) {
     if (!id) return;
@@ -623,7 +640,11 @@ const App = (function () {
   // Show/hide nav + elements by permission. Elements can declare data-perm="key".
   function applyPermissions() {
     // Nav items that map to a permission (others are visible to every member).
-    const navPerm = { billing: 'view_billing', team: 'manage_team' };
+    const navPerm = {
+      billing: 'view_billing', team: 'manage_team',
+      monitoring: 'view_monitoring', forecast: 'view_monitoring',
+      alerts: 'view_alerts', reports: 'view_reports',
+    };
     document.querySelectorAll('.rail .navbtn[data-tab]').forEach(b => {
       const need = navPerm[b.dataset.tab];
       if (need) b.style.display = can(need) ? '' : 'none';
