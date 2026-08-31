@@ -51,7 +51,10 @@
     const s = document.createElement('style');
     s.id = 'tg-css';
     s.textContent = `
-      .tg-block { position:fixed; inset:0; z-index:99990; background:transparent; }
+      .tg-block { position:fixed; inset:0; z-index:99990; background:transparent; transition:background .2s; }
+      /* Center steps have no spotlight ring, so dim + blur the page ourselves
+         to put the card in focus. */
+      .tg-block.tg-dim { background:rgba(8,20,27,.55); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
       .tg-hole { position:fixed; z-index:99991; border-radius:12px; box-shadow:0 0 0 9999px rgba(8,20,27,.60); transition:top .25s,left .25s,width .25s,height .25s,opacity .2s; pointer-events:none; }
       .tg-hole.hidden { opacity:0; }
       .tg-card { position:fixed; z-index:99993; width:330px; max-width:calc(100vw - 32px); background:var(--surface,#fff); color:var(--ink,#0e2c3d);
@@ -86,8 +89,10 @@
 
   function place(card, hole, target) {
     const vw = window.innerWidth, vh = window.innerHeight;
+    const block = _els && _els.block;
     if (!target) {
       hole.classList.add('hidden');
+      if (block) block.classList.add('tg-dim');   // no spotlight → dim+blur the page
       card.style.left = Math.round((vw - card.offsetWidth) / 2) + 'px';
       card.style.top = Math.round((vh - card.offsetHeight) / 2) + 'px';
       return;
@@ -96,11 +101,13 @@
     // if the target isn't really on-screen (e.g. collapsed mobile rail) → center
     if (r.width < 4 || r.height < 4 || r.bottom < 0 || r.top > vh) {
       hole.classList.add('hidden');
+      if (block) block.classList.add('tg-dim');
       card.style.left = Math.round((vw - card.offsetWidth) / 2) + 'px';
       card.style.top = Math.round((vh - card.offsetHeight) / 2) + 'px';
       return;
     }
     hole.classList.remove('hidden');
+    if (block) block.classList.remove('tg-dim');   // spotlight ring handles focus
     hole.style.top = (r.top - PAD) + 'px';
     hole.style.left = (r.left - PAD) + 'px';
     hole.style.width = (r.width + PAD * 2) + 'px';
