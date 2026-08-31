@@ -1938,8 +1938,8 @@ const Screens = (function () {
       </tr>`;
     }).join('');
     document.getElementById('team-body').innerHTML = `
-      <div class="card">
-        <div class="section-t">Invite a teammate</div>
+      <div class="card panel-pad">
+        <div class="section-t" style="margin-top:0">Invite a teammate</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
           <div class="field"><label>Full name</label><input id="tm-name" placeholder="Jane Doe"></div>
           <div class="field"><label>Email</label><input id="tm-email" type="email" placeholder="jane@company.com"></div>
@@ -1948,12 +1948,12 @@ const Screens = (function () {
         <button class="btn" style="margin-top:14px" onclick="App.inviteTeammate()">Send invite</button>
         <p class="muted" style="margin-top:8px;font-size:12px">They'll receive an email to set a password and join your account.</p>
       </div>
-      <div class="card" style="margin-top:16px">
-        <div class="section-t">Team members</div>
+      <div class="card panel-pad" style="margin-top:16px">
+        <div class="section-t" style="margin-top:0">Team members</div>
         <table class="data-table"><thead><tr><th>Member</th><th>Role</th><th></th></tr></thead><tbody>${rows}</tbody></table>
       </div>
-      <div class="card" style="margin-top:16px">
-        <div class="section-t">What each role can do</div>
+      <div class="card panel-pad" style="margin-top:16px">
+        <div class="section-t" style="margin-top:0">What each role can do</div>
         ${roles.map((r, i) => `<div style="padding:9px 0;${i ? 'border-top:1px solid var(--line)' : ''}"><b>${UI.esc(r.label)}</b><div class="muted" style="font-size:13px;margin-top:2px">${UI.esc(r.desc || '')}</div></div>`).join('')}
       </div>`;
   }
