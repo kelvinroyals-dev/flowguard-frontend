@@ -27,14 +27,15 @@ const App = (function () {
     const routePerm = {
       team: 'manage_team', billing: 'view_billing',
       monitoring: 'view_monitoring', forecast: 'view_monitoring',
-      alerts: 'view_alerts', reports: 'view_reports',
+      alerts: 'view_alerts', reports: 'view_reports', reportDetail: 'view_reports',
+      properties: 'manage_properties',
     };
     if (routePerm[tab] && !can(routePerm[tab])) tab = 'overview';
     current = tab;
     window.scrollTo(0, 0);
     // persist active screen in the URL hash so a refresh restores it
     // and so emails can deep-link (e.g. #property/PROP-123)
-    const hashMap = { propertyDetail: 'property', sensorDetail: 'sensor', ticketDetail: 'ticket' };
+    const hashMap = { propertyDetail: 'property', sensorDetail: 'sensor', ticketDetail: 'ticket', reportDetail: 'report' };
     const newHash = hashMap[tab] ? `#${hashMap[tab]}/${arg}` : `#${tab}`;
     if (location.hash !== newHash) {
       _suppressHashChange = true;
@@ -45,7 +46,7 @@ const App = (function () {
     // nav active state. Detail views map to their parent nav item. Notifications
     // is a global, platform-wide view — NOT part of Alerts (alerts are threshold/
     // incident events), so it highlights no module rather than lighting up Alerts.
-    const navTab = tab === 'propertyDetail' ? 'properties' : tab === 'sensorDetail' ? 'monitoring' : tab === 'ticketDetail' ? 'support' : tab;
+    const navTab = tab === 'propertyDetail' ? 'properties' : tab === 'sensorDetail' ? 'monitoring' : tab === 'ticketDetail' ? 'support' : tab === 'reportDetail' ? 'reports' : tab;
     document.querySelectorAll('.rail .navbtn').forEach(b =>
       b.classList.toggle('on', b.dataset.tab === navTab));
     // the bell is re-rendered per screen — re-apply the unread badge, and if the
@@ -57,11 +58,13 @@ const App = (function () {
     if (tab === 'propertyDetail') { Screens.propertyDetail(view, arg); return; }
     if (tab === 'sensorDetail') { Screens.sensorDetail(view, arg); return; }
     if (tab === 'ticketDetail') { Screens.ticketDetail(view, arg); return; }
+    if (tab === 'reportDetail') { Screens.reportDetail(view, arg); return; }
     const fn = Screens[tab];
     if (fn) fn(view);
   }
 
   function openProperty(id) { go('propertyDetail', id); }
+  function openReport(id) { if (id) go('reportDetail', id); }
   function openSensor(id) { go('sensorDetail', id); }
   function setSensorRange(h, sensorId) { Screens.setSensorRange(h, sensorId); go('sensorDetail', sensorId); }
   function monSearch(v) { Screens.monSearch(v); }
@@ -644,6 +647,7 @@ const App = (function () {
       billing: 'view_billing', team: 'manage_team',
       monitoring: 'view_monitoring', forecast: 'view_monitoring',
       alerts: 'view_alerts', reports: 'view_reports',
+      properties: 'manage_properties',
     };
     document.querySelectorAll('.rail .navbtn[data-tab]').forEach(b => {
       const need = navPerm[b.dataset.tab];
@@ -725,7 +729,7 @@ const App = (function () {
     const raw = (location.hash || '').replace(/^#/, '');
     if (!raw) { go('overview'); return; }
     const [seg, id] = raw.split('/');
-    const detailMap = { property: 'propertyDetail', sensor: 'sensorDetail', ticket: 'ticketDetail' };
+    const detailMap = { property: 'propertyDetail', sensor: 'sensorDetail', ticket: 'ticketDetail', report: 'reportDetail' };
     if (detailMap[seg] && id) { go(detailMap[seg], decodeURIComponent(id)); return; }
     // plain screens — only if the screen actually exists, else overview
     if (Screens[seg]) { go(seg); return; }
@@ -767,7 +771,7 @@ const App = (function () {
     } catch (_) { /* keep cached */ }
   }
 
-  return { go, openProperty, openEditProperty, activeProperty, setActiveProperty, setFcRange, openSensor, setSensorRange, monSearch, monFilter, monMetric, viewReport, downloadReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings, changePassword,
+  return { go, openProperty, openReport, openEditProperty, activeProperty, setActiveProperty, setFcRange, openSensor, setSensorRange, monSearch, monFilter, monMetric, viewReport, downloadReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings, changePassword,
            openTicketDetail, sendReply, openInvoice, notifyPayment, downloadInvoicePdf, selectServices, confirmServices, deactivateAccount, confirmDeactivate,
            setNotifFilter, markRead, markAllRead, deleteNotif, setTicketFilter, openTicket, submitTicket,
            can, inviteTeammate, setMemberRole, toggleMember, init };

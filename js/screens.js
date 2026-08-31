@@ -1266,7 +1266,8 @@ const Screens = (function () {
     const risk = r.flood_risk_level;
     const riskKind = risk === 'high' || risk === 'critical' ? 'alert' : risk === 'moderate' || risk === 'medium' ? 'warn' : 'ok';
     const isReady = (r.status === 'sent' || r.status === 'approved' || r.status === 'completed' || r.sent_to_client_at);
-    return `<tr>
+    const rid = r.report_id || r.id || '';
+    return `<tr style="cursor:pointer" onclick="App.openReport('${UI.esc(rid)}')">
       <td data-label="Report"><b>${UI.esc(r.title || 'Inspection report')}</b></td>
       <td class="muted" data-label="Property">${UI.esc(r.property_name || r.property_id || '—')}</td>
       <td class="muted" data-label="Date">${UI.fmtDate(r.sent_to_client_at || r.created_at)}</td>
@@ -1274,7 +1275,7 @@ const Screens = (function () {
       <td data-label="Flood risk">${risk ? UI.chip(riskKind, cap(String(risk))) : '<span class="muted">—</span>'}</td>
       <td data-label="Status">${isReady ? UI.chip('ok', 'Ready') : UI.chip('warn', cap(r.status || 'In progress'))}</td>
       <td data-label="Download">${isReady
-        ? `<button class="btn ghost sm" onclick="App.downloadReport('${UI.esc(r.report_id || '')}')">Download PDF</button>`
+        ? `<button class="btn ghost sm" onclick="event.stopPropagation();App.downloadReport('${UI.esc(rid)}')">Download PDF</button>`
         : '<span class="muted">Finalising</span>'}</td>
     </tr>`;
   }
@@ -1661,6 +1662,52 @@ const Screens = (function () {
     }
   }
 
+  // ---------------- REPORT DETAIL ----------------
+  async function reportDetail(view, id) {
+    view.innerHTML = `
+      <div class="top"><div>
+        <div class="crumb" onclick="App.go('reports')">← Reports &amp; documents</div>
+        <h1 id="rd-title">Loading…</h1><div class="sub" id="rd-sub"></div>
+      </div><div id="rd-actions"></div></div>
+      ${demoBanner()}
+      <div id="rd-body">${UI.loading(3)}</div>`;
+    let d;
+    if (Demo.isOn()) {
+      d = (Demo.data.reports || []).find(r => (r.report_id || r.id) === id) || (Demo.data.reports || [])[0];
+    } else {
+      try { const r = await apiRequest('/field-reports/' + encodeURIComponent(id)); d = r && r.data; }
+      catch (e) { document.getElementById('rd-body').innerHTML = UI.state('error', "Couldn't load the report", e.message || 'Please try again.', 'Retry', `onclick=\"App.openReport('${UI.esc(id)}')\"`); return; }
+    }
+    if (!d) { document.getElementById('rd-body').innerHTML = UI.state('empty', 'Report not found', 'It may have been removed or is not yet shared with you.'); return; }
+
+    const rid = d.report_id || d.id || id;
+    const score = d.drainage_condition_score;
+    const scoreColor = score == null ? 'var(--ink-3)' : score >= 70 ? 'var(--ok)' : score >= 40 ? 'var(--warn)' : 'var(--alert)';
+    const risk = d.flood_risk_level;
+    const riskKind = risk === 'high' || risk === 'critical' ? 'alert' : risk === 'moderate' || risk === 'medium' ? 'warn' : 'ok';
+    const isReady = (d.status === 'sent' || d.status === 'approved' || d.status === 'completed' || d.sent_to_client_at);
+    const loc = [d.city, d.state].filter(Boolean).join(', ');
+
+    document.getElementById('rd-title').textContent = d.title || 'Inspection report';
+    document.getElementById('rd-sub').textContent = `${d.property_name || d.property_id || ''}${loc ? ' · ' + loc : ''} · ${UI.fmtDate(d.sent_to_client_at || d.created_at)}`;
+    document.getElementById('rd-actions').innerHTML = isReady
+      ? `<div style="display:flex;gap:8px"><button class="btn ghost" onclick="App.viewReport('${UI.esc(rid)}')">View PDF</button><button class="btn" onclick="App.downloadReport('${UI.esc(rid)}')">Download PDF</button></div>`
+      : `<span class="chip warn">${cap(d.status || 'In progress')}</span>`;
+
+    const block = (title, body) => body ? `<div class="panel panel-pad mb-20"><h3 style="margin:0 0 10px">${title}</h3><div style="font-size:14px;color:var(--ink-2);line-height:1.7;white-space:pre-wrap">${UI.esc(body)}</div></div>` : '';
+    const kpi = (label, valueHtml, sub) => `<div class="card statcard"><div class="lbl">${label}</div><div style="font-family:var(--ff-d);font-size:22px;font-weight:600;margin:6px 0 2px">${valueHtml}</div><div class="sub">${sub}</div></div>`;
+    document.getElementById('rd-body').innerHTML = `
+      <div class="kpi-row" style="margin-bottom:20px">
+        ${kpi('Drainage condition', `<span style="color:${scoreColor}">${score != null ? score + '<span style="font-size:14px;color:var(--ink-3)">/100</span>' : '—'}</span>`, score == null ? 'Not scored' : score >= 70 ? 'Good' : score >= 40 ? 'Fair' : 'Poor')}
+        ${kpi('Flood risk', risk ? `<span style="color:${riskKind === 'alert' ? 'var(--alert)' : riskKind === 'warn' ? 'var(--warn)' : 'var(--ok)'}">${cap(String(risk))}</span>` : '—', 'Assessed at inspection')}
+        ${kpi('Status', isReady ? 'Ready' : cap(d.status || 'In progress'), UI.fmtDate(d.sent_to_client_at || d.created_at))}
+      </div>
+      ${block('Summary', d.summary || d.executive_summary)}
+      ${block('Findings', d.findings)}
+      ${block('Recommendations', d.recommendations)}
+      ${(!d.summary && !d.executive_summary && !d.findings && !d.recommendations) ? `<div class="panel panel-pad"><p class="muted" style="margin:0">The written details for this report aren't available here yet${isReady ? ' — the full document is in the PDF above.' : '.'}</p></div>` : ''}`;
+  }
+
   // ---------------- SENSOR DETAIL (drill-down + time range) ----------------
   let _sensorRange = 24;
   async function sensorDetail(view, sensorId) {
@@ -1961,6 +2008,6 @@ const Screens = (function () {
       </div>`;
   }
 
-  return { overview, monitoring, forecast, explainClientRisk, getMyProperties, propertySelector, sensorDetail, properties, propertyDetail, billing, alerts, notifications, reports, support, ticketDetail, settings, account, team, setNotifFilter, setTicketFilter, setFcRange, setSensorRange, monSearch, monFilter, monMetric, TICKET_CATS };
+  return { overview, monitoring, forecast, explainClientRisk, getMyProperties, propertySelector, sensorDetail, properties, propertyDetail, billing, alerts, notifications, reports, reportDetail, support, ticketDetail, settings, account, team, setNotifFilter, setTicketFilter, setFcRange, setSensorRange, monSearch, monFilter, monMetric, TICKET_CATS };
 })();
 window.Screens = Screens;
