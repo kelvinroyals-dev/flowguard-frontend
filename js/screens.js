@@ -1930,7 +1930,7 @@ const Screens = (function () {
         ? (m.is_active
             ? `<button class="btn ghost" style="color:var(--alert)" onclick="App.toggleMember(${m.id}, false)">Deactivate</button>`
             : `<button class="btn ghost" onclick="App.toggleMember(${m.id}, true)">Reactivate</button>`)
-        : '<span class="muted">—</span>';
+        : '';
       return `<tr>
         <td data-label="Member"><b>${UI.esc(m.full_name || '—')}</b><div class="muted" style="font-size:12px">${UI.esc(m.email)}</div>${badges ? `<div style="margin-top:5px;display:flex;gap:5px;flex-wrap:wrap">${badges}</div>` : ''}</td>
         <td data-label="Role">${roleCell}</td>
@@ -1954,7 +1954,7 @@ const Screens = (function () {
       </div>
       <div class="card" style="margin-top:16px">
         <div class="section-t">What each role can do</div>
-        ${roles.map(r => `<div style="padding:9px 0;border-top:1px solid var(--line)"><b>${UI.esc(r.label)}</b><div class="muted" style="font-size:13px;margin-top:2px">${UI.esc(r.desc || '')}</div></div>`).join('')}
+        ${roles.map((r, i) => `<div style="padding:9px 0;${i ? 'border-top:1px solid var(--line)' : ''}"><b>${UI.esc(r.label)}</b><div class="muted" style="font-size:13px;margin-top:2px">${UI.esc(r.desc || '')}</div></div>`).join('')}
       </div>`;
   }
 
