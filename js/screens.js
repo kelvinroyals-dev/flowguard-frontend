@@ -2037,9 +2037,18 @@ const Screens = (function () {
   }
 
   // ---- TEAM & ROLES (client organisation RBAC) ----
+  // Plain-language capability lists per role (presentation only — perms live server-side)
+  const ROLE_CAPS = {
+    platform_admin: ['Manage properties & nodes', 'Invite and edit team roles', 'View/pay invoices', 'Access audit logs'],
+    facility_manager: ['Acknowledge live warnings', 'Request diagnostics checks', 'Draft site inspection reports'],
+    finance: ['Download monthly invoices', 'Update payment methods', 'View cost forecasting charts'],
+    member: ['Monitor real-time water metrics', 'Export historical reports', 'Submit hardware requests'],
+  };
+  const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+
   async function team(view) {
     view.innerHTML = `
-      <div class="top"><div><h1>Team &amp; roles</h1><div class="sub">Invite teammates and control what they can access</div></div></div>
+      <div class="top"><div><h1>Team &amp; roles</h1><div class="sub">Invite teammates and control what operations they can access.</div></div></div>
       <div id="team-body"><div class="card"><p class="muted">Loading team…</p></div></div>`;
     let members = [], roles = [];
     try {
@@ -2051,53 +2060,64 @@ const Screens = (function () {
       return;
     }
     const roleOpts = sel => roles.map(r => `<option value="${r.key}" ${r.key === sel ? 'selected' : ''}>${UI.esc(r.label)}</option>`).join('');
-    const selStyle = 'style="padding:9px 10px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface-2);color:var(--ink);font-family:var(--ff);font-size:13px;max-width:200px"';
-    // A proper role pill (the neutral UI.chip has no background, so it looked unstyled).
-    const rolePill = lbl => `<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:100px;background:var(--brand-soft);color:var(--brand-deep);font-size:11px;font-weight:600"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>${UI.esc(lbl)}</span>`;
+    const initialsOf = n => (String(n || '').replace(/[^a-zA-Z ]/g, ' ').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('') || '?').toUpperCase();
+
     const rows = members.map(m => {
-      const badges = [
-        m.is_account_owner ? UI.chip('ok', 'Owner') : '',
-        m.is_you ? UI.chip('warn', 'You') : '',
-        m.invited_pending ? UI.chip('warn', 'Invite pending') : '',
-        (!m.is_active) ? UI.chip('alert', 'Deactivated') : '',
-      ].filter(Boolean).join(' ');
       const canEdit = !m.is_account_owner && !m.is_you;
-      // Why a row is locked, so a static pill doesn't read as "broken".
-      const lockReason = m.is_account_owner ? 'Account owner — always Platform admin'
-        : m.is_you ? "You can't change your own role" : '';
+      const isAdmin = m.client_role === 'platform_admin';
+      const av = m.avatar_url ? `<img src="${UI.esc(m.avatar_url)}" alt="">` : `<span>${UI.esc(initialsOf(m.full_name))}</span>`;
+      const ownerTag = m.is_account_owner ? '<span class="tm-owner">Owner</span>' : (m.is_you ? '<span class="tm-owner">You</span>' : '');
       const roleCell = canEdit
-        ? `<select ${selStyle} onchange="App.setMemberRole(${m.id}, this.value)">${roleOpts(m.client_role)}</select>`
-        : `${rolePill(m.client_role_label || '—')}${lockReason ? `<div class="muted" style="font-size:11px;margin-top:4px;display:flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>${UI.esc(lockReason)}</div>` : ''}`;
-      const actionCell = canEdit
+        ? `<select class="tm-role-sel" onchange="App.setMemberRole(${m.id}, this.value)">${roleOpts(m.client_role)}</select>`
+        : `<span class="tm-role-pill ${isAdmin ? 'admin' : 'neutral'}">${UI.esc(m.client_role_label || '—')}</span>`;
+      const status = !m.is_active ? { c: 'off', l: 'Deactivated' }
+        : m.invited_pending ? { c: 'pending', l: 'Pending Invite' }
+          : { c: 'active', l: 'Active' };
+      const deact = canEdit
         ? (m.is_active
-            ? `<button class="btn ghost" style="color:var(--alert)" onclick="App.toggleMember(${m.id}, false)">Deactivate</button>`
-            : `<button class="btn ghost" onclick="App.toggleMember(${m.id}, true)">Reactivate</button>`)
+            ? `<button class="tm-deact" onclick="App.toggleMember(${m.id}, false)">Deactivate</button>`
+            : `<button class="tm-deact" onclick="App.toggleMember(${m.id}, true)">Reactivate</button>`)
         : '';
-      return `<tr>
-        <td data-label="Member"><b>${UI.esc(m.full_name || '—')}</b><div class="muted" style="font-size:12px">${UI.esc(m.email)}</div>${badges ? `<div style="margin-top:5px;display:flex;gap:5px;flex-wrap:wrap">${badges}</div>` : ''}</td>
-        <td data-label="Role">${roleCell}</td>
-        <td data-label="" style="text-align:right">${actionCell}</td>
-      </tr>`;
+      return `<div class="tm-row">
+        <div class="tm-member">
+          <span class="tm-av">${av}</span>
+          <div style="min-width:0">
+            <div class="tm-name">${UI.esc(m.full_name || '—')}${ownerTag}</div>
+            <div class="tm-email">${UI.esc(m.email)}</div>
+          </div>
+        </div>
+        <div>${roleCell}</div>
+        <div class="tm-status-cell"><span class="tm-status ${status.c}">${status.l}</span>${deact}</div>
+      </div>`;
     }).join('');
+
+    const roleCards = roles.map(r => {
+      const caps = ROLE_CAPS[r.key] || [];
+      return `<div class="tm-role-card">
+        <h4>${UI.esc(r.label)}</h4>
+        <div class="rc-desc">${UI.esc(r.desc || '')}</div>
+        ${caps.length ? `<div class="tm-caps">${caps.map(c => `<div class="tm-cap">${CHECK_SVG}<span>${UI.esc(c)}</span></div>`).join('')}</div>` : ''}
+      </div>`;
+    }).join('');
+
     document.getElementById('team-body').innerHTML = `
       <div class="card panel-pad">
         <div class="section-t" style="margin-top:0">Invite a teammate</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-          <div class="field"><label>Full name</label><input id="tm-name" placeholder="Jane Doe"></div>
-          <div class="field"><label>Email</label><input id="tm-email" type="email" placeholder="jane@company.com"></div>
-          <div class="field"><label>Role</label><select id="tm-role" style="width:100%;padding:12px 14px;border:1px solid var(--line-2);border-radius:var(--rx);background:var(--surface-2);color:var(--ink);font-family:var(--ff);font-size:14px">${roleOpts('member')}</select></div>
+        <div class="tm-invite-grid">
+          <div class="tm-field"><label>Full name</label><input id="tm-name" placeholder="e.g. Jane Doe"></div>
+          <div class="tm-field"><label>Email address</label><input id="tm-email" type="email" placeholder="jane@company.com"></div>
+          <div class="tm-field"><label>Role</label><select id="tm-role">${roleOpts('member')}</select></div>
+          <button class="btn tm-invite-btn" onclick="App.inviteTeammate()">Send Invite</button>
         </div>
-        <button class="btn" style="margin-top:14px" onclick="App.inviteTeammate()">Send invite</button>
-        <p class="muted" style="margin-top:8px;font-size:12px">They'll receive an email to set a password and join your account.</p>
+        <p class="tm-hint">They'll receive an email to set a password and join your corporate account.</p>
       </div>
       <div class="card panel-pad" style="margin-top:16px">
         <div class="section-t" style="margin-top:0">Team members</div>
-        <table class="data-table"><thead><tr><th>Member</th><th>Role</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+        <div class="tm-thead"><span>MEMBER</span><span>ROLE</span><span>STATUS</span></div>
+        ${rows}
       </div>
-      <div class="card panel-pad" style="margin-top:16px">
-        <div class="section-t" style="margin-top:0">What each role can do</div>
-        ${roles.map((r, i) => `<div style="padding:9px 0;${i ? 'border-top:1px solid var(--line)' : ''}"><b>${UI.esc(r.label)}</b><div class="muted" style="font-size:13px;margin-top:2px">${UI.esc(r.desc || '')}</div></div>`).join('')}
-      </div>`;
+      <div class="section-t" style="margin-top:26px">What each role can do</div>
+      <div class="tm-roles-grid">${roleCards}</div>`;
   }
 
   return { overview, monitoring, forecast, explainClientRisk, getMyProperties, propertySelector, sensorDetail, properties, propertyDetail, billing, alerts, notifications, reports, reportDetail, support, ticketDetail, settings, account, team, setNotifFilter, setTicketFilter, setFcRange, setSensorRange, monSearch, monFilter, monMetric, TICKET_CATS };
