@@ -41,7 +41,10 @@ a{color:inherit}
 
 /* ---------- App shell ---------- */
 .app{display:grid;grid-template-columns:224px 1fr;min-height:100vh}
-.rail{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:20px 14px;gap:4px;position:sticky;top:0;height:100vh}
+.rail{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:20px 14px;gap:4px;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+.rail::-webkit-scrollbar{width:6px}
+.rail::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:3px}
+.rail::-webkit-scrollbar-track{background:transparent}
 .rail-brand{display:flex;align-items:center;gap:10px;padding:2px 8px 20px}
 .rail-brand .logo{height:32px;width:auto;max-width:44px;object-fit:contain}
 .rail-brand .logo-dark{display:none}
@@ -55,7 +58,10 @@ a{color:inherit}
 .rail .navbtn .navlabel{white-space:nowrap}
 .rail .navbtn:hover{background:var(--bg);color:var(--ink)}
 .rail .navbtn.on{background:var(--brand);color:#fff}
-.rail-foot{margin-top:auto;display:flex;flex-direction:column;gap:4px;padding-top:12px;border-top:1px solid var(--line)}
+.rail-foot{margin-top:auto;display:flex;flex-direction:column;gap:4px;padding-top:12px;border-top:1px solid var(--line);position:sticky;bottom:0;background:var(--surface)}
+/* On short screens, drop the promo so the nav + account/logout footer always fit */
+@media(max-height:780px){.rail-promo{display:none}}
+@media(max-height:600px){.rail-brand{padding-bottom:12px}.rail .navbtn{padding:7px 12px}}
 .rail .theme-btn{color:var(--ink-2)}
 .rail-user{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:10px;border:none;background:none;cursor:pointer;transition:.13s}
 .rail-user:hover{background:var(--bg)}
@@ -165,12 +171,12 @@ a{color:inherit}
 .tm-hint{margin-top:16px;font-size:13px;color:var(--ink-3)}
 .tm-thead{display:grid;grid-template-columns:1fr 220px 190px;gap:16px;padding:0 2px 14px;border-bottom:1px solid var(--line)}
 .tm-thead span{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--ink-3)}
-.tm-row{display:grid;grid-template-columns:1fr 220px 190px;gap:16px;align-items:center;padding:16px 2px;border-bottom:1px solid var(--line)}
-.tm-row:last-child{border-bottom:0}
+.trl-row{display:grid;grid-template-columns:1fr 220px 190px;gap:16px;align-items:center;padding:16px 2px;border-bottom:1px solid var(--line)}
+.trl-row:last-child{border-bottom:0}
 .tm-member{display:flex;align-items:center;gap:14px;min-width:0}
-.tm-av{width:44px;height:44px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;overflow:hidden;background:var(--surface-3);color:var(--ink-2);font-size:14px;font-weight:700;border:1px solid var(--line)}
-.tm-av img{width:100%;height:100%;object-fit:cover}
-.tm-name{display:flex;align-items:center;gap:8px;font-weight:600;color:var(--ink);font-size:14.5px}
+.trl-av{width:44px;height:44px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;overflow:hidden;background:var(--surface-3);color:var(--ink-2);font-size:14px;font-weight:700;border:1px solid var(--line)}
+.trl-av img{width:100%;height:100%;object-fit:cover}
+.trl-name{display:flex;align-items:center;gap:8px;font-weight:600;color:var(--ink);font-size:14.5px}
 .tm-email{font-size:12.5px;color:var(--ink-3);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tm-owner{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;background:color-mix(in srgb,var(--brand) 16%,transparent);color:var(--brand)}
 .tm-role-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:9px;font-size:12.5px;font-weight:600}
@@ -195,7 +201,7 @@ a{color:inherit}
 .tm-cap{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:var(--ink-2)}
 .tm-cap svg{width:16px;height:16px;color:var(--brand);flex-shrink:0;margin-top:1px}
 @media(max-width:1024px){.tm-roles-grid{grid-template-columns:repeat(2,1fr)}.tm-invite-grid{grid-template-columns:1fr 1fr}.tm-invite-btn{grid-column:1/-1}}
-@media(max-width:640px){.tm-roles-grid,.tm-invite-grid{grid-template-columns:1fr}.tm-thead{display:none}.tm-row{grid-template-columns:1fr;gap:12px}}
+@media(max-width:640px){.tm-roles-grid,.tm-invite-grid{grid-template-columns:1fr}.tm-thead{display:none}.trl-row{grid-template-columns:1fr;gap:12px}}
 
 /* ---------- Toast ---------- */
 #toasts{position:fixed;top:20px;right:20px;z-index:100;display:flex;flex-direction:column;gap:10px}
@@ -393,6 +399,8 @@ a{color:inherit}
 /* ---------- Stat tiles ---------- */
 .grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:8px}
 .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:1024px){.grid-4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.grid-4{grid-template-columns:1fr}}
 .statcard{padding:20px}
 .statcard .lbl{color:var(--ink-3);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px}
 .statcard .num{font-family:var(--ff-d);font-size:28px;font-weight:700;letter-spacing:-.02em}
@@ -451,7 +459,7 @@ a{color:inherit}
   .mob-toggle{display:grid;place-items:center;position:fixed;top:14px;right:14px;z-index:50;width:42px;height:42px;border-radius:12px;background:var(--surface);border:1px solid var(--line-2);color:var(--ink);cursor:pointer}
   .mob-toggle svg{width:20px;height:20px}
   .main{padding:0 18px 40px}
-  .top{padding:10px 18px;margin:0 -18px 18px;min-height:54px}
+  .top{padding:10px 70px 10px 18px;margin:0 -18px 18px;min-height:54px}
 }
 .assigned-team{margin-top:6px}
 .team-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -643,7 +651,7 @@ button:focus:not(:focus-visible){outline:none}
 <!-- Portal v2 -->
 <script src="js/ui.js"></script>
 <script src="js/demo.js?v=2"></script>
-<script src="js/screens.js?v=22"></script>
+<script src="js/screens.js?v=23"></script>
 <script src="js/app.js?v=7"></script>
 <script src="js/tour.js?v=3"></script>
 </body>

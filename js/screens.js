@@ -2078,11 +2078,11 @@ const Screens = (function () {
             ? `<button class="tm-deact" onclick="App.toggleMember(${m.id}, false)">Deactivate</button>`
             : `<button class="tm-deact" onclick="App.toggleMember(${m.id}, true)">Reactivate</button>`)
         : '';
-      return `<div class="tm-row">
+      return `<div class="trl-row">
         <div class="tm-member">
-          <span class="tm-av">${av}</span>
+          <span class="trl-av">${av}</span>
           <div style="min-width:0">
-            <div class="tm-name">${UI.esc(m.full_name || '—')}${ownerTag}</div>
+            <div class="trl-name">${UI.esc(m.full_name || '—')}${ownerTag}</div>
             <div class="tm-email">${UI.esc(m.email)}</div>
           </div>
         </div>
