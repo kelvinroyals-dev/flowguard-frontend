@@ -319,10 +319,10 @@ const Screens = (function () {
     const pendingCount = (props || []).filter(p => ['submitted', 'inspection_scheduled', 'inspection_ongoing'].includes(p.status)).length;
     const alertCount = (alerts || []).length;
     document.getElementById('ov-kpis').innerHTML = `<div class="kpi-row">
-      ${kpiCard('Areas monitored', activeCount, activeCount ? 'Live' : 'None yet', icons.check)}
-      ${kpiCard('In progress', pendingCount, pendingCount ? 'Being set up' : 'None', icons.warn)}
-      ${kpiCard('Sensors online', risk && risk.has_data ? `${risk.sensors_online}/${risk.sensors_total}` : (risk && risk.sensors_total ? `0/${risk.sensors_total}` : '—'), 'Reporting', icons.sensor)}
-      ${kpiCard('Active alerts', alertCount, alertCount ? 'Need attention' : 'All clear', icons.bell)}
+      ${kpiCard('Areas monitored', activeCount, activeCount ? 'Live' : 'None yet', '<path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>')}
+      ${kpiCard('In progress', pendingCount, pendingCount ? 'Being set up' : 'None', '<path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0114.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0020.5 15"/>')}
+      ${kpiCard('Sensors online', risk && risk.has_data ? `${risk.sensors_online}/${risk.sensors_total}` : (risk && risk.sensors_total ? `0/${risk.sensors_total}` : '—'), 'Reporting', '<path d="M2 8.8a15 15 0 0120 0M5 12.3a10 10 0 0114 0M8.5 15.8a5 5 0 017 0"/><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/>')}
+      ${kpiCard('Active alerts', alertCount, alertCount ? 'Need attention' : 'All clear', '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>')}
     </div>`;
 
     renderSeasonal();
