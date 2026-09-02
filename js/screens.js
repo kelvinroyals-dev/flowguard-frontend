@@ -1206,7 +1206,7 @@ const Screens = (function () {
         <button class="chip ${_notifFilter === 'all' ? 'ok' : ''} clickable-outline" onclick="App.setNotifFilter('all')">All</button>
         <button class="chip ${_notifFilter === 'unread' ? 'ok' : ''} clickable-outline" onclick="App.setNotifFilter('unread')">Unread</button>
       </div>
-      <div class="card panel-pad" id="notif-list">${UI.loading(3)}</div>`;
+      <div id="notif-list">${UI.loading(3)}</div>`;
 
     let items;
     if (Demo.isOn()) {
@@ -1231,10 +1231,28 @@ const Screens = (function () {
     }
   }
 
+  function notifIcon(hint) {
+    const t = String(hint || '').toLowerCase();
+    if (/inv|bill|payment|invoice/.test(t)) return { c: '#3b82f6', s: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/>' };
+    if (/support|ticket|message|reply|chat/.test(t)) return { c: '#22c3e6', s: '<path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>' };
+    if (/inspect/.test(t)) return { c: '#10b981', s: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 4H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1"/><path d="M9 13l2 2 4-4"/>' };
+    if (/report|document/.test(t)) return { c: '#0891b2', s: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/>' };
+    if (/alert|critical|warn|flood|risk|incident/.test(t)) return { c: '#f59e0b', s: '<path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/>' };
+    return { c: '#0891b2', s: '<path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/>' };
+  }
+  function notifTime(t) {
+    if (!t) return '';
+    const d = new Date(t);
+    if (isNaN(d.getTime())) return UI.esc(t);   // already relative (e.g. "40 days ago")
+    const m = Math.floor((Date.now() - d.getTime()) / 60000);
+    if (m < 1) return 'just now'; if (m < 60) return m + 'm ago';
+    const h = Math.floor(m / 60); if (h < 24) return h + 'h ago';
+    const dd = Math.floor(h / 24); if (dd < 30) return dd + 'd ago';
+    return UI.fmtDate(t);
+  }
   function notifRow(n) {
     const read = n.read || n.is_read;
-    const kind = n.type === 'warning' ? 'warn' : n.type === 'critical' || n.type === 'alert' ? 'alert' : 'ok';
-    const ic = kind === 'ok' ? icons.check : icons.warn;
+    const ic = notifIcon(n.type || n.link || n.title);
     // '#tab' opens the list; '#tab/RECORD-ID' opens the specific record.
     const raw = (n.link || '').replace(/^#/, '');
     const slash = raw.indexOf('/');
@@ -1245,14 +1263,15 @@ const Screens = (function () {
                    : (tab === 'property' || tab === 'properties') ? 'propertyDetail' : null;
       goCall = detail ? `App.go('${detail}','${UI.esc(rid)}')` : `App.go('${UI.esc(tab)}')`;
     } else if (raw) { goCall = `App.go('${UI.esc(raw)}')`; }
-    const nav = goCall ? `onclick="${goCall}" style="cursor:pointer;${read ? 'opacity:.6' : ''}"` : `style="${read ? 'opacity:.6' : ''}"`;
-    return `<div class="evt ${kind}" ${nav}>
-      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ic}</svg></div>
-      <div style="flex:1"><b>${UI.esc(n.title || 'Notification')}</b><small>${UI.esc(n.message || n.description || '')}</small></div>
-      <span class="t">${UI.esc(n.created_at || '')}</span>
-      <div style="display:flex;gap:8px;margin-left:10px">
-        ${!read ? `<button class="chip clickable-outline" onclick="event.stopPropagation();App.markRead('${UI.esc(n.id)}')">Mark read</button>` : ''}
-        <button class="chip clickable-outline" onclick="event.stopPropagation();App.deleteNotif('${UI.esc(n.id)}')">Delete</button>
+    const nav = goCall ? `onclick="${goCall}" style="cursor:pointer"` : '';
+    return `<div class="ntf-item ${read ? '' : 'unread'}" ${nav}>
+      ${read ? '' : '<span class="ntf-dot"></span>'}
+      <div class="ntf-ic" style="background:${ic.c}22;color:${ic.c};"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ic.s}</svg></div>
+      <div class="ntf-body"><div class="ntf-t">${UI.esc(n.title || 'Notification')}</div><div class="ntf-s">${UI.esc(n.message || n.description || '')}</div></div>
+      <span class="ntf-time">${notifTime(n.created_at)}</span>
+      <div class="ntf-acts" onclick="event.stopPropagation()">
+        ${!read ? `<button class="ntf-act" title="Mark read" onclick="App.markRead('${UI.esc(n.id)}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></button>` : ''}
+        <button class="ntf-act" title="Delete" onclick="App.deleteNotif('${UI.esc(n.id)}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m-9 0v14a2 2 0 002 2h8a2 2 0 002-2V6"/></svg></button>
       </div>
     </div>`;
   }
