@@ -1957,7 +1957,7 @@ const Screens = (function () {
           <div class="reply-bar">
             <label class="reply-attach">
               <input type="file" hidden onchange="var s=document.getElementById('td-attach-name');if(s)s.textContent=this.files&&this.files[0]?this.files[0].name:''">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
               <span>Attach document or file</span>
             </label>
             <span id="td-attach-name" class="reply-attach-name"></span>
