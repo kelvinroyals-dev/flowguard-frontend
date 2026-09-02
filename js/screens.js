@@ -604,13 +604,13 @@ const Screens = (function () {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
           <input id="mon-search" placeholder="Search sensors…" value="${UI.esc(_monSearch)}" oninput="App.monSearch(this.value)">
         </div>
-        <div class="mon-filters" id="mon-filters"></div>
+        <div class="seg" id="mon-filters"></div>
       </div>
       <div id="mon-grid">${UI.loading(1)}</div>
       <div class="section-t" style="margin-top:26px">Network trend
-        <span style="display:flex;gap:6px">
-          <button class="chip ${_monMetric === 'level' ? 'ok' : ''} clickable-outline" onclick="App.monMetric('level')">Water level</button>
-          <button class="chip ${_monMetric === 'flow' ? 'ok' : ''} clickable-outline" onclick="App.monMetric('flow')">Flow rate</button>
+        <span class="seg">
+          <button class="${_monMetric === 'level' ? 'on' : ''}" onclick="App.monMetric('level')">Water level</button>
+          <button class="${_monMetric === 'flow' ? 'on' : ''}" onclick="App.monMetric('flow')">Flow rate</button>
         </span>
       </div>
       <div class="panel panel-pad" id="mon-chart">${UI.loading(2)}</div>
@@ -658,7 +658,7 @@ const Screens = (function () {
       ['all', `All (${_monSensors.length})`],
       ['bio', `Bio-dispensers (${bioCount})`],
       ['offline', `Offline (${offCount})`]
-    ].map(([k, l]) => `<button class="chip ${_monFilter === k ? 'ok' : ''} clickable-outline" onclick="App.monFilter('${k}')">${l}</button>`).join('');
+    ].map(([k, l]) => `<button class="${_monFilter === k ? 'on' : ''}" onclick="App.monFilter('${k}')">${l}</button>`).join('');
 
     renderMonGrid();
     renderMonChart();
@@ -1202,9 +1202,9 @@ const Screens = (function () {
       <div class="top"><div><h1>Notifications</h1><div class="sub">Account and service updates — submissions, inspections, reports, and billing</div></div>
         <button class="btn ghost" onclick="App.markAllRead()">Mark all read</button></div>
       ${demoBanner()}
-      <div style="display:flex;gap:8px;margin-bottom:16px">
-        <button class="chip ${_notifFilter === 'all' ? 'ok' : ''} clickable-outline" onclick="App.setNotifFilter('all')">All</button>
-        <button class="chip ${_notifFilter === 'unread' ? 'ok' : ''} clickable-outline" onclick="App.setNotifFilter('unread')">Unread</button>
+      <div class="seg" style="margin-bottom:16px">
+        <button class="${_notifFilter === 'all' ? 'on' : ''}" onclick="App.setNotifFilter('all')">All</button>
+        <button class="${_notifFilter === 'unread' ? 'on' : ''}" onclick="App.setNotifFilter('unread')">Unread</button>
       </div>
       <div id="notif-list">${UI.loading(3)}</div>`;
 
@@ -1456,8 +1456,8 @@ const Screens = (function () {
     const allProps = await getMyProperties();
     view.innerHTML = `
       <div class="top"><div><h1>Risk forecast</h1><div class="sub">Prediction of flooding risk across your property</div></div>
-      <span style="display:flex;gap:6px">
-        ${[7, 14, 30].map(d => `<button class="chip ${_fcRange === d ? 'ok' : ''} clickable-outline" onclick="App.setFcRange(${d})">${d}d</button>`).join('')}
+      <span class="seg">
+        ${[7, 14, 30].map(d => `<button class="${_fcRange === d ? 'on' : ''}" onclick="App.setFcRange(${d})">${d}d</button>`).join('')}
       </span></div>
       ${demoBanner()}
       <div id="fc-body">${UI.loading(2)}</div>`;
@@ -1735,9 +1735,9 @@ const Screens = (function () {
         <div class="crumb" onclick="App.go('monitoring')">← Monitoring</div>
         <h1 id="sd-name">Loading…</h1><div class="sub" id="sd-sub"></div>
       </div>
-      <div style="display:flex;gap:6px">
+      <div class="seg">
         ${[['24h', 24], ['7d', 168], ['30d', 720]].map(([lbl, h]) =>
-          `<button class="chip ${_sensorRange === h ? 'ok' : ''} clickable-outline" onclick="App.setSensorRange(${h},'${UI.esc(sensorId)}')">${lbl}</button>`).join('')}
+          `<button class="${_sensorRange === h ? 'on' : ''}" onclick="App.setSensorRange(${h},'${UI.esc(sensorId)}')">${lbl}</button>`).join('')}
       </div></div>
       ${demoBanner()}
       <div id="sd-body">${UI.loading(3)}</div>`;
@@ -1823,12 +1823,12 @@ const Screens = (function () {
       <div class="top"><div><h1>Support</h1><div class="sub">Raise a request or track your existing tickets</div></div>
         <button class="btn" onclick="App.openTicket()">+ New ticket</button></div>
       ${demoBanner()}
-      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-        <button class="chip ${_ticketFilter === 'all' ? 'ok' : ''} clickable-outline" onclick="App.setTicketFilter('all')">All</button>
-        <button class="chip ${_ticketFilter === 'open' ? 'ok' : ''} clickable-outline" onclick="App.setTicketFilter('open')">Open</button>
-        <button class="chip ${_ticketFilter === 'resolved' ? 'ok' : ''} clickable-outline" onclick="App.setTicketFilter('resolved')">Resolved</button>
+      <div class="seg" style="margin-bottom:16px">
+        <button class="${_ticketFilter === 'all' ? 'on' : ''}" onclick="App.setTicketFilter('all')">All</button>
+        <button class="${_ticketFilter === 'open' ? 'on' : ''}" onclick="App.setTicketFilter('open')">Open</button>
+        <button class="${_ticketFilter === 'resolved' ? 'on' : ''}" onclick="App.setTicketFilter('resolved')">Resolved</button>
       </div>
-      <div class="card panel-pad" id="tk-list">${UI.loading(3)}</div>`;
+      <div id="tk-list">${UI.loading(3)}</div>`;
 
     let items;
     if (Demo.isOn()) items = Demo.data.tickets;
@@ -1855,16 +1855,52 @@ const Screens = (function () {
     }
   }
 
+  function ticketIcon(t) {
+    const s = `${t.subject || t.title || ''} ${t.category || ''}`.toLowerCase();
+    // returns { c: accent color, p: svg path markup }
+    if (/calibrat|tune|adjust|threshold/.test(s))
+      return { c: '#a78bfa', p: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>' };
+    if (/rain|forecast|weather|precip|flood|storm/.test(s))
+      return { c: '#38bdf8', p: '<line x1="8" y1="19" x2="8" y2="21"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="16" y1="19" x2="16" y2="21"/><line x1="16" y1="13" x2="16" y2="15"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="12" y1="15" x2="12" y2="17"/><path d="M20 16.58A5 5 0 0018 7h-1.26A8 8 0 104 15.25"/>' };
+    if (/offline|sensor|node|device|telemetry|signal|connect/.test(s))
+      return { c: '#22c3e6', p: '<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>' };
+    if (/bill|invoice|payment|charge|dispute|contract|refund/.test(s))
+      return { c: '#2dd4bf', p: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>' };
+    if (/dispatch|crew|visit|plant|truck|vehicle|clean/.test(s))
+      return { c: '#f0a92a', p: '<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>' };
+    if (/emergency|urgent|critical/.test(s))
+      return { c: '#f87171', p: '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>' };
+    return { c: '#22c3e6', p: '<path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>' };
+  }
+
   function ticketRow(t) {
-    const statusMap = { new: ['warn', 'New'], open: ['warn', 'Open'], in_progress: ['warn', 'In progress'], resolved: ['ok', 'Resolved'], closed: ['ok', 'Closed'] };
-    const [sk, sl] = statusMap[t.status] || ['warn', cap(t.status || 'Open')];
-    const prio = t.priority === 'high' || t.priority === 'urgent' ? UI.chip('alert', cap(t.priority)) : '';
-    return `<div class="row clickable" onclick="App.openTicketDetail('${UI.esc(t.ticket_id)}')">
-      <div class="rmain">
-        <b>${UI.esc(t.subject || t.title || 'Support request')}</b>
-        <small>${UI.esc(TICKET_CATS[t.category] || t.category || 'General')} · ${UI.esc(t.ticket_id || '')} · ${UI.fmtDate(t.created_at)}</small>
+    const done = ['resolved', 'closed'].includes(t.status);
+    const st = done
+      ? { c: 'ok', l: t.status === 'closed' ? 'Closed' : 'Resolved' }
+      : { c: 'open', l: t.status === 'in_progress' ? 'In progress' : (t.status === 'new' ? 'New' : 'Open') };
+    const prio = String(t.priority || '').toLowerCase();
+    const pr = (prio === 'high' || prio === 'urgent') ? { c: 'alert', l: cap(prio) }
+      : prio === 'medium' ? { c: 'warn', l: 'Medium' }
+        : { c: 'low', l: prio ? cap(prio) : 'Low' };
+    const ic = ticketIcon(t);
+    const desc = t.description || t.last_message || t.body || '';
+    const meta = `${UI.esc(t.ticket_id || '')} · ${UI.esc(TICKET_CATS[t.category] || t.category || 'General')} · ${UI.fmtDate(t.created_at)}`;
+    const dot = (!done && t.needs_response) ? '<span class="ntf-dot"></span>' : '';
+    return `<div class="tkt-item${done ? ' done' : ''}" onclick="App.openTicketDetail('${UI.esc(t.ticket_id)}')">
+      ${dot}
+      <div class="ntf-ic" style="background:${ic.c}1f;color:${ic.c}">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic.p}</svg>
       </div>
-      <div class="rright" style="display:flex;gap:8px;align-items:center">${prio}${UI.chip(sk, sl)}<span style="color:var(--brand);font-size:13px;font-weight:600">View →</span></div>
+      <div class="tkt-body">
+        <div class="tkt-t">${UI.esc(t.subject || t.title || 'Support request')}</div>
+        ${desc ? `<div class="tkt-d">${UI.esc(desc)}</div>` : ''}
+        <div class="tkt-m">${meta}</div>
+      </div>
+      <div class="tkt-right">
+        <span class="tkt-pill ${pr.c}">${pr.l}</span>
+        <span class="tkt-pill ${st.c}">${st.l}</span>
+        <button class="tkt-view" onclick="event.stopPropagation();App.openTicketDetail('${UI.esc(t.ticket_id)}')">View</button>
+      </div>
     </div>`;
   }
   function setTicketFilter(f) { _ticketFilter = f; }
@@ -1892,24 +1928,40 @@ const Screens = (function () {
     }
     if (!t) { document.getElementById('td-body').innerHTML = UI.state('error', 'Ticket not found', ''); return; }
 
-    const statusMap = { new: ['warn', 'New'], open: ['warn', 'Open'], in_progress: ['warn', 'In progress'], resolved: ['ok', 'Resolved'], closed: ['ok', 'Closed'] };
-    const [sk, sl] = statusMap[t.status] || ['warn', cap(t.status || 'Open')];
+    const done = ['resolved', 'closed'].includes(t.status);
+    const st = done
+      ? { c: 'ok', l: t.status === 'closed' ? 'Closed' : 'Resolved' }
+      : { c: 'open', l: t.status === 'in_progress' ? 'In progress' : (t.status === 'new' ? 'New' : 'Open') };
+    const prio = String(t.priority || '').toLowerCase();
+    const pr = (prio === 'high' || prio === 'urgent') ? { c: 'alert', l: cap(prio) }
+      : prio === 'medium' ? { c: 'warn', l: 'Medium' }
+        : { c: 'low', l: prio ? cap(prio) : 'Low' };
+    const ic = ticketIcon(t);
     document.getElementById('td-subj').textContent = t.subject || t.title || 'Support request';
     document.getElementById('td-meta').innerHTML = `${UI.esc(t.ticket_id || '')} · ${UI.esc(TICKET_CATS[t.category] || t.category || 'General')} · opened ${UI.fmtDate(t.created_at)}`;
 
     const msgs = t.messages || [];
     document.getElementById('td-body').innerHTML = `
-      <div class="grid-3 mb-20">
-        ${UI.stat('Status', `<span style="font-size:16px">${sl}</span>`, 'Current')}
-        ${UI.stat('Priority', `<span style="font-size:16px">${cap(t.priority || 'Normal')}</span>`, '')}
-        ${UI.stat('Category', `<span style="font-size:16px">${UI.esc(TICKET_CATS[t.category] || t.category || 'General')}</span>`, '')}
+      <div class="tkt-head">
+        <div class="ntf-ic" style="background:${ic.c}1f;color:${ic.c}">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic.p}</svg>
+        </div>
+        <div class="tkt-head-info">
+          <div class="tkt-head-subj">${UI.esc(t.subject || t.title || 'Support request')}</div>
+          <div class="tkt-head-meta">${UI.esc(t.ticket_id || '')} · ${UI.esc(TICKET_CATS[t.category] || t.category || 'General')} · opened ${UI.fmtDate(t.created_at)}</div>
+        </div>
+        <div class="tkt-head-pills">
+          <span class="tkt-pill ${pr.c}">${pr.l}</span>
+          <span class="tkt-pill ${st.c}">${st.l}</span>
+        </div>
       </div>
-      <div class="panel panel-pad">
+      ${t.description ? `<div class="tkt-desc-card">${UI.esc(t.description)}</div>` : ''}
+      <div class="panel panel-pad" style="margin-top:16px">
         <h3 style="font-family:var(--ff-d);font-size:16px;margin-bottom:16px">Conversation</h3>
         <div class="thread" id="td-thread">
           ${msgs.length ? msgs.map(threadMsg).join('') : `<p class="muted">No messages yet.</p>`}
         </div>
-        ${['resolved', 'closed'].includes(t.status) ? '' : `
+        ${done ? `<div class="tkt-closed-note">This ticket is ${st.l.toLowerCase()}. Reopen by raising a new ticket if you still need help.</div>` : `
         <div class="reply-box">
           <textarea id="td-reply" rows="3" placeholder="Add a reply…"></textarea>
           <button class="btn" onclick="App.sendReply('${UI.esc(t.ticket_id)}', this)">Send reply</button>
