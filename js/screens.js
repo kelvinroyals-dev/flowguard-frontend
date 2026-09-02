@@ -1940,7 +1940,21 @@ const Screens = (function () {
     document.getElementById('td-subj').textContent = t.subject || t.title || 'Support request';
     document.getElementById('td-meta').innerHTML = `${UI.esc(t.ticket_id || '')} · ${UI.esc(TICKET_CATS[t.category] || t.category || 'General')} · Opened ${UI.fmtDate(t.created_at)}`;
 
-    const msgs = t.messages || [];
+    let msgs = t.messages || [];
+    // The client's original request is the ticket description. Make sure the
+    // thread always opens with it — prepend client-side unless the API already
+    // surfaced it as the first message (dedupe by text to avoid doubling up).
+    const desc = (t.description || '').trim();
+    if (desc && !(msgs.length && (msgs[0].message || '').trim() === desc)) {
+      const me = (typeof Auth !== 'undefined' && Auth.getUser) ? Auth.getUser() : null;
+      msgs = [{
+        author_type: 'client',
+        author_email: t.creator_email || t.created_by || (me && me.email) || null,
+        author_name: t.creator_name || (me && me.fullName) || 'You',
+        message: t.description,
+        created_at: t.created_at,
+      }, ...msgs];
+    }
     document.getElementById('td-body').innerHTML = `
       <div class="td-cards">
         <div class="td-card"><div class="td-card-l">STATUS</div><div class="td-card-v"><span class="td-dot" style="background:${stStatus.dot}"></span>${stStatus.l}</div></div>
