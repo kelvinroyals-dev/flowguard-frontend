@@ -148,14 +148,13 @@ a{color:inherit}
 .tkt-view:hover{border-color:var(--brand);color:var(--brand)}
 @media(max-width:640px){.tkt-item{flex-wrap:wrap}.tkt-right{width:100%;padding-left:56px;margin-top:2px}}
 /* ticket detail */
-.tkt-head{display:flex;align-items:flex-start;gap:16px;padding:18px 20px;border-radius:16px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--sh-sm)}
-.tkt-head-info{flex:1;min-width:0;padding-top:1px}
-.tkt-head-subj{font-size:17px;font-weight:700;font-family:var(--ff-d);color:var(--ink);line-height:1.3}
-.tkt-head-meta{font-size:12.5px;color:var(--ink-3);margin-top:6px;font-family:var(--ff)}
-.tkt-head-pills{display:flex;gap:10px;align-items:center;flex-shrink:0;padding-top:3px}
-.tkt-desc-card{margin-top:12px;padding:14px 18px;border-radius:14px;background:var(--bg);border:1px solid var(--line);color:var(--ink-2);font-size:13.5px;line-height:1.6}
-.tkt-closed-note{margin-top:16px;padding:12px 16px;border-radius:12px;background:var(--bg);border:1px solid var(--line);color:var(--ink-3);font-size:13px}
-@media(max-width:640px){.tkt-head{flex-wrap:wrap}.tkt-head-pills{width:100%;padding-left:60px}}
+.td-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:22px}
+.td-card{padding:20px 22px;border-radius:16px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--sh-sm)}
+.td-card-l{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--ink-3)}
+.td-card-v{display:flex;align-items:center;gap:9px;margin-top:12px;font-size:19px;font-weight:700;font-family:var(--ff-d);color:var(--ink)}
+.td-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.td-convo-t{font-family:var(--ff-d);font-size:16px;margin-bottom:20px;color:var(--ink)}
+@media(max-width:720px){.td-cards{grid-template-columns:1fr}}
 
 /* ---------- Toast ---------- */
 #toasts{position:fixed;top:20px;right:20px;z-index:100;display:flex;flex-direction:column;gap:10px}
@@ -260,17 +259,26 @@ a{color:inherit}
 .data-table tbody td{padding:10px 6px;border-top:1px solid var(--line)}
 .data-table tbody tr:hover{background:var(--surface-2)}
 /* ticket thread */
-.thread{display:flex;flex-direction:column;gap:12px;margin-bottom:18px}
-.thread-msg{max-width:80%;padding:12px 15px;border-radius:14px}
-.thread-msg.mine{align-self:flex-end;background:var(--brand-soft);border-bottom-right-radius:4px}
-.thread-msg.them{align-self:flex-start;background:var(--bg);border-bottom-left-radius:4px}
-.thread-h{display:flex;justify-content:space-between;gap:12px;margin-bottom:4px;font-size:11px}
-.thread-h b{font-weight:600}.thread-h span{color:var(--ink-3)}
-.thread-b{font-size:13px;color:var(--ink);line-height:1.5}
+.thread{display:flex;flex-direction:column;gap:18px;margin-bottom:22px}
+.thread-msg{max-width:62%;padding:14px 17px;border-radius:16px;border:1px solid var(--line)}
+.thread-msg.mine{align-self:flex-end;background:color-mix(in srgb,var(--brand) 10%,var(--surface));border-color:color-mix(in srgb,var(--brand) 26%,var(--line))}
+.thread-msg.them{align-self:flex-start;background:var(--bg)}
+.thread-h{display:flex;align-items:center;gap:9px;margin-bottom:9px;font-size:13px}
+.thread-av{width:26px;height:26px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;overflow:hidden;background:var(--surface-3);color:var(--ink-2);font-size:10px;font-weight:700;border:1px solid var(--line)}
+.thread-av img{width:100%;height:100%;object-fit:cover}
+.thread-h b{font-weight:600;color:var(--ink);font-size:13px}
+.thread-time{margin-left:auto;color:var(--ink-3);font-size:12px;white-space:nowrap}
+.thread-b{font-size:13.5px;color:var(--ink-2);line-height:1.6}
 .thread-sys{text-align:center;font-size:12px;color:var(--ink-3);padding:4px}
-.reply-box{border-top:1px solid var(--line);padding-top:16px}
-.reply-box textarea{width:100%;padding:11px 14px;border:1px solid var(--line-2);border-radius:var(--rx);background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:14px;margin-bottom:10px;resize:vertical}
+.reply-box{border-top:1px solid var(--line);padding-top:18px}
+.reply-box textarea{width:100%;padding:12px 15px;border:1px solid var(--line-2);border-radius:12px;background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:14px;margin-bottom:12px;resize:vertical}
 .reply-box textarea:focus{outline:none;border-color:var(--brand)}
+.reply-bar{display:flex;align-items:center;gap:14px}
+.reply-attach{display:inline-flex;align-items:center;gap:8px;color:var(--ink-3);font-size:13px;cursor:pointer;transition:.12s}
+.reply-attach:hover{color:var(--ink-2)}
+.reply-attach svg{width:16px;height:16px}
+.reply-attach-name{font-size:12px;color:var(--ink-3);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reply-bar .btn{margin-left:auto}
 /* invoice detail */
 .inv-line{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px}
 .inv-line:last-child{border:none}.inv-line span{color:var(--ink-3)}
@@ -594,7 +602,7 @@ button:focus:not(:focus-visible){outline:none}
 <!-- Portal v2 -->
 <script src="js/ui.js"></script>
 <script src="js/demo.js?v=2"></script>
-<script src="js/screens.js?v=18"></script>
+<script src="js/screens.js?v=19"></script>
 <script src="js/app.js?v=7"></script>
 <script src="js/tour.js?v=3"></script>
 </body>

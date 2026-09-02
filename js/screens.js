@@ -1909,9 +1909,9 @@ const Screens = (function () {
   async function ticketDetail(view, ticketId) {
     view.innerHTML = `
       <div class="top"><div>
-        <div class="crumb" onclick="App.go('support')">← Support</div>
+        <div class="crumb" onclick="App.go('support')">← Back to tickets</div>
         <h1 id="td-subj">Loading…</h1><div class="sub" id="td-meta"></div>
-      </div><button class="btn ghost" onclick="App.go('support')">Back</button></div>
+      </div></div>
       ${demoBanner()}
       <div id="td-body">${UI.loading(3)}</div>`;
 
@@ -1929,43 +1929,41 @@ const Screens = (function () {
     if (!t) { document.getElementById('td-body').innerHTML = UI.state('error', 'Ticket not found', ''); return; }
 
     const done = ['resolved', 'closed'].includes(t.status);
-    const st = done
-      ? { c: 'ok', l: t.status === 'closed' ? 'Closed' : 'Resolved' }
-      : { c: 'open', l: t.status === 'in_progress' ? 'In progress' : (t.status === 'new' ? 'New' : 'Open') };
+    const stStatus = done
+      ? { dot: '#34d399', l: t.status === 'closed' ? 'Closed' : 'Resolved' }
+      : t.status === 'in_progress' ? { dot: '#f0a92a', l: 'In progress' }
+        : { dot: '#22c3e6', l: t.status === 'new' ? 'New' : 'Open' };
     const prio = String(t.priority || '').toLowerCase();
-    const pr = (prio === 'high' || prio === 'urgent') ? { c: 'alert', l: cap(prio) }
-      : prio === 'medium' ? { c: 'warn', l: 'Medium' }
-        : { c: 'low', l: prio ? cap(prio) : 'Low' };
-    const ic = ticketIcon(t);
+    const prDot = (prio === 'high' || prio === 'urgent') ? '#f87171' : prio === 'medium' ? '#f0a92a' : '#8b96a5';
+    const prLabel = prio ? cap(prio) : 'Normal';
+    const category = t.category_label || t.subcategory || TICKET_CATS[t.category] || t.category || 'General';
     document.getElementById('td-subj').textContent = t.subject || t.title || 'Support request';
-    document.getElementById('td-meta').innerHTML = `${UI.esc(t.ticket_id || '')} · ${UI.esc(TICKET_CATS[t.category] || t.category || 'General')} · opened ${UI.fmtDate(t.created_at)}`;
+    document.getElementById('td-meta').innerHTML = `${UI.esc(t.ticket_id || '')} · ${UI.esc(TICKET_CATS[t.category] || t.category || 'General')} · Opened ${UI.fmtDate(t.created_at)}`;
 
     const msgs = t.messages || [];
     document.getElementById('td-body').innerHTML = `
-      <div class="tkt-head">
-        <div class="ntf-ic" style="background:${ic.c}1f;color:${ic.c}">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic.p}</svg>
-        </div>
-        <div class="tkt-head-info">
-          <div class="tkt-head-subj">${UI.esc(t.subject || t.title || 'Support request')}</div>
-          <div class="tkt-head-meta">${UI.esc(t.ticket_id || '')} · ${UI.esc(TICKET_CATS[t.category] || t.category || 'General')} · opened ${UI.fmtDate(t.created_at)}</div>
-        </div>
-        <div class="tkt-head-pills">
-          <span class="tkt-pill ${pr.c}">${pr.l}</span>
-          <span class="tkt-pill ${st.c}">${st.l}</span>
-        </div>
+      <div class="td-cards">
+        <div class="td-card"><div class="td-card-l">STATUS</div><div class="td-card-v"><span class="td-dot" style="background:${stStatus.dot}"></span>${stStatus.l}</div></div>
+        <div class="td-card"><div class="td-card-l">PRIORITY</div><div class="td-card-v"><span class="td-dot" style="background:${prDot}"></span>${prLabel}</div></div>
+        <div class="td-card"><div class="td-card-l">CATEGORY</div><div class="td-card-v">${UI.esc(category)}</div></div>
       </div>
-      ${t.description ? `<div class="tkt-desc-card">${UI.esc(t.description)}</div>` : ''}
-      <div class="panel panel-pad" style="margin-top:16px">
-        <h3 style="font-family:var(--ff-d);font-size:16px;margin-bottom:16px">Conversation</h3>
+      <div class="panel panel-pad td-convo">
+        <h3 class="td-convo-t">Conversation</h3>
         <div class="thread" id="td-thread">
           ${msgs.length ? msgs.map(threadMsg).join('') : `<p class="muted">No messages yet.</p>`}
         </div>
-        ${done ? `<div class="tkt-closed-note">This ticket is ${st.l.toLowerCase()}. Reopen by raising a new ticket if you still need help.</div>` : `
         <div class="reply-box">
-          <textarea id="td-reply" rows="3" placeholder="Add a reply…"></textarea>
-          <button class="btn" onclick="App.sendReply('${UI.esc(t.ticket_id)}', this)">Send reply</button>
-        </div>`}
+          <textarea id="td-reply" rows="2" placeholder="Type your message here…"></textarea>
+          <div class="reply-bar">
+            <label class="reply-attach">
+              <input type="file" hidden onchange="var s=document.getElementById('td-attach-name');if(s)s.textContent=this.files&&this.files[0]?this.files[0].name:''">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+              <span>Attach document or file</span>
+            </label>
+            <span id="td-attach-name" class="reply-attach-name"></span>
+            <button class="btn" onclick="App.sendReply('${UI.esc(t.ticket_id)}', this)">Send message</button>
+          </div>
+        </div>
       </div>`;
   }
 
@@ -1973,8 +1971,17 @@ const Screens = (function () {
     const mine = m.author_type === 'client';
     const sys = m.author_type === 'system';
     if (sys) return `<div class="thread-sys">${UI.esc(m.message)} · ${UI.fmtDate(m.created_at)}</div>`;
+    const name = m.author_email || m.author_name || (mine ? 'You' : 'Support');
+    const initials = (name.replace(/[^a-zA-Z ]/g, ' ').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('') || (mine ? 'U' : 'S')).toUpperCase();
+    const av = m.avatar_url
+      ? `<img src="${UI.esc(m.avatar_url)}" alt="">`
+      : `<span>${UI.esc(initials)}</span>`;
     return `<div class="thread-msg ${mine ? 'mine' : 'them'}">
-      <div class="thread-h"><b>${UI.esc(m.author_name || (mine ? 'You' : 'Support'))}</b><span>${UI.fmtTime(m.created_at)}</span></div>
+      <div class="thread-h">
+        <span class="thread-av">${av}</span>
+        <b>${UI.esc(name)}</b>
+        <span class="thread-time">${UI.fmtTime(m.created_at)}</span>
+      </div>
       <div class="thread-b">${UI.esc(m.message)}</div>
     </div>`;
   }
