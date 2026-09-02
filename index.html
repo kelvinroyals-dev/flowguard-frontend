@@ -138,32 +138,28 @@ a{color:inherit}
 .greeting .sub{color:var(--ink-3);font-size:12px;margin-top:1px}
 
 /* Journey hero — adapts per stage */
-.journey{display:flex;align-items:center;gap:20px;padding:22px 26px;border-radius:var(--r);margin-bottom:20px;position:relative;overflow:hidden}
-.journey.stage-active{background:linear-gradient(120deg,var(--brand-deep),var(--brand))}
-.journey.stage-progress{background:linear-gradient(120deg,#155e6e,#1f8ba3)}
-.journey.stage-pending{background:var(--surface);border:1px solid var(--line)}
-.journey .jic{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;flex-shrink:0}
-.journey.stage-active .jic,.journey.stage-progress .jic{background:rgba(255,255,255,.18)}
-.journey.stage-pending .jic{background:var(--brand-soft)}
-.journey .jic svg{width:28px;height:28px}
-.journey.stage-active .jic svg,.journey.stage-progress .jic svg{color:#fff}
-.journey.stage-pending .jic svg{color:var(--brand)}
+.journey{display:flex;align-items:center;gap:20px;padding:22px 26px;border-radius:var(--r);margin-bottom:20px;position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--line)}
+.journey.stage-active{background-image:radial-gradient(720px 260px at 88% 50%,rgba(8,145,178,.24),transparent)}
+.journey.stage-progress{background-image:radial-gradient(720px 260px at 88% 50%,rgba(28,139,163,.15),transparent)}
+.journey .jic{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;flex-shrink:0;background:var(--brand-soft)}
+.journey .jic svg{width:28px;height:28px;color:var(--brand)}
 .journey .jtext{flex:1}
-.journey.stage-active .jtext b,.journey.stage-progress .jtext b{color:#fff}
-.journey .jtext b{font-family:var(--ff-d);font-size:18px;font-weight:600;display:block;margin-bottom:3px}
-.journey.stage-active .jtext small,.journey.stage-progress .jtext small{color:rgba(255,255,255,.85)}
+.journey .jtext b{font-family:var(--ff-d);font-size:18px;font-weight:600;display:block;margin-bottom:3px;color:var(--ink)}
 .journey .jtext small{color:var(--ink-2);font-size:13px}
 .journey .jcta{flex-shrink:0}
-.journey .jcta button{background:rgba(255,255,255,.2);color:#fff;border:none;padding:10px 18px;border-radius:100px;font-family:var(--ff-d);font-weight:600;font-size:13px;cursor:pointer}
-.journey.stage-pending .jcta button{background:var(--brand);color:#fff}
+.journey .jcta button{background:var(--surface-2);color:var(--ink);border:1px solid var(--line-2);padding:10px 18px;border-radius:100px;font-family:var(--ff-d);font-weight:600;font-size:13px;cursor:pointer}
+.journey .jcta button:hover{border-color:var(--brand);color:var(--brand)}
+.journey.stage-pending .jcta button{background:var(--brand);color:#fff;border-color:var(--brand)}
 
 /* denser KPI row */
 .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:20px}
-.kpi-c{background:var(--surface);border:1px solid var(--line);border-radius:var(--rs);padding:16px 18px;box-shadow:var(--sh-sm)}
-.kpi-c .kl{color:var(--ink-3);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;display:flex;align-items:center;gap:6px}
-.kpi-c .kl svg{width:13px;height:13px}
-.kpi-c .kn{font-family:var(--ff-d);font-size:22px;font-weight:700;letter-spacing:-.02em}
-.kpi-c .ks{font-size:11px;color:var(--ink-3);margin-top:2px}
+.kpi-c{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh-sm)}
+.kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.kpi-c .kl{color:var(--ink-3);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.kpi-ic{width:36px;height:36px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink-3);flex-shrink:0}
+.kpi-ic svg{width:18px;height:18px}
+.kpi-c .kn{font-family:var(--ff-d);font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.kpi-c .ks{font-size:12px;color:var(--ink-3);margin-top:8px}
 
 /* monitoring section wrapper */
 .mon-wrap{display:grid;grid-template-columns:280px minmax(0,1fr);gap:24px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:28px;box-shadow:var(--sh);margin-bottom:8px}
@@ -543,7 +539,7 @@ button:focus:not(:focus-visible){outline:none}
 <!-- Portal v2 -->
 <script src="js/ui.js"></script>
 <script src="js/demo.js?v=2"></script>
-<script src="js/screens.js?v=14"></script>
+<script src="js/screens.js?v=15"></script>
 <script src="js/app.js?v=7"></script>
 <script src="js/tour.js?v=3"></script>
 </body>

@@ -488,7 +488,7 @@ const Screens = (function () {
 
   function kpiCard(label, value, sub, icon) {
     return `<div class="kpi-c">
-      <div class="kl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icon}</svg>${UI.esc(label)}</div>
+      <div class="kpi-top"><span class="kl">${UI.esc(label)}</span><span class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icon}</svg></span></div>
       <div class="kn">${value}</div><div class="ks">${UI.esc(sub)}</div>
     </div>`;
   }
