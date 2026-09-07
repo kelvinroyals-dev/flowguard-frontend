@@ -1349,7 +1349,7 @@ const Screens = (function () {
     return `<div class="fc-cell">
       <b>${dn}</b>
       <span class="muted" style="font-size:12px">${r.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-      ${weatherGlyph(r.code, 38)}
+      ${weatherGlyph(r.code, 54)}
       <span style="font-weight:600;font-size:13px;color:${FC_COLOR[r.level]}">${FC_WORD[r.level]}</span>
       <b style="font-size:14px">${r.chance}%</b>
     </div>`;
@@ -1371,7 +1371,7 @@ const Screens = (function () {
           <div class="fc-mini">
             ${rows.map((r, i) => `<div class="fc-mini-cell" title="${(window.WeatherIcons && r.code != null ? WeatherIcons.label(r.code) + ' · ' : '')}${r.mm ? r.mm.toFixed(1) + 'mm rain' : 'No rain expected'}">
               <span class="fcd">${i === 0 ? 'Now' : r.date.toLocaleDateString('en-GB', { weekday: 'short' }).slice(0, 2)}</span>
-              ${weatherGlyph(r.code, 26)}
+              ${weatherGlyph(r.code, 34)}
               <b style="font-size:12px;color:${FC_COLOR[r.level]}">${r.chance}%</b>
             </div>`).join('')}
           </div>
@@ -1541,7 +1541,7 @@ const Screens = (function () {
     document.getElementById('fc-body').innerHTML = `
       <div class="kpi-row">
         ${kpi('Overall risk today', `<span style="color:${FC_COLOR[today.level]}">${FC_WORD[today.level]}</span>`, `${today.chance}% flood chance`)}
-        ${kpi('Rainfall forecast (24h)', `<span style="display:inline-flex;align-items:center;gap:9px">${weatherGlyph(today.code, 34)}<span>${Math.round(today.mm)}<span style="font-size:14px;color:var(--ink-3);margin-left:3px">mm</span></span></span>`, `${(window.WeatherIcons && today.code != null ? WeatherIcons.label(today.code) + ' · ' : '')}${today.prob}% chance of rain`)}
+        ${kpi('Rainfall forecast (24h)', `<span style="display:inline-flex;align-items:center;gap:9px">${weatherGlyph(today.code, 46)}<span>${Math.round(today.mm)}<span style="font-size:14px;color:var(--ink-3);margin-left:3px">mm</span></span></span>`, `${(window.WeatherIcons && today.code != null ? WeatherIcons.label(today.code) + ' · ' : '')}${today.prob}% chance of rain`)}
         ${kpi('Peak risk window', dayLbl(worst.date), `<span style="color:${FC_COLOR[worst.level]};font-weight:600">${worst.chance}% · ${FC_WORD[worst.level]} risk</span>`)}
         ${kpi('Drainage health', health ? `${health.score}<span style="font-size:14px;color:var(--ink-3);margin-left:3px">/100</span>` : '—', health ? 'Powers this forecast' : 'Assuming mid vulnerability')}
       </div>
