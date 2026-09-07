@@ -694,8 +694,8 @@
           <div class="step-progress2" id="stepProgress1"></div>
         </div>
 
-        <h1>Create your account</h1>
-        <div class="form-sub">Start protecting your properties today. Join the network of smart estate managers.</div>
+        <h1>Start your property assessment</h1>
+        <div class="form-sub">Create your FlowGuard account to tell us about your property and begin your assessment.</div>
 
         <div class="ff">
           <label>Full name</label>
@@ -732,14 +732,6 @@
         <button class="btn-primary" id="btn1" onclick="step1Next()">Continue <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         
         <p class="terms-note">By clicking continue, you agree to our <a onclick="openLegal('terms')">Terms</a> and <a onclick="openLegal('privacy')">Privacy Policy</a>.</p>
-
-        <div class="security-box">
-          <div class="icn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-          <div>
-            <div class="t">Enterprise-grade security</div>
-            <div class="s">Your data is encrypted and stored in compliance with NDPA regulations.</div>
-          </div>
-        </div>
       </div>
 
       <!-- STEP 2: PHONE -->
@@ -829,11 +821,75 @@
         <button class="btn-ghost" onclick="goTo(3)">&larr; Back</button>
       </div>
 
-      <!-- STEP 5: REVIEW -->
+      <!-- STEP 5: PROPERTY -->
       <div class="form-panel step-view" data-step="5">
         <div class="step-header">
-          <span class="step-count2" id="stepCount5">Step 5 of 5</span>
-          <div class="step-progress2" id="stepProgress5"></div>
+          <span class="step-count2">Step 5 of 6</span>
+          <div class="step-progress2"></div>
+        </div>
+
+        <h1>Tell us about your property</h1>
+        <div class="form-sub">This starts your assessment. You can add more properties later.</div>
+
+        <div class="ff">
+          <label>Property / estate name</label>
+          <div class="wrap-in">
+            <svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10l9-7 9 7"/><path d="M5 9v10a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1V9"/></svg>
+            <input type="text" id="su-propname" placeholder="e.g. Sunrise Court Estate">
+          </div>
+        </div>
+
+        <div class="ff">
+          <label>Location</label>
+          <div class="wrap-in">
+            <svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            <input type="text" id="su-location" placeholder="e.g. Lekki, Lagos">
+          </div>
+        </div>
+
+        <div class="ff">
+          <label>Property type</label>
+          <div class="wrap-in">
+            <svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M6 21V8l6-4 6 4v13"/></svg>
+            <select id="su-ptype">
+              <option value="">Select…</option>
+              <option>Residential estate</option>
+              <option>Commercial</option>
+              <option>Industrial</option>
+              <option>Institutional</option>
+              <option>Retail &amp; Hospitality</option>
+              <option>Critical infrastructure</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="ff">
+          <label>Approximate size</label>
+          <div class="wrap-in">
+            <svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 21V9h12"/></svg>
+            <input type="text" id="su-psize" placeholder="e.g. 40 units / 5 hectares">
+          </div>
+        </div>
+
+        <div class="ff">
+          <label>Primary concern</label>
+          <div class="wrap-in">
+            <svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h16.9a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+            <input type="text" id="su-concern" placeholder="e.g. Access road floods in heavy rain">
+          </div>
+        </div>
+
+        <div class="form-err" id="errProp"></div>
+        <button class="btn-primary" onclick="propNext()">Continue to Property Assessment <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <button class="btn-ghost" onclick="goTo(4)">&larr; Back</button>
+      </div>
+
+      <!-- STEP 6: REVIEW -->
+      <div class="form-panel step-view" data-step="6">
+        <div class="step-header">
+          <span class="step-count2">Step 6 of 6</span>
+          <div class="step-progress2"></div>
         </div>
 
         <h1>Review your details</h1>
@@ -844,16 +900,19 @@
           <div class="ff" style="margin-bottom:12px;"><label style="margin-bottom:2px; color:var(--text-3);">Email</label><div style="font-size:14px;font-weight:700;" id="rv-email">—</div></div>
           <div class="ff" style="margin-bottom:12px;"><label style="margin-bottom:2px; color:var(--text-3);">Phone</label><div style="font-size:14px;font-weight:700;" id="rv-phone">—</div></div>
           <div class="ff" style="margin-bottom:12px;"><label style="margin-bottom:2px; color:var(--text-3);">Organization</label><div style="font-size:14px;font-weight:700;" id="rv-org">—</div></div>
-          <div class="ff" style="margin-bottom:0;"><label style="margin-bottom:2px; color:var(--text-3);">Job title</label><div style="font-size:14px;font-weight:700;" id="rv-title">—</div></div>
+          <div class="ff" style="margin-bottom:12px;"><label style="margin-bottom:2px; color:var(--text-3);">Job title</label><div style="font-size:14px;font-weight:700;" id="rv-title">—</div></div>
+          <div class="ff" style="margin-bottom:12px;"><label style="margin-bottom:2px; color:var(--text-3);">Property</label><div style="font-size:14px;font-weight:700;" id="rv-property">—</div></div>
+          <div class="ff" style="margin-bottom:12px;"><label style="margin-bottom:2px; color:var(--text-3);">Location</label><div style="font-size:14px;font-weight:700;" id="rv-location">—</div></div>
+          <div class="ff" style="margin-bottom:0;"><label style="margin-bottom:2px; color:var(--text-3);">Property type</label><div style="font-size:14px;font-weight:700;" id="rv-ptype">—</div></div>
         </div>
 
         <div class="form-err" id="err5"></div>
         <button class="btn-primary" id="btn5" onclick="step5Confirm()">Confirm &amp; create account <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-        <button class="btn-ghost" onclick="goTo(4)">&larr; Back</button>
+        <button class="btn-ghost" onclick="goTo(5)">&larr; Back</button>
       </div>
 
-      <!-- STEP 6: SUCCESS -->
-      <div class="form-panel centered step-view" data-step="6">
+      <!-- STEP 7: SUCCESS -->
+      <div class="form-panel centered step-view" data-step="7">
         <div class="success-ring2">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
         </div>
@@ -941,7 +1000,7 @@
     if (e.target.id === 'legalOverlay') closeLegal();
   });
 
-  const totalSteps = 5;
+  const totalSteps = 6;
 
   function buildProgress(step) {
     const progressBars = document.querySelectorAll('.step-progress2');
@@ -984,7 +1043,7 @@
            organization → review → create account → dashboard.
      ============================================================ */
   const API = 'https://api.flowguard.ng/api/v1';
-  const S = { name:'', email:'', password:'', phone:'', emailToken:'', verifyToken:'', org:'', title:'' };
+  const S = { name:'', email:'', password:'', phone:'', emailToken:'', verifyToken:'', org:'', title:'', property:'', location:'', ptype:'', psize:'', concern:'', source:'' };
 
   const $ = id => document.getElementById(id);
   function showErr(n, msg){ const e=$('err'+n); if(!e) return; e.textContent=msg; e.classList.add('show'); }
@@ -1070,19 +1129,34 @@
     setTimeout(()=>{ link.textContent = 'Resend'; }, 4000);
   }
 
-  // STEP 4 → organization, then populate review
+  // STEP 4 → organization
   function step4Next(){
     clearErr(4);
     const org = $('su-org').value.trim();
     const title = $('su-title').value.trim();
     if (org.length < 2) return showErr(4, 'Please enter your organization name.');
     S.org = org; S.title = title;
+    goTo(5);
+  }
+
+  // STEP 5 → property details, then populate review
+  function propNext(){
+    clearErr('Prop');
+    const pn = $('su-propname').value.trim();
+    const loc = $('su-location').value.trim();
+    if (pn.length < 2) return showErr('Prop', 'Please enter your property or estate name.');
+    if (loc.length < 2) return showErr('Prop', 'Please enter the property location.');
+    S.property = pn; S.location = loc;
+    S.ptype = $('su-ptype').value; S.psize = $('su-psize').value.trim(); S.concern = $('su-concern').value.trim();
     $('rv-name').textContent = S.name;
     $('rv-email').textContent = S.email;
     $('rv-phone').textContent = S.phone || '—';
     $('rv-org').textContent = S.org;
     $('rv-title').textContent = S.title || '—';
-    goTo(5);
+    $('rv-property').textContent = S.property;
+    $('rv-location').textContent = S.location;
+    $('rv-ptype').textContent = S.ptype || '—';
+    goTo(6);
   }
 
   // STEP 5 → create the account for real
@@ -1095,7 +1169,9 @@
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
           fullName: S.name, email: S.email, phone: S.phone, password: S.password,
-          company: S.org, jobTitle: S.title, emailVerifyToken: S.verifyToken
+          company: S.org, jobTitle: S.title, emailVerifyToken: S.verifyToken,
+          source: S.source,
+          property: { name: S.property, location: S.location, type: S.ptype, size: S.psize, primaryConcern: S.concern }
         })
       });
       const d = await r.json();
@@ -1108,7 +1184,7 @@
         localStorage.setItem('token', d.data.token);
         localStorage.setItem('user', JSON.stringify(d.data.user));
       } catch(_){}
-      goTo(6);
+      goTo(7);
     } catch(_) {
       showErr(5, 'Connection failed. Try again.'); btn.innerHTML = label;
     } finally { btn.disabled = false; btn.style.opacity = '1'; }
@@ -1126,6 +1202,7 @@
     });
   });
 
+  try { S.source = new URLSearchParams(location.search).get('source') || 'direct'; } catch(_) { S.source = 'direct'; }
   render(1);
 </script>
 </body>
