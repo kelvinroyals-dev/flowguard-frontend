@@ -92,7 +92,7 @@ const Screens = (function () {
   async function renderWeather(props) {
     const el = document.getElementById('ov-weather');
     if (!el) return;
-    let days;
+    let days, current = null;
     if (Demo.isOn()) {
       const d = i => new Date(Date.now() + i * 864e5).toISOString().slice(0, 10);
       days = [
@@ -102,13 +102,16 @@ const Screens = (function () {
         { date: d(3), mm: 0, prob: 10 },
         { date: d(4), mm: 0, prob: 5 },
       ];
+      const hr = new Date().getHours();
+      current = { code: 2, isDay: hr >= 6 && hr < 19 ? 1 : 0 };
     } else {
       const p = (props || []).find(x => x.latitude && x.longitude);
       const lat = p ? p.latitude : 6.4478, lon = p ? p.longitude : 3.5476;
       try {
-        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum,precipitation_probability_max&timezone=Africa%2FLagos&forecast_days=5`);
+        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum,precipitation_probability_max&current=weather_code,is_day&timezone=Africa%2FLagos&forecast_days=5`);
         const j = await r.json();
         days = j.daily.time.map((t, i) => ({ date: t, mm: j.daily.precipitation_sum[i] || 0, prob: j.daily.precipitation_probability_max[i] || 0 }));
+        if (j.current) current = { code: j.current.weather_code, isDay: j.current.is_day };
       } catch (_) { el.innerHTML = ''; return; }
     }
     const worst = days.reduce((a, b) => (b.mm > a.mm ? b : a), days[0]);
@@ -120,9 +123,12 @@ const Screens = (function () {
     if (worst.mm >= 20) { kind = 'alert'; msg = `<b>Heavy rain expected ${dayName(worst.date)}</b> — est. ${Math.round(worst.mm)}mm (${worst.prob}% chance). Your drainage network is monitored and the team is on standby.`; }
     else if (worst.mm >= 5) { kind = 'warn'; msg = `<b>Rain expected ${dayName(worst.date)}</b> — est. ${Math.round(worst.mm)}mm (${worst.prob}% chance). Drainage is clear and monitoring is active.`; }
     else { kind = 'ok'; msg = `<b>No significant rain</b> expected over the next 5 days.`; }
+    const wIcon = current
+      ? weatherGlyph(current.code, 40, current.isDay ? 1 : 0)
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16.2A4.5 4.5 0 0017.5 8h-1.8A7 7 0 104 14.9"/><path d="M8 19v2M12 20v2M16 19v2"/></svg>`;
     el.innerHTML = `
       <div class="weather-strip ${kind}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16.2A4.5 4.5 0 0017.5 8h-1.8A7 7 0 104 14.9"/><path d="M8 19v2M12 20v2M16 19v2"/></svg>
+        ${wIcon}
         <span>${msg}</span>
       </div>`;
   }
@@ -1306,15 +1312,17 @@ const Screens = (function () {
     if (Demo.isOn()) {
       const d = i => new Date(Date.now() + i * 864e5);
       const mm = [2.1, 9.4, 14.2, 4.0, 6.5, 24.5, 33.0, 12.4, 8.1, 3.0, 5.8, 27.6, 38.2, 11.0, 6.5, 2.0];
-      days = Array.from({ length: horizon }, (_, i) => ({ date: d(i), mm: mm[i % mm.length], prob: Math.min(95, Math.round(mm[i % mm.length] * 4 + 15)) }));
+      const wc = [2, 61, 63, 51, 3, 65, 95, 63, 3, 1, 51, 65, 95, 63, 3, 2]; // WMO codes matched to the demo rainfall
+      days = Array.from({ length: horizon }, (_, i) => ({ date: d(i), mm: mm[i % mm.length], prob: Math.min(95, Math.round(mm[i % mm.length] * 4 + 15)), code: wc[i % wc.length] }));
     } else {
       const cur = resolveActive(allProps);
       const sel = (allProps || []).find(p => p.property_id === cur);
       const p0 = sel && sel.latitude ? sel : ((allProps || []).find(x => x.latitude) || {});
       const lat = p0.latitude || 6.4478, lon = p0.longitude || 3.5476;
-      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum,precipitation_probability_max&timezone=Africa%2FLagos&forecast_days=${horizon}`);
+      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum,precipitation_probability_max,weather_code&timezone=Africa%2FLagos&forecast_days=${horizon}`);
       const j = await r.json();
-      days = j.daily.time.map((t, i) => ({ date: new Date(t), mm: j.daily.precipitation_sum[i] || 0, prob: j.daily.precipitation_probability_max[i] || 0 }));
+      const wc = (j.daily && j.daily.weather_code) || [];
+      days = j.daily.time.map((t, i) => ({ date: new Date(t), mm: j.daily.precipitation_sum[i] || 0, prob: j.daily.precipitation_probability_max[i] || 0, code: wc[i] }));
     }
     return days.map(d => {
       const mmFactor = Math.min(100, d.mm * 4);
@@ -1328,12 +1336,20 @@ const Screens = (function () {
   function fcCloud(level) {
     return `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="${FC_COLOR[level]}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16.2A4.5 4.5 0 0017.5 8h-1.8A7 7 0 104 14.9"/><path d="M8 18v2M12 19v2M16 18v2"/></svg>`;
   }
+  // Weather-condition glyph from the brand icon set (WMO code). Falls back to the risk cloud.
+  function weatherGlyph(code, size, isDay) {
+    size = size || 34;
+    if (window.WeatherIcons && code != null) {
+      return `<span class="wx-ico" title="${UI.esc(WeatherIcons.label(code))}">${WeatherIcons.html(code, isDay === undefined ? true : isDay, size)}</span>`;
+    }
+    return fcCloud('low').replace('width="30" height="30"', `width="${size}" height="${size}"`);
+  }
   function fcDayCell(r, i) {
     const dn = i === 0 ? 'Today' : r.date.toLocaleDateString('en-GB', { weekday: 'short' });
     return `<div class="fc-cell">
       <b>${dn}</b>
       <span class="muted" style="font-size:12px">${r.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-      ${fcCloud(r.level)}
+      ${weatherGlyph(r.code, 38)}
       <span style="font-weight:600;font-size:13px;color:${FC_COLOR[r.level]}">${FC_WORD[r.level]}</span>
       <b style="font-size:14px">${r.chance}%</b>
     </div>`;
@@ -1353,9 +1369,9 @@ const Screens = (function () {
             <span class="muted" style="font-size:12px">7-day</span>
           </div>
           <div class="fc-mini">
-            ${rows.map((r, i) => `<div class="fc-mini-cell" title="${r.mm ? r.mm.toFixed(1) + 'mm rain' : 'No rain expected'}">
+            ${rows.map((r, i) => `<div class="fc-mini-cell" title="${(window.WeatherIcons && r.code != null ? WeatherIcons.label(r.code) + ' · ' : '')}${r.mm ? r.mm.toFixed(1) + 'mm rain' : 'No rain expected'}">
               <span class="fcd">${i === 0 ? 'Now' : r.date.toLocaleDateString('en-GB', { weekday: 'short' }).slice(0, 2)}</span>
-              ${fcCloud(r.level).replace('width="30" height="30"', 'width="20" height="20"')}
+              ${weatherGlyph(r.code, 26)}
               <b style="font-size:12px;color:${FC_COLOR[r.level]}">${r.chance}%</b>
             </div>`).join('')}
           </div>
@@ -1525,7 +1541,7 @@ const Screens = (function () {
     document.getElementById('fc-body').innerHTML = `
       <div class="kpi-row">
         ${kpi('Overall risk today', `<span style="color:${FC_COLOR[today.level]}">${FC_WORD[today.level]}</span>`, `${today.chance}% flood chance`)}
-        ${kpi('Rainfall forecast (24h)', `${Math.round(today.mm)}<span style="font-size:14px;color:var(--ink-3);margin-left:3px">mm</span>`, `${today.prob}% chance of rain`)}
+        ${kpi('Rainfall forecast (24h)', `<span style="display:inline-flex;align-items:center;gap:9px">${weatherGlyph(today.code, 34)}<span>${Math.round(today.mm)}<span style="font-size:14px;color:var(--ink-3);margin-left:3px">mm</span></span></span>`, `${(window.WeatherIcons && today.code != null ? WeatherIcons.label(today.code) + ' · ' : '')}${today.prob}% chance of rain`)}
         ${kpi('Peak risk window', dayLbl(worst.date), `<span style="color:${FC_COLOR[worst.level]};font-weight:600">${worst.chance}% · ${FC_WORD[worst.level]} risk</span>`)}
         ${kpi('Drainage health', health ? `${health.score}<span style="font-size:14px;color:var(--ink-3);margin-left:3px">/100</span>` : '—', health ? 'Powers this forecast' : 'Assuming mid vulnerability')}
       </div>
