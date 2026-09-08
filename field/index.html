@@ -148,6 +148,17 @@
   .msg{padding:11px 13px;border-radius:var(--rx);font-size:13px;margin:10px 0;display:none}
   .msg.err{background:var(--alert-bg);color:var(--alert);display:block}
   .msg.ok{background:var(--ok-bg);color:var(--ok);display:block}
+  /* ── modal ── */
+  .mo-back{position:fixed;inset:0;background:rgba(6,12,16,.55);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;animation:mo-fade .15s ease}
+  @keyframes mo-fade{from{opacity:0}to{opacity:1}}
+  .mo{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);width:100%;max-width:460px;overflow:hidden;animation:mo-pop .18s cubic-bezier(.2,.9,.3,1.2)}
+  @keyframes mo-pop{from{transform:translateY(8px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+  .mo-h{padding:18px 22px;border-bottom:1px solid var(--line);font-family:var(--ff-d);font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:space-between}
+  .mo-h .x{cursor:pointer;color:var(--ink-3);border:0;background:none;font-size:20px;line-height:1;padding:2px 6px;border-radius:8px}
+  .mo-h .x:hover{background:var(--surface-2);color:var(--ink)}
+  .mo-b{padding:18px 22px}
+  .mo-b .fld:first-child{margin-top:0}
+  .mo-f{padding:14px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px}
   .mob-toggle{display:none}
   @media(max-width:860px){
     .app{grid-template-columns:1fr}
@@ -408,7 +419,12 @@
     bind('a-enroute',function(){act(j,'/en-route');});
     bind('a-start',function(){act(j,'/start');});
     bind('a-complete',function(){$('a-complete').disabled=true;act(j,'/complete');});
-    bind('a-decline',function(){var reason=prompt('Why are you declining this job?');if(reason&&reason.trim())act(j,'/decline',{reason:reason.trim()});});
+    bind('a-decline',function(){
+      modal('Decline job',
+        '<div class="msg" id="mo-msg"></div><div class="fld"><label>Reason</label><textarea id="mo-reason" rows="3" placeholder="Let FlowGuard know why — this is shared with them."></textarea></div>',
+        [{label:'Cancel',cls:'ghost',onClick:closeModal},
+         {label:'Decline job',cls:'',onClick:function(btn){var r=$('mo-reason').value.trim();if(!r)return moErr('Add a brief reason');btn.disabled=true;closeModal();act(j,'/decline',{reason:r});}}]);
+    });
   }
   var _evFile=null; // downscaled data-URL of a chosen photo
   function downscale(file,cb){
@@ -507,25 +523,65 @@
       Array.prototype.forEach.call(el.querySelectorAll('[data-edit]'),function(b){b.addEventListener('click',function(){manageMember(rows.filter(function(x){return x.id==b.dataset.edit;})[0]);});});
     });
   }
+  /* ── reusable modal ── */
+  function closeModal(){var m=$('mo-root');if(m)m.remove();}
+  function modal(title,bodyHtml,buttons){
+    closeModal();
+    var back=document.createElement('div');back.className='mo-back';back.id='mo-root';
+    back.innerHTML='<div class="mo"><div class="mo-h"><span>'+esc(title)+'</span><button class="x" data-x>&times;</button></div>'
+      +'<div class="mo-b">'+bodyHtml+'</div><div class="mo-f" id="mo-foot"></div></div>';
+    document.body.appendChild(back);
+    back.addEventListener('mousedown',function(e){if(e.target===back)closeModal();});
+    back.querySelector('[data-x]').addEventListener('click',closeModal);
+    var foot=back.querySelector('#mo-foot');
+    (buttons||[]).forEach(function(b){var el=document.createElement('button');el.className='btn'+(b.cls?' '+b.cls:'');el.textContent=b.label;el.addEventListener('click',function(){b.onClick(el);});foot.appendChild(el);});
+    var first=back.querySelector('input,select,textarea');if(first)first.focus();
+    return back;
+  }
+  function moErr(t){var m=$('mo-msg');if(m){m.className='msg err';m.textContent=t;}}
+
+  var ROLE_OPTS='<option value="field_technician">Field technician</option><option value="supervisor">Supervisor</option>';
   function inviteMember(){
-    var name=prompt('Full name of the new member:');if(!name||!name.trim())return;
-    var email=prompt('Their email address:');if(!email||!email.trim())return;
-    var role=prompt('Role — type: supervisor or technician','technician');
-    var sp=role&&role.toLowerCase().indexOf('super')>-1?'supervisor':'field_technician';
-    api('/service-providers/me/members','POST',{full_name:name.trim(),email:email.trim(),sp_role:sp}).then(function(res){
-      if(res.ok&&res.j.success){renderTeam();}else{alert((res.j&&res.j.error)||'Could not add member');}
-    });
+    var adminOpt=isAdmin()?'<option value="owner_admin">Admin</option>':'';
+    modal('Add team member',
+      '<div class="msg" id="mo-msg"></div>'
+      +'<div class="fld"><label>Full name</label><input id="mo-name" placeholder="e.g. Chidi Okafor"></div>'
+      +'<div class="fld"><label>Work email</label><input id="mo-email" type="email" placeholder="name@company.com"></div>'
+      +'<div class="fld"><label>Role</label><select id="mo-role">'+ROLE_OPTS+adminOpt+'</select></div>'
+      +'<p class="tl-d" style="margin-top:4px">They\'ll get an email with a link to set their password and sign in.</p>',
+      [{label:'Cancel',cls:'ghost',onClick:closeModal},
+       {label:'Send invite',onClick:function(btn){
+         var name=$('mo-name').value.trim(),email=$('mo-email').value.trim(),role=$('mo-role').value;
+         if(name.length<2)return moErr('Enter their full name');
+         if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return moErr('Enter a valid email');
+         btn.disabled=true;btn.textContent='Sending…';
+         api('/service-providers/me/members','POST',{full_name:name,email:email,sp_role:role}).then(function(res){
+           if(res.ok&&res.j.success){closeModal();renderTeam();}
+           else{moErr((res.j&&res.j.error)||'Could not add member');btn.disabled=false;btn.textContent='Send invite';}
+         });
+       }}]);
   }
   function manageMember(m){
     if(!m)return;
-    var choice=prompt('Manage '+(m.full_name||m.email)+':\nType a new role (admin / supervisor / technician), or "remove" to deactivate.\nCurrent: '+m.sp_role,m.sp_role);
-    if(choice==null)return;choice=choice.trim().toLowerCase();
-    if(choice==='remove'){
-      api('/service-providers/me/members/'+m.id,'DELETE').then(function(res){if(res.ok&&res.j.success)renderTeam();else alert((res.j&&res.j.error)||'Failed');});return;
-    }
-    var map={admin:'owner_admin',supervisor:'supervisor',technician:'field_technician'};
-    var sp=map[choice];if(!sp){alert('Unknown role');return;}
-    api('/service-providers/me/members/'+m.id,'PUT',{sp_role:sp}).then(function(res){if(res.ok&&res.j.success)renderTeam();else alert((res.j&&res.j.error)||'Failed');});
+    var cur=m.sp_role;
+    modal('Manage '+(m.full_name||m.email),
+      '<div class="msg" id="mo-msg"></div>'
+      +'<div class="fld"><label>Role</label><select id="mo-role"><option value="field_technician"'+(cur==='field_technician'?' selected':'')+'>Field technician</option>'
+        +'<option value="supervisor"'+(cur==='supervisor'?' selected':'')+'>Supervisor</option>'
+        +'<option value="owner_admin"'+(cur==='owner_admin'?' selected':'')+'>Admin</option></select></div>'
+      +'<p class="tl-d" style="margin-top:4px">'+esc(m.email)+'</p>',
+      [{label:'Remove from team',cls:'ghost',onClick:function(btn){
+          btn.disabled=true;
+          api('/service-providers/me/members/'+m.id,'DELETE').then(function(res){
+            if(res.ok&&res.j.success){closeModal();renderTeam();}else{moErr((res.j&&res.j.error)||'Failed');btn.disabled=false;}
+          });
+        }},
+       {label:'Save',onClick:function(btn){
+          var role=$('mo-role').value;btn.disabled=true;btn.textContent='Saving…';
+          api('/service-providers/me/members/'+m.id,'PUT',{sp_role:role}).then(function(res){
+            if(res.ok&&res.j.success){closeModal();renderTeam();}else{moErr((res.j&&res.j.error)||'Failed');btn.disabled=false;btn.textContent='Save';}
+          });
+        }}]);
   }
 
   /* ── NOTIFICATIONS ── */
