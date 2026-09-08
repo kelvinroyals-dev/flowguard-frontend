@@ -5,20 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FlowGuard — Service Provider Portal</title>
 <meta name="robots" content="noindex">
+<link rel="icon" type="image/png" sizes="32x32" href="../favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
 <script>
-  /* no-flash theme init: apply saved/system theme before first paint */
+  /* no-flash theme: apply saved/system theme before first paint */
   (function(){try{var t=localStorage.getItem('fg_field_theme')||'system';
     var dark=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme:dark)').matches);
     document.documentElement.setAttribute('data-theme',dark?'dark':'light');}catch(_){document.documentElement.setAttribute('data-theme','light');}})();
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
 <style>
-  /* Tokens mirror the client portal design system (index.html :root) — same
-     cyan --brand family, ink/surface scale, radii, shadows, and fonts — so the
-     provider portal is a sibling of the client app, not a look-alike. The dark
-     theme is the provider-only addition (client portal ships light). */
+  /* ── tokens: identical to the client portal (index.html :root); dark is the field-only addition ── */
   :root[data-theme="light"]{
     --bg:#ffffff;--surface:#ffffff;--surface-2:#f7fafb;--surface-3:#eef3f6;--line:#e2e9ed;--line-2:#d3dde2;
     --ink:#12222b;--ink-2:#4a626d;--ink-3:#6f8794;
@@ -31,57 +29,73 @@
   :root[data-theme="dark"]{
     --bg:#0b1418;--surface:#0f1a20;--surface-2:#13212a;--surface-3:#1a2b35;--line:#213039;--line-2:#2b3d47;
     --ink:#e9f2f6;--ink-2:#a6bcc7;--ink-3:#6f8794;
-    --brand:#22c5e6;--brand-2:#38d0ee;--brand-deep:#7fdff2;--brand-soft:#0e2b34;
+    --brand:#22c5e6;--brand-2:#38d0ee;--brand-deep:#0e5b6e;--brand-soft:#0e2b34;
     --ok:#34d399;--ok-bg:#0f2a24;--warn:#fbbf24;--warn-bg:#2c2410;--alert:#f87171;--alert-bg:#2e1616;--lock:#5a6f7c;
     --r:20px;--rs:13px;--rx:9px;
     --sh:0 2px 4px rgba(0,0,0,.25),0 12px 32px rgba(0,0,0,.35);--sh-sm:0 1px 2px rgba(0,0,0,.3);
     --ff:'Inter',sans-serif;--ff-d:'Space Grotesk',sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:var(--ff);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;min-height:100vh}
+  body{font-family:var(--ff);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
   a{color:inherit;text-decoration:none}
-  .app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
-  .side{background:var(--surface);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:4px}
-  .brand{display:flex;align-items:center;gap:9px;font-family:var(--ff-d);font-weight:700;font-size:17px;letter-spacing:-.02em;padding:6px 8px 16px}
-  .brand .dot{width:24px;height:24px;border-radius:8px;background:var(--brand);display:grid;place-items:center;color:#fff;font-size:12px;font-weight:700}
-  .nav a{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:10px;font-family:var(--ff);font-size:13px;font-weight:500;color:var(--ink-2);cursor:pointer;transition:.13s}
-  .nav a:hover:not(.locked){background:var(--surface-2);color:var(--ink)}
-  .nav a.active{background:var(--brand);color:#fff;font-weight:600}
-  .nav a.locked{color:var(--ink-3);cursor:not-allowed}
-  .nav a .lk{margin-left:auto;color:var(--lock);display:none}
-  .nav a.locked .lk{display:block}
-  .nav a svg{width:19px;height:19px;flex-shrink:0}
-  .side .sp{flex:1}
-  .side .su{border-top:1px solid var(--line);padding-top:12px;margin-top:8px}
-  .theme{display:flex;gap:4px;background:var(--surface-2);border-radius:10px;padding:4px;margin-bottom:8px}
-  .theme button{flex:1;border:0;background:none;color:var(--ink-2);font-size:11.5px;font-weight:600;padding:6px;border-radius:7px;cursor:pointer;font-family:var(--ff)}
-  .theme button.on{background:var(--surface);color:var(--ink);box-shadow:var(--sh-sm)}
-  .signout{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:10px;font-size:13px;font-weight:500;color:var(--ink-2);cursor:pointer}
-  .signout:hover{background:var(--surface-2)}
-  .signout svg{width:19px;height:19px}
-  .main{padding:28px 30px;overflow:auto}
-  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
-  .top h1{font-family:var(--ff-d);font-size:24px;font-weight:700;letter-spacing:-.02em}
-  .top .who{font-size:13px;color:var(--ink-3)}
-  .banner{display:flex;gap:12px;align-items:flex-start;background:var(--warn-bg);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);border-radius:var(--rs);padding:16px 18px;margin-bottom:22px;font-size:14px;line-height:1.5}
-  .banner svg{width:20px;height:20px;flex-shrink:0;margin-top:1px}
-  .banner b{display:block;margin-bottom:2px;color:var(--ink)}
+  .app{display:grid;grid-template-columns:224px 1fr;min-height:100vh}
+  /* ── rail (client portal shell) ── */
+  .rail{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:20px 14px;gap:4px;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden}
+  .rail-brand{display:flex;align-items:center;gap:10px;padding:2px 8px 16px}
+  .rail-brand .logo{height:30px;width:auto;max-width:44px;object-fit:contain}
+  .rail-brand .logo-dark{display:none}
+  [data-theme="dark"] .rail-brand .logo-light{display:none}
+  [data-theme="dark"] .rail-brand .logo-dark{display:block}
+  .rail-brand .brand-name{font-family:var(--ff-d);font-size:16px;font-weight:600;letter-spacing:-.01em}
+  .rail-brand .tag{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);background:var(--brand-soft);padding:2px 6px;border-radius:6px;margin-left:auto}
+  .nav-group{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}
+  .nav-heading{font-size:11px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.07em;padding:12px 12px 6px}
+  .navbtn{display:flex;align-items:center;gap:12px;width:100%;padding:9px 12px;border-radius:10px;color:var(--ink-2);transition:.13s;cursor:pointer;border:none;background:none;text-align:left;font-family:var(--ff);font-size:13px;font-weight:500}
+  .navbtn:hover:not(.locked){background:var(--surface-2);color:var(--ink)}
+  .navbtn svg{width:19px;height:19px;flex-shrink:0}
+  .navbtn .navlabel{white-space:nowrap}
+  .navbtn.on{background:var(--brand);color:#fff}
+  .navbtn.locked{color:var(--ink-3);cursor:not-allowed}
+  .navbtn .lk{margin-left:auto;color:var(--lock);display:none}
+  .navbtn.locked .lk{display:block}
+  .rail-foot{margin-top:auto;display:flex;flex-direction:column;gap:4px;padding-top:12px;border-top:1px solid var(--line)}
+  .rail-user{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:10px;border:none;background:none;cursor:pointer;text-align:left}
+  .rail-user .me-av{width:32px;height:32px;border-radius:50%;background:var(--brand-deep);color:#fff;display:grid;place-items:center;font-family:var(--ff-d);font-weight:600;font-size:13px;flex-shrink:0}
+  .rail-user .who{min-width:0}
+  .rail-user .nm{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rail-user .org{font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* ── main + sticky header ── */
+  .main{padding:0 40px 60px;width:100%;min-width:0}
+  .top{position:sticky;top:0;z-index:20;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 40px;margin:0 -40px 22px;background:var(--surface);border-bottom:1px solid var(--line);min-height:62px}
+  .top h1{font-family:var(--ff-d);font-size:18px;font-weight:600;letter-spacing:-.01em;line-height:1.2}
+  .top .sub{color:var(--ink-3);font-size:12px;margin-top:2px}
+  .top-actions{display:flex;align-items:center;gap:8px}
+  .section-t{display:flex;align-items:center;justify-content:space-between;font-family:var(--ff-d);font-size:15px;font-weight:600;margin:24px 0 12px}
+  .section-t:first-child{margin-top:0}
+  /* ── buttons ── */
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:0;border-radius:100px;background:var(--brand);color:#fff;font-family:var(--ff-d);font-weight:600;font-size:14px;cursor:pointer;transition:.15s}
+  .btn:hover:not(:disabled){background:var(--brand-deep)}
+  .btn.ghost{background:var(--surface);border:1px solid var(--line-2);color:var(--ink-2)}
+  .btn.ghost:hover{background:var(--surface-2)}
+  .btn.sm{padding:7px 14px;font-size:12px}
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+  /* ── cards / kpis ── */
   .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:22px;margin-bottom:16px}
   .card h3{font-family:var(--ff-d);font-size:16px;font-weight:600;margin-bottom:6px}
   .card p{color:var(--ink-2);font-size:14px;line-height:1.6}
-  .btn{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border:0;border-radius:100px;background:var(--brand);color:#fff;font-family:var(--ff-d);font-weight:600;font-size:14px;cursor:pointer;transition:.15s}
-  .btn:hover{background:var(--brand-deep)}
-  .btn.ghost{background:var(--surface);border:1px solid var(--line-2);color:var(--ink-2)}
-  .btn.ghost:hover{background:var(--surface-2)}
-  .btn.sm{padding:8px 15px;font-size:12px}
-  .btn:disabled{opacity:.6;cursor:not-allowed}
-  @media(max-width:760px){.app{grid-template-columns:1fr}.side{position:fixed;bottom:0;left:0;right:0;top:auto;flex-direction:row;border-right:0;border-top:1px solid var(--line);overflow-x:auto;z-index:9}.side .brand,.side .su,.side .sp,.theme{display:none}.nav{display:flex;gap:2px}.nav a span:not(.lk){display:none}.main{padding:18px 16px 90px}}
-  /* jobs / lists */
-  /* segmented filter — identical to the client portal's .seg control */
-  .seg{display:inline-flex;gap:2px;padding:3px;background:var(--bg);border:1px solid var(--line);border-radius:11px;margin-bottom:16px}
-  .seg button{border:0;background:transparent;color:var(--ink-3);font-size:13px;font-weight:600;padding:6px 14px;border-radius:8px;cursor:pointer;transition:.12s;font-family:var(--ff);white-space:nowrap}
-  .seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--sh-sm)}
-  /* data table — identical to the client portal's .tbl / .tbl-wrap */
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:20px}
+  .kpi-c{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh-sm)}
+  .kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .kpi-c .kl{color:var(--ink-3);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+  .kpi-ic{width:36px;height:36px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;color:var(--brand);flex-shrink:0}
+  .kpi-ic svg{width:18px;height:18px}
+  .kpi-c .kn{font-family:var(--ff-d);font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1}
+  .kpi-c .ks{font-size:12px;color:var(--ink-3);margin-top:8px}
+  /* ── banner (pending) ── */
+  .banner{display:flex;gap:12px;align-items:flex-start;background:var(--warn-bg);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);border-radius:var(--rs);padding:16px 18px;margin-bottom:22px;font-size:14px;line-height:1.5}
+  .banner svg{width:20px;height:20px;flex-shrink:0;margin-top:1px}
+  .banner b{display:block;margin-bottom:2px;color:var(--ink)}
+  /* ── table ── */
   .tbl-wrap{overflow-x:auto;padding:0}
   .tbl{width:100%;border-collapse:collapse;font-size:13px}
   .tbl th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);padding:12px 16px;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -92,6 +106,8 @@
   .tbl .nm{font-weight:600;color:var(--ink)}
   .tbl .ref{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--ink-3);margin-top:2px}
   .tbl .tbl-arrow{text-align:right;color:var(--brand);font-weight:600}
+  .muted{color:var(--ink-3)}
+  /* ── chips / pills ── */
   .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600;white-space:nowrap}
   .chip .d{width:6px;height:6px;border-radius:50%;background:currentColor}
   .chip.ok{background:var(--ok-bg);color:var(--ok)}
@@ -100,24 +116,19 @@
   .chip.info{background:var(--brand-soft);color:var(--brand-deep)}
   .chip.neutral{background:var(--surface-3);color:var(--ink-2)}
   .pri{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
-  .muted{color:var(--ink-3)}
-  /* empty / awaiting state — identical to the client portal's .state */
+  /* ── segmented filter ── */
+  .seg{display:inline-flex;gap:2px;padding:3px;background:var(--bg);border:1px solid var(--line);border-radius:11px;margin-bottom:16px}
+  .seg button{border:0;background:transparent;color:var(--ink-3);font-size:13px;font-weight:600;padding:6px 14px;border-radius:8px;cursor:pointer;transition:.12s;font-family:var(--ff);white-space:nowrap}
+  .seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--sh-sm)}
+  /* ── empty/error state ── */
   .state{padding:50px 30px;text-align:center;color:var(--ink-3)}
   .state .ic{width:52px;height:52px;border-radius:16px;background:var(--bg);display:grid;place-items:center;margin:0 auto 16px}
   .state .ic svg{width:26px;height:26px;color:var(--ink-3)}
   .state b{display:block;font-family:var(--ff-d);font-size:16px;color:var(--ink);margin-bottom:6px}
   .state p{font-size:13px;max-width:340px;margin:0 auto}
-  @media(max-width:760px){
-    .tbl thead{display:none}
-    .tbl tr{display:block;padding:14px 16px;border-bottom:1px solid var(--line)}
-    .tbl tbody tr:last-child{border-bottom:0}
-    .tbl td{display:flex;justify-content:space-between;gap:16px;width:100%;padding:3px 0;border:none}
-    .tbl td::before{content:attr(data-label);color:var(--ink-3);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
-    .tbl td:first-child::before{display:none}
-    .tbl .tbl-arrow{display:none}
-  }
+  /* ── job detail bits ── */
   .back{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;margin-bottom:14px}
-  .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 14px;font-size:14px;margin:4px 0 6px}
+  .kv{display:grid;grid-template-columns:130px 1fr;gap:8px 14px;font-size:14px}
   .kv dt{color:var(--ink-3);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.3px}
   .req{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:100px;margin:4px 5px 0 0}
   .req.ok{color:var(--ok);background:var(--ok-bg)}
@@ -125,10 +136,10 @@
   .ev{display:flex;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--line);border-radius:var(--rx);margin-top:8px;font-size:13px}
   .ev .k{font-weight:600;text-transform:capitalize;color:var(--ink-2)}
   .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
-  .field{margin:12px 0}
-  .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
-  .field input,.field select,.field textarea{width:100%;padding:11px 12px;border:1px solid var(--line-2);border-radius:var(--rx);font-family:var(--ff);font-size:14px;background:var(--surface);color:var(--ink)}
-  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--brand)}
+  .fld{margin:12px 0}
+  .fld label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
+  .fld input,.fld select,.fld textarea{width:100%;padding:11px 12px;border:1px solid var(--line-2);border-radius:var(--rx);font-family:var(--ff);font-size:14px;background:var(--surface);color:var(--ink)}
+  .fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--brand)}
   .tl{margin-top:6px;border-left:2px solid var(--line);padding-left:14px}
   .tl-i{position:relative;padding:5px 0}
   .tl-i::before{content:'';position:absolute;left:-21px;top:9px;width:9px;height:9px;border-radius:50%;background:var(--brand);border:2px solid var(--surface)}
@@ -137,149 +148,217 @@
   .msg{padding:11px 13px;border-radius:var(--rx);font-size:13px;margin:10px 0;display:none}
   .msg.err{background:var(--alert-bg);color:var(--alert);display:block}
   .msg.ok{background:var(--ok-bg);color:var(--ok);display:block}
+  .mob-toggle{display:none}
+  @media(max-width:860px){
+    .app{grid-template-columns:1fr}
+    .rail{position:fixed;left:0;top:0;bottom:0;width:224px;z-index:40;transform:translateX(-100%);transition:transform .25s;box-shadow:var(--sh)}
+    .rail.open{transform:translateX(0)}
+    .mob-toggle{display:grid;place-items:center;position:fixed;top:14px;right:14px;z-index:50;width:42px;height:42px;border-radius:12px;background:var(--surface);border:1px solid var(--line-2);color:var(--ink);cursor:pointer}
+    .mob-toggle svg{width:20px;height:20px}
+    .main{padding:0 18px 40px}
+    .top{padding:12px 66px 12px 18px;margin:0 -18px 18px}
+  }
+  @media(max-width:760px){
+    .tbl thead{display:none}
+    .tbl tr{display:block;padding:14px 16px;border-bottom:1px solid var(--line)}
+    .tbl tbody tr:last-child{border-bottom:0}
+    .tbl td{display:flex;justify-content:space-between;gap:16px;width:100%;padding:3px 0;border:none}
+    .tbl td::before{content:attr(data-label);color:var(--ink-3);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+    .tbl td:first-child::before{display:none}
+    .tbl .tbl-arrow{display:none}
+    .kv{grid-template-columns:1fr}
+  }
 </style>
 </head>
 <body>
 <div class="app" id="app" style="visibility:hidden">
-  <aside class="side">
-    <div class="brand"><span class="dot">FG</span> Provider</div>
-    <nav class="nav" id="nav"></nav>
-    <div class="sp"></div>
-    <div class="su">
-      <div class="theme" id="theme">
-        <button data-t="light">Light</button><button data-t="dark">Dark</button><button data-t="system">System</button>
-      </div>
-      <div class="signout" id="signout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg><span>Sign out</span></div>
+  <nav class="rail" id="rail">
+    <div class="rail-brand">
+      <img class="logo logo-light" src="../fg-logo-light.png" alt="FlowGuard">
+      <img class="logo logo-dark" src="../fg-logo-dark.png" alt="FlowGuard">
+      <span class="brand-name">FlowGuard</span>
+      <span class="tag">Provider</span>
     </div>
-  </aside>
-  <main class="main">
-    <div class="top"><h1 id="pageTitle">Dashboard</h1><div class="who" id="who"></div></div>
-    <div id="content"></div>
-  </main>
+    <nav class="nav-group" id="nav-work"></nav>
+    <div class="nav-group"><div class="nav-heading">Account</div><div id="nav-acct"></div></div>
+    <div class="rail-foot">
+      <button class="navbtn" id="themeBtn"><span id="themeIc"></span><span class="navlabel" id="themeLabel">Theme</span></button>
+      <button class="rail-user" id="signout"><span class="me-av" id="meAv">--</span><span class="who"><span class="nm" id="meName">—</span><span class="org" id="meOrg">Sign out</span></span></button>
+    </div>
+  </nav>
+  <button class="mob-toggle" id="mobToggle" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
+  <main class="main" id="view"></main>
 </div>
 
 <script>
   var API='https://api.flowguard.ng/api/v1';
   var $=function(id){return document.getElementById(id);};
   function tok(){try{return localStorage.getItem('token');}catch(_){return null;}}
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function api(path,method,body){return fetch(API+path,{method:method||'GET',headers:{'Authorization':'Bearer '+tok(),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined}).then(function(r){return r.json().then(function(j){return {ok:r.ok,status:r.status,j:j};});});}
+  function fmtDT(d){return d?new Date(d).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';}
+  function fmtDate(d){return d?new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—';}
 
-  /* ---- theme ---- */
-  function applyTheme(){var t=localStorage.getItem('fg_field_theme')||'system';
-    var dark=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);
-    document.documentElement.setAttribute('data-theme',dark?'dark':'light');
-    Array.prototype.forEach.call(document.querySelectorAll('#theme button'),function(b){b.classList.toggle('on',b.dataset.t===t);});}
-  document.getElementById('theme').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;localStorage.setItem('fg_field_theme',b.dataset.t);applyTheme();});
-  matchMedia('(prefers-color-scheme:dark)').addEventListener('change',function(){if((localStorage.getItem('fg_field_theme')||'system')==='system')applyTheme();});
-
-  $('signout').addEventListener('click',function(){try{localStorage.removeItem('token');localStorage.removeItem('user');}catch(_){}window.location.href='../login.html';});
-
-  /* ---- menu (locked until org active) ---- */
-  var ICONS={
-    dashboard:'<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+  /* ── icons ── */
+  var IC={
+    dashboard:'<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/>',
     jobs:'<path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
-    properties:'<path d="M3 11l9-7 9 7M5 10v10h14V10"/>',
-    assets:'<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/>',
+    properties:'<path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-4h6v4M9 10h.01M15 10h.01"/>',
     team:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>',
     notifications:'<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
-    profile:'<path d="M3 21V7l9-4 9 4v14"/><path d="M9 21v-6h6v6"/>',
-    support:'<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>'
+    profile:'<path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 9h.01M9 13h.01M9 17h.01"/>',
+    support:'<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+    bell:'<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+    clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    check:'<circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/>',
+    sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>',
+    moon:'<path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/>',
+    auto:'<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/>'
   };
   var LOCK='<svg class="lk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
-  // key, label, alwaysOpen(available while pending)
-  var MENU=[
-    ['dashboard','Dashboard',false],['jobs','Jobs',false],['properties','Properties',false],
-    ['assets','Assets & Devices',false],['team','Team',false],['notifications','Notifications',false],
-    ['profile','Profile & Company',true],['support','Support',true]
-  ];
 
-  function renderNav(active){
-    $('nav').innerHTML=MENU.map(function(m){
-      var locked=STATE.locked&&!m[2];
-      return '<a data-k="'+m[0]+'" class="'+(m[0]===active?'active':'')+(locked?' locked':'')+'">'
-        +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+ICONS[m[0]]+'</svg>'
-        +'<span>'+m[1]+'</span>'+LOCK+'</a>';
-    }).join('');
-    Array.prototype.forEach.call($('nav').querySelectorAll('a'),function(a){
-      a.addEventListener('click',function(){ if(a.classList.contains('locked')) return; go(a.dataset.k); });
+  /* ── theme (light / dark / system cycle) ── */
+  var THEMES=['light','dark','system'];
+  function curTheme(){return localStorage.getItem('fg_field_theme')||'system';}
+  function applyTheme(){var t=curTheme();var dark=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);
+    document.documentElement.setAttribute('data-theme',dark?'dark':'light');
+    var ic=t==='dark'?IC.moon:(t==='light'?IC.sun:IC.auto);
+    if($('themeIc'))$('themeIc').innerHTML='<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+ic+'</svg>';
+    if($('themeLabel'))$('themeLabel').textContent=t.charAt(0).toUpperCase()+t.slice(1);}
+  matchMedia('(prefers-color-scheme:dark)').addEventListener('change',function(){if(curTheme()==='system')applyTheme();});
+
+  /* ── nav ── */
+  var NAV_WORK=[['dashboard','Dashboard',false],['jobs','Jobs',false],['properties','Properties',false]];
+  var NAV_ACCT=[['team','Team',false],['notifications','Notifications',false],['profile','Profile',true],['support','Support',true]];
+  var STATE={locked:true,org:null,user:null,tab:'dashboard'};
+
+  function navBtn(k,label,alwaysOpen,active){
+    var locked=STATE.locked&&!alwaysOpen;
+    return '<button class="navbtn'+(k===active?' on':'')+(locked?' locked':'')+'" data-tab="'+k+'">'
+      +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+IC[k]+'</svg>'
+      +'<span class="navlabel">'+label+'</span>'+LOCK+'</button>';
+  }
+  function renderRail(active){
+    $('nav-work').innerHTML=NAV_WORK.map(function(m){return navBtn(m[0],m[1],m[2],active);}).join('');
+    $('nav-acct').innerHTML=NAV_ACCT.map(function(m){return navBtn(m[0],m[1],m[2],active);}).join('');
+    Array.prototype.forEach.call(document.querySelectorAll('.navbtn[data-tab]'),function(b){
+      b.addEventListener('click',function(){ if(b.classList.contains('locked'))return; $('rail').classList.remove('open'); go(b.dataset.tab); });
     });
   }
 
-  var STATE={locked:true,org:null,user:null};
-
-  function go(key){
-    var m=MENU.filter(function(x){return x[0]===key;})[0]; if(!m) key='profile';
-    if(STATE.locked && !(m&&m[2])) key='profile';
-    renderNav(key);
-    $('pageTitle').textContent=(MENU.filter(function(x){return x[0]===key;})[0]||['','Dashboard'])[1];
-    if(key==='profile') return renderProfile();
-    if(key==='support') return renderSupport();
-    if(key==='jobs') return renderJobs();
-    if(key==='properties') return renderProperties();
-    $('content').innerHTML='<div class="card"><h3>Coming soon</h3><p>This section is part of the Field product build.</p></div>';
+  /* ── header ── */
+  function topBar(title,sub,actions){
+    return '<div class="top"><div><h1>'+esc(title)+'</h1>'+(sub?'<div class="sub">'+esc(sub)+'</div>':'')+'</div><div class="top-actions">'+(actions||'')+'</div></div>';
   }
 
-  /* ---- properties (assigned to this provider) ---- */
-  function renderProperties(){
-    $('content').innerHTML=state('empty','Loading…','');
-    api('/service-providers/me/properties').then(function(res){
-      if(!res.ok){$('content').innerHTML=state('error',"Couldn't load properties",(res.j&&res.j.error)||'Please try again.');return;}
-      var rows=(res.j&&res.j.data)||[];
-      if(!rows.length){$('content').innerHTML=state('empty','No properties assigned yet','FlowGuard assigns properties to you when they dispatch a job there.');return;}
-      $('content').innerHTML='<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Property</th><th>Location</th><th>Type</th></tr></thead><tbody>'
-        +rows.map(function(p){
-          var loc=[p.city,p.state].filter(Boolean).join(', ')||'—';
-          var ptype=p.property_type?esc(String(p.property_type).replace(/_/g,' ')):'—';
-          return '<tr><td><div class="nm">'+esc(p.property_name||p.property_id)+'</div></td>'
-            +'<td data-label="Location" class="muted">'+esc(loc)+'</td>'
-            +'<td data-label="Type" class="muted">'+ptype+'</td></tr>';
-        }).join('')+'</tbody></table></div>';
-    });
-  }
+  /* ── empty/error state (client UI.state) ── */
+  var STATE_IC={empty:'<path d="M3 7h18M3 12h18M3 17h18"/>',error:'<circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/>',ok:'<path d="M20 6L9 17l-5-5"/>'};
+  function stateBox(kind,title,body){return '<div class="card"><div class="state"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'+(STATE_IC[kind]||STATE_IC.empty)+'</svg></div><b>'+esc(title)+'</b><p>'+esc(body||'')+'</p></div></div>';}
 
-  /* ---- jobs ---- */
-  var esc=function(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  /* ── job status pills ── */
   var JT={inspection:'Inspection',drain_cleaning:'Drain cleaning',sensor_maintenance:'Sensor maintenance',repair:'Repair',survey:'Survey',other:'Other'};
   var PR={low:'Low',normal:'Normal',high:'High',urgent:'Urgent'};
   var PRC={low:'var(--ink-3)',normal:'var(--brand)',high:'var(--warn)',urgent:'var(--alert)'};
   var SP_={dispatched:['info','New — respond'],accepted:['info','Accepted'],en_route:['info','En route'],in_progress:['warn','In progress'],completed:['warn','Awaiting verification'],verified:['ok','Verified'],declined:['alert','Declined'],rejected:['alert','Rework needed'],cancelled:['neutral','Cancelled'],draft:['neutral','Draft']};
-  var JOB_FILTER='active';
-  var FBUCKET={active:['dispatched','accepted','en_route','in_progress','rejected'],completed:['completed'],verified:['verified']};
-  function fmtDT(d){return d?new Date(d).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';}
   function pill(s){var c=SP_[s]||SP_.draft;return '<span class="chip '+c[0]+'"><span class="d"></span>'+c[1]+'</span>';}
-  function api(path,method,body){return fetch(API+path,{method:method||'GET',headers:{'Authorization':'Bearer '+tok(),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined}).then(function(r){return r.json().then(function(j){return {ok:r.ok,status:r.status,j:j};});});}
-  /* empty/error state — mirrors the client portal's UI.state */
-  var STATE_IC={empty:'<path d="M3 7h18M3 12h18M3 17h18"/>',error:'<circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/>'};
-  function state(kind,title,body){return '<div class="card"><div class="state"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'+(STATE_IC[kind]||STATE_IC.empty)+'</svg></div><b>'+esc(title)+'</b><p>'+esc(body||'')+'</p></div></div>';}
+  var ACTIVE_ST=['dispatched','accepted','en_route','in_progress','rejected'];
 
+  /* ── router ── */
+  var META={dashboard:['Dashboard','Your jobs at a glance'],jobs:['Jobs','Work dispatched to you'],properties:['Properties','Sites assigned to you'],team:['Team','People in your organisation'],notifications:['Notifications','Updates from FlowGuard'],profile:['Profile & company',''],support:['Support','']};
+  function go(tab){
+    var m=NAV_WORK.concat(NAV_ACCT).filter(function(x){return x[0]===tab;})[0];
+    if(!m){tab='dashboard';m=NAV_WORK[0];}
+    if(STATE.locked && !m[2]) tab='profile';
+    STATE.tab=tab; renderRail(tab);
+    if(tab==='dashboard')return renderDashboard();
+    if(tab==='jobs')return renderJobs();
+    if(tab==='properties')return renderProperties();
+    if(tab==='profile')return renderProfile();
+    if(tab==='support')return renderSupport();
+    // team / notifications — honest placeholder for now
+    var t=META[tab]||[tab,''];
+    $('view').innerHTML=topBar(t[0],t[1])+stateBox('empty',t[0]+' coming soon','This section is part of the Service Provider rollout and will light up shortly.');
+  }
+
+  function pendingBanner(){
+    if(!STATE.locked)return '';
+    var rejected=STATE.org&&STATE.org.status==='rejected';
+    return '<div class="banner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div>'
+      +(rejected?'<b>Your application was not approved.</b>We\'ve emailed you the reason — update your details and re-submit from your Profile.'
+        :'<b>Your account is under review.</b>You\'ll get full access once FlowGuard approves your organisation. Meanwhile you can complete your profile and submit for verification.')
+      +'</div></div>';
+  }
+
+  /* ── DASHBOARD ── */
+  function kpi(label,value,sub,icon){
+    return '<div class="kpi-c"><div class="kpi-top"><span class="kl">'+esc(label)+'</span><span class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+icon+'</svg></span></div>'
+      +'<div class="kn">'+value+'</div><div class="ks">'+esc(sub||'')+'</div></div>';
+  }
+  function renderDashboard(){
+    var name=(STATE.user&&(STATE.user.full_name||STATE.user.email)||'').split(' ')[0]||'there';
+    var hr=new Date().getHours(), greet=hr<12?'Good morning':hr<18?'Good afternoon':'Good evening';
+    $('view').innerHTML=topBar(greet+', '+name,(STATE.org&&STATE.org.name)||'Service Provider',
+      '<button class="btn sm" onclick="go(\'jobs\')">View jobs</button>')
+      +pendingBanner()+'<div id="dash"></div>';
+    if(STATE.locked){$('dash').innerHTML=stateBox('empty','Nothing to do yet','Once FlowGuard approves your organisation, dispatched jobs and assigned properties will show here.');return;}
+    $('dash').innerHTML=stateBox('empty','Loading…','');
+    Promise.all([api('/jobs'),api('/service-providers/me/properties')]).then(function(r){
+      var jobs=(r[0].ok&&r[0].j.data)||[]; var props=(r[1].ok&&r[1].j.data)||[];
+      var open=jobs.filter(function(j){return ACTIVE_ST.indexOf(j.status)>-1;});
+      var awaiting=jobs.filter(function(j){return j.status==='completed';});
+      var verified=jobs.filter(function(j){return j.status==='verified';});
+      var needAction=jobs.filter(function(j){return j.status==='dispatched'||j.status==='rejected';});
+      var html='<div class="kpi-row">'
+        +kpi('Open jobs',open.length,open.length?'In progress or awaiting you':'All clear',IC.jobs)
+        +kpi('Awaiting verification',awaiting.length,'Submitted to FlowGuard',IC.clock)
+        +kpi('Assigned properties',props.length,'Sites you cover',IC.properties)
+        +kpi('Verified',verified.length,'Completed & signed off',IC.check)
+        +'</div>';
+      html+='<div class="section-t">Needs your attention</div>';
+      if(!needAction.length){ html+=stateBox('ok','You\'re all caught up','No jobs are waiting on a response right now.'); }
+      else{
+        html+='<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Job</th><th>Property</th><th>Status</th><th>SLA due</th><th></th></tr></thead><tbody>'
+          +needAction.map(function(j){return '<tr class="rowlink" data-id="'+j.id+'"><td><div class="nm">'+esc(j.title)+'</div><div class="ref">'+esc(j.reference||'')+'</div></td>'
+            +'<td data-label="Property" class="muted">'+esc(j.property_name||'—')+'</td>'
+            +'<td data-label="Status">'+pill(j.status)+'</td>'
+            +'<td data-label="SLA due" class="muted">'+(j.sla_due_at?fmtDate(j.sla_due_at):'—')+'</td><td class="tbl-arrow">→</td></tr>';}).join('')
+          +'</tbody></table></div>';
+      }
+      $('dash').innerHTML=html;
+      Array.prototype.forEach.call($('dash').querySelectorAll('.rowlink'),function(row){row.addEventListener('click',function(){openJob(row.dataset.id);});});
+    });
+  }
+
+  /* ── JOBS ── */
+  var JOB_FILTER='active';
+  var FBUCKET={active:ACTIVE_ST,completed:['completed'],verified:['verified']};
   function renderJobs(){
     var tabs=[['active','Active'],['completed','Submitted'],['verified','Verified']];
-    $('content').innerHTML='<div class="seg" id="jchips">'+tabs.map(function(t){return '<button class="'+(t[0]===JOB_FILTER?'on':'')+'" data-s="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div><div id="jlist">'+state('empty','Loading…','')+'</div>';
+    $('view').innerHTML=topBar('Jobs','Work dispatched to you by FlowGuard')
+      +'<div class="seg" id="jchips">'+tabs.map(function(t){return '<button class="'+(t[0]===JOB_FILTER?'on':'')+'" data-s="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div><div id="jlist">'+stateBox('empty','Loading…','')+'</div>';
     $('jchips').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;JOB_FILTER=b.dataset.s;renderJobs();});
     api('/jobs').then(function(res){
       var el=$('jlist');
-      if(!res.ok){el.innerHTML=state('error',"Couldn't load jobs",(res.j&&res.j.error)||'Please try again.');return;}
-      var rows=(res.j&&res.j.data)||[];
-      rows=rows.filter(function(r){return (FBUCKET[JOB_FILTER]||[]).indexOf(r.status)>-1;});
-      if(!rows.length){el.innerHTML=state('empty','No jobs here',JOB_FILTER==='active'?'New jobs FlowGuard dispatches to you will appear here.':'Nothing in this view yet.');return;}
+      if(!res.ok){el.innerHTML=stateBox('error',"Couldn't load jobs",(res.j&&res.j.error)||'Please try again.');return;}
+      var rows=((res.j&&res.j.data)||[]).filter(function(r){return (FBUCKET[JOB_FILTER]||[]).indexOf(r.status)>-1;});
+      if(!rows.length){el.innerHTML=stateBox('empty','No jobs here',JOB_FILTER==='active'?'New jobs FlowGuard dispatches to you will appear here.':'Nothing in this view yet.');return;}
       el.innerHTML='<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Job</th><th>Property</th><th>Priority</th><th>Status</th><th>SLA due</th><th></th></tr></thead><tbody>'
-        +rows.map(function(j){
-          var pr=PR[j.priority]?'<span class="pri" style="color:'+PRC[j.priority]+'">'+PR[j.priority]+'</span>':'—';
-          return '<tr class="rowlink" data-id="'+j.id+'">'
-            +'<td><div class="nm">'+esc(j.title)+'</div><div class="ref">'+esc(j.reference||'')+' · '+esc(JT[j.job_type]||j.job_type)+'</div></td>'
+        +rows.map(function(j){var pr=PR[j.priority]?'<span class="pri" style="color:'+PRC[j.priority]+'">'+PR[j.priority]+'</span>':'—';
+          return '<tr class="rowlink" data-id="'+j.id+'"><td><div class="nm">'+esc(j.title)+'</div><div class="ref">'+esc(j.reference||'')+' · '+esc(JT[j.job_type]||j.job_type)+'</div></td>'
             +'<td data-label="Property" class="muted">'+esc(j.property_name||'—')+'</td>'
             +'<td data-label="Priority">'+pr+'</td>'
             +'<td data-label="Status">'+pill(j.status)+'</td>'
-            +'<td data-label="SLA due" class="muted">'+(j.sla_due_at?fmtDT(j.sla_due_at):'—')+'</td>'
-            +'<td class="tbl-arrow">→</td></tr>';
-        }).join('')+'</tbody></table></div>';
+            +'<td data-label="SLA due" class="muted">'+(j.sla_due_at?fmtDate(j.sla_due_at):'—')+'</td>'
+            +'<td class="tbl-arrow">→</td></tr>';}).join('')+'</tbody></table></div>';
       Array.prototype.forEach.call(el.querySelectorAll('.rowlink'),function(r){r.addEventListener('click',function(){openJob(r.dataset.id);});});
     });
   }
 
+  /* ── JOB DETAIL ── */
   function openJob(id){
-    $('content').innerHTML=state('empty','Loading…','');
+    $('view').innerHTML=topBar('Job','')+stateBox('empty','Loading…','');
     api('/jobs/'+id).then(function(res){
-      if(!res.ok||!res.j.success){$('content').innerHTML=state('error',"Couldn't load this job",(res.j&&res.j.error)||'Please try again.');return;}
+      if(!res.ok||!res.j.success){$('view').innerHTML=topBar('Job','')+stateBox('error',"Couldn't load this job",(res.j&&res.j.error)||'');return;}
       var j=res.j.data;
       var have={};(j.evidence||[]).forEach(function(e){if(e.evidence_key)have[e.evidence_key]=1;});
       var reqs=Array.isArray(j.required_evidence)?j.required_evidence:[];
@@ -288,137 +367,129 @@
       var LB={created:'Created',dispatched:'Dispatched to you',accepted:'Accepted',declined:'Declined',en_route:'En route',started:'Work started',completed:'Marked complete',verified:'Verified by FlowGuard',rejected:'Returned for rework',cancelled:'Cancelled',evidence_added:'Evidence added',note:'Note'};
       var tl=(j.events||[]).map(function(e){return '<div class="tl-i"><div class="tl-t">'+esc(LB[e.event_type]||e.event_type)+(e.note?' — '+esc(e.note):'')+'</div><div class="tl-d">'+fmtDT(e.created_at)+'</div></div>';}).join('')||'<div class="tl-d">No activity yet.</div>';
       var canEvidence=['accepted','en_route','in_progress'].indexOf(j.status)>-1;
-      $('content').innerHTML='<div class="back" id="jback">‹ Back to jobs</div>'
-        +'<div class="card"><div style="display:flex;align-items:flex-start;gap:12px"><div style="flex:1"><h3 style="font-size:18px">'+esc(j.title)+'</h3><div class="ref">'+esc(j.reference||'')+'</div></div>'+pill(j.status)+'</div>'
+      $('view').innerHTML=topBar('Job',esc(j.reference||''))
+        +'<div class="back" id="jback">‹ Back to jobs</div>'
+        +'<div class="card"><div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px"><div style="flex:1"><h3 style="font-size:18px">'+esc(j.title)+'</h3><div class="ref">'+esc(j.reference||'')+' · '+esc(JT[j.job_type]||j.job_type)+'</div></div>'+pill(j.status)+'</div>'
         +'<div class="msg" id="jmsg"></div>'
-        +'<dl class="kv" style="margin-top:12px"><dt>Type</dt><dd>'+esc(JT[j.job_type]||j.job_type)+' · '+esc(PR[j.priority]||j.priority)+'</dd>'
+        +'<dl class="kv"><dt>Priority</dt><dd>'+esc(PR[j.priority]||j.priority)+'</dd>'
         +'<dt>Property</dt><dd>'+esc(j.property_name||'—')+(j.property_address?(' · '+esc(j.property_address)):'')+'</dd>'
-        +'<dt>Schedule</dt><dd>'+fmtDT(j.scheduled_for)+'</dd><dt>SLA due</dt><dd>'+fmtDT(j.sla_due_at)+'</dd>'
+        +'<dt>Scheduled</dt><dd>'+fmtDT(j.scheduled_for)+'</dd><dt>SLA due</dt><dd>'+fmtDT(j.sla_due_at)+'</dd>'
         +(j.description?'<dt>Details</dt><dd>'+esc(j.description)+'</dd>':'')
         +(j.reject_reason?'<dt>Rework</dt><dd style="color:var(--warn)">'+esc(j.reject_reason)+'</dd>':'')+'</dl>'
-        +'<div style="margin-top:12px"><div class="kv" style="grid-template-columns:1fr"><dt>Required evidence</dt></div>'+reqHtml+'</div>'
+        +'<div style="margin-top:16px"><dt style="color:var(--ink-3);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">Required evidence</dt>'+reqHtml+'</div>'
         +(canEvidence?'<div id="evForm"></div>':'')
-        +'<div style="margin-top:14px"><div class="kv" style="grid-template-columns:1fr"><dt>Uploaded</dt></div>'+evHtml+'</div>'
+        +'<div style="margin-top:16px"><dt style="color:var(--ink-3);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">Uploaded</dt>'+evHtml+'</div>'
         +'<div class="actions" id="jactions"></div></div>'
         +'<div class="card"><h3 style="font-size:15px">Activity</h3><div class="tl">'+tl+'</div></div>';
-      $('jback').addEventListener('click',renderJobs);
-      if(canEvidence) renderEvidenceForm(j);
+      $('jback').addEventListener('click',function(){go('jobs');});
+      if(canEvidence)renderEvidenceForm(j);
       renderActions(j);
     });
   }
 
   function msg(t,cls){var m=$('jmsg');if(!m)return;m.className='msg '+cls;m.textContent=t;}
-  function act(j,path,body,okText){
+  function act(j,path,body){
     return api('/jobs/'+j.id+path,'POST',body||{}).then(function(res){
       if(res.ok&&res.j.success){openJob(j.id);}
       else if(res.status===422&&res.j.missing){msg('Add these first: '+res.j.missing.join(', '),'err');}
       else{msg((res.j&&res.j.error)||'Action failed','err');}
     }).catch(function(){msg('Network error — try again','err');});
   }
-
   function renderActions(j){
     var a=$('jactions');if(!a)return;var b=[];
-    if(j.status==='dispatched'){
-      b.push('<button class="btn" id="a-accept">Accept job</button>');
-      b.push('<button class="btn ghost" id="a-decline">Decline</button>');
-    } else if(j.status==='accepted'){
-      b.push('<button class="btn" id="a-enroute">On my way</button>');
-      b.push('<button class="btn ghost" id="a-start">Start work</button>');
-    } else if(j.status==='en_route'){
-      b.push('<button class="btn" id="a-start">Start work</button>');
-    } else if(j.status==='in_progress'){
-      b.push('<button class="btn" id="a-complete">Mark complete</button>');
-    }
+    if(j.status==='dispatched'){b.push('<button class="btn" id="a-accept">Accept job</button>');b.push('<button class="btn ghost" id="a-decline">Decline</button>');}
+    else if(j.status==='accepted'){b.push('<button class="btn" id="a-enroute">On my way</button>');b.push('<button class="btn ghost" id="a-start">Start work</button>');}
+    else if(j.status==='en_route'){b.push('<button class="btn" id="a-start">Start work</button>');}
+    else if(j.status==='in_progress'){b.push('<button class="btn" id="a-complete">Mark complete</button>');}
     a.innerHTML=b.join('');
     var bind=function(id,fn){var el=$(id);if(el)el.addEventListener('click',fn);};
     bind('a-accept',function(){$('a-accept').disabled=true;act(j,'/accept');});
     bind('a-enroute',function(){act(j,'/en-route');});
     bind('a-start',function(){act(j,'/start');});
     bind('a-complete',function(){$('a-complete').disabled=true;act(j,'/complete');});
-    bind('a-decline',function(){
-      var reason=prompt('Why are you declining this job?');
-      if(reason&&reason.trim())act(j,'/decline',{reason:reason.trim()});
-    });
+    bind('a-decline',function(){var reason=prompt('Why are you declining this job?');if(reason&&reason.trim())act(j,'/decline',{reason:reason.trim()});});
   }
-
   function renderEvidenceForm(j){
     var host=$('evForm');if(!host)return;
-    host.innerHTML='<div class="card" style="background:var(--surface-2);margin-top:14px;box-shadow:none">'
-      +'<h3 style="font-size:14px">Add evidence</h3>'
-      +'<div class="field"><label>What is it</label><select id="ev-key"><option value="">General note / photo</option>'
-      +(Array.isArray(j.required_evidence)?j.required_evidence.map(function(r){return '<option value="'+esc(r.key)+'" data-kind="'+esc(r.kind||'photo')+'">'+esc(r.label||r.key)+'</option>';}).join(''):'')
-      +'</select></div>'
-      +'<div class="field"><label>Type</label><select id="ev-kind"><option value="photo">Photo</option><option value="note">Note</option><option value="document">Document</option><option value="video">Video</option><option value="signature">Signature</option><option value="gps">GPS check-in</option></select></div>'
-      +'<div class="field"><label>Caption / note</label><input id="ev-cap" placeholder="Short description"></div>'
-      +'<div class="field"><label>File link (optional)</label><input id="ev-url" placeholder="Paste a photo/document URL"></div>'
+    host.innerHTML='<div class="card" style="background:var(--surface-2);margin-top:16px;box-shadow:none"><h3 style="font-size:14px">Add evidence</h3>'
+      +'<div class="fld"><label>What is it</label><select id="ev-key"><option value="">General note / photo</option>'
+      +(Array.isArray(j.required_evidence)?j.required_evidence.map(function(r){return '<option value="'+esc(r.key)+'" data-kind="'+esc(r.kind||'photo')+'">'+esc(r.label||r.key)+'</option>';}).join(''):'')+'</select></div>'
+      +'<div class="fld"><label>Type</label><select id="ev-kind"><option value="photo">Photo</option><option value="note">Note</option><option value="document">Document</option><option value="video">Video</option><option value="signature">Signature</option><option value="gps">GPS check-in</option></select></div>'
+      +'<div class="fld"><label>Caption / note</label><input id="ev-cap" placeholder="Short description"></div>'
+      +'<div class="fld"><label>File link (optional)</label><input id="ev-url" placeholder="Paste a photo/document URL"></div>'
       +'<div class="actions"><button class="btn ghost" id="ev-gps">Use my location</button><button class="btn" id="ev-add">Add evidence</button></div></div>';
     $('ev-key').addEventListener('change',function(){var o=this.options[this.selectedIndex];if(o&&o.dataset.kind)$('ev-kind').value=o.dataset.kind;});
     $('ev-gps').addEventListener('click',function(){
       if(!navigator.geolocation){msg('Location not available on this device','err');return;}
       $('ev-gps').disabled=true;$('ev-gps').textContent='Locating…';
-      navigator.geolocation.getCurrentPosition(function(p){
-        act(j,'/evidence',{kind:'gps',evidence_key:($('ev-key').value||'gps'),caption:'On-site GPS check-in',lat:p.coords.latitude,lng:p.coords.longitude});
-      },function(){msg('Couldn\'t get your location','err');$('ev-gps').disabled=false;$('ev-gps').textContent='Use my location';});
+      navigator.geolocation.getCurrentPosition(function(p){act(j,'/evidence',{kind:'gps',evidence_key:($('ev-key').value||'gps'),caption:'On-site GPS check-in',lat:p.coords.latitude,lng:p.coords.longitude});},
+        function(){msg('Couldn\'t get your location','err');$('ev-gps').disabled=false;$('ev-gps').textContent='Use my location';});
     });
     $('ev-add').addEventListener('click',function(){
       var kind=$('ev-kind').value,cap=$('ev-cap').value.trim(),url=$('ev-url').value.trim(),key=$('ev-key').value||null;
       if(kind==='note'&&!cap){msg('Add a note','err');return;}
       if(kind!=='note'&&kind!=='gps'&&!url&&!cap){msg('Add a file link or caption','err');return;}
-      $('ev-add').disabled=true;
-      act(j,'/evidence',{kind:kind,evidence_key:key,caption:cap||null,file_url:url||null});
+      $('ev-add').disabled=true;act(j,'/evidence',{kind:kind,evidence_key:key,caption:cap||null,file_url:url||null});
     });
   }
 
+  /* ── PROPERTIES ── */
+  function renderProperties(){
+    $('view').innerHTML=topBar('Properties','Sites FlowGuard has assigned to you')+'<div id="plist">'+stateBox('empty','Loading…','')+'</div>';
+    api('/service-providers/me/properties').then(function(res){
+      var el=$('plist');
+      if(!res.ok){el.innerHTML=stateBox('error',"Couldn't load properties",(res.j&&res.j.error)||'');return;}
+      var rows=(res.j&&res.j.data)||[];
+      if(!rows.length){el.innerHTML=stateBox('empty','No properties assigned yet','FlowGuard assigns properties to you when they dispatch a job there.');return;}
+      el.innerHTML='<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Property</th><th>Location</th><th>Type</th></tr></thead><tbody>'
+        +rows.map(function(p){var loc=[p.city,p.state].filter(Boolean).join(', ')||'—';var ptype=p.property_type?esc(String(p.property_type).replace(/_/g,' ')):'—';
+          return '<tr><td><div class="nm">'+esc(p.property_name||p.property_id)+'</div></td><td data-label="Location" class="muted">'+esc(loc)+'</td><td data-label="Type" class="muted">'+ptype+'</td></tr>';}).join('')
+        +'</tbody></table></div>';
+    });
+  }
+
+  /* ── PROFILE ── */
   function renderProfile(){
     var o=STATE.org||{};
-    $('content').innerHTML='<div class="card"><h3>'+(o.name||'Your organisation')+'</h3>'
-      +'<p>Contact: '+(o.contact_person||'—')+'<br>Email: '+(o.email||'—')+' &middot; Phone: '+(o.phone||'—')
-      +'<br>Coverage: '+(o.coverage_area||'—')+'<br>Services: '+((o.service_types&&o.service_types.join(', '))||'—')+'</p>'
-      + (STATE.org && STATE.org.status==='pending' && !STATE.org.verification_submitted_at
-          ? '<button class="btn" id="submitVerify">Submit for verification</button>'
-          : (STATE.org && STATE.org.status==='pending' ? '<p style="margin-top:10px;color:var(--warn)">Submitted — awaiting FlowGuard review.</p>' : ''))
+    var pendingSubmit=o.status==='pending'&&!o.verification_submitted_at;
+    $('view').innerHTML=topBar('Profile & company','')+pendingBanner()
+      +'<div class="card"><h3>'+esc(o.name||'Your organisation')+'</h3>'
+      +'<dl class="kv" style="margin-top:12px"><dt>Contact</dt><dd>'+esc(o.contact_person||'—')+'</dd>'
+      +'<dt>Email</dt><dd>'+esc(o.email||'—')+'</dd><dt>Phone</dt><dd>'+esc(o.phone||'—')+'</dd>'
+      +'<dt>Coverage</dt><dd>'+esc(o.coverage_area||'—')+'</dd>'
+      +'<dt>Services</dt><dd>'+esc((o.service_types&&o.service_types.join(', '))||'—')+'</dd></dl>'
+      +(pendingSubmit?'<div class="actions"><button class="btn" id="submitVerify">Submit for verification</button></div>'
+        :(o.status==='pending'?'<p style="margin-top:14px;color:var(--warn)">Submitted — awaiting FlowGuard review.</p>':''))
       +'</div>';
-    var sv=$('submitVerify'); if(sv) sv.addEventListener('click',async function(){
-      sv.disabled=true;sv.textContent='Submitting…';
-      try{await fetch(API+'/service-providers/me/submit-verification',{method:'POST',headers:{'Authorization':'Bearer '+tok(),'Content-Type':'application/json'}});}catch(_){}
-      STATE.org.verification_submitted_at=new Date().toISOString(); renderProfile();
-    });
+    var sv=$('submitVerify');if(sv)sv.addEventListener('click',function(){sv.disabled=true;sv.textContent='Submitting…';
+      api('/service-providers/me/submit-verification','POST',{}).then(function(){STATE.org.verification_submitted_at=new Date().toISOString();renderProfile();});});
   }
-  function renderSupport(){$('content').innerHTML='<div class="card"><h3>Support</h3><p>Email <a href="mailto:info@flowguard.ng" style="color:var(--brand-deep)">info@flowguard.ng</a> or call 0905 692 5668.</p></div>';}
-
-  function pendingBanner(){
-    if(!STATE.locked) return '';
-    var rejected=STATE.org&&STATE.org.status==='rejected';
-    return '<div class="banner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div>'
-      +(rejected?'<b>Your application was not approved.</b>We\'ve emailed you the reason. You can update your details and re-submit.'
-        :'<b>Your account is under review.</b>You\'ll get full access once FlowGuard approves your organisation. Meanwhile you can complete your profile and submit for verification.')
-      +'</div></div>';
+  function renderSupport(){
+    $('view').innerHTML=topBar('Support','')+'<div class="card"><h3>We\'re here to help</h3><p>Email <a href="mailto:info@flowguard.ng" style="color:var(--brand-deep);font-weight:600">info@flowguard.ng</a> or call <b>0905 692 5668</b>. For anything about a specific job, mention its reference (e.g. JOB-2026-000101).</p></div>';
   }
 
-  /* ---- boot: guard + load org ---- */
-  (async function boot(){
-    if(!tok()){ window.location.href='../login.html'; return; }
-    try{
-      var r=await fetch(API+'/auth/me',{headers:{'Authorization':'Bearer '+tok()}});
-      var d=await r.json();
-      if(!r.ok||!d.success){ window.location.href='../login.html'; return; }
-      var u=d.data.user;
-      if(u.user_type!=='service_provider'){
-        // wrong portal for this account — send them home
-        window.location.href = u.user_type==='internal' ? 'https://neon.flowguard.ng' : '../index.html';
-        return;
-      }
-      STATE.user=u; STATE.org=d.data.organisation||null;
-      STATE.locked = !(STATE.org && STATE.org.status==='active');
-      $('who').textContent=(STATE.org&&STATE.org.name?STATE.org.name+' · ':'')+(u.full_name||u.email);
+  /* ── wiring ── */
+  $('themeBtn').addEventListener('click',function(){var i=THEMES.indexOf(curTheme());localStorage.setItem('fg_field_theme',THEMES[(i+1)%THEMES.length]);applyTheme();});
+  $('signout').addEventListener('click',function(){try{localStorage.removeItem('token');localStorage.removeItem('user');}catch(_){}window.location.href='../login.html';});
+  $('mobToggle').addEventListener('click',function(){$('rail').classList.toggle('open');});
+
+  /* ── boot ── */
+  (function boot(){
+    if(!tok()){window.location.href='../login.html';return;}
+    api('/auth/me').then(function(res){
+      if(!res.ok||!res.j.success){window.location.href='../login.html';return;}
+      var u=res.j.data.user;
+      if(u.user_type!=='service_provider'){window.location.href=u.user_type==='internal'?'https://neon.flowguard.ng':'../index.html';return;}
+      STATE.user=u; STATE.org=res.j.data.organisation||null;
+      STATE.locked=!(STATE.org&&STATE.org.status==='active');
+      var nm=u.full_name||u.email||'Account';
+      $('meName').textContent=nm;
+      $('meAv').textContent=(nm.split(' ').map(function(x){return x[0];}).join('').toUpperCase().slice(0,2))||'FG';
+      $('meOrg').textContent=(STATE.org&&STATE.org.name)||'Sign out';
       applyTheme();
-      renderNav(STATE.locked?'profile':'dashboard');
-      $('content').insertAdjacentHTML('afterbegin',pendingBanner());
       go(STATE.locked?'profile':'dashboard');
-      // keep banner above content
-      if(STATE.locked){ $('content').insertAdjacentHTML('afterbegin',pendingBanner()); }
       $('app').style.visibility='visible';
-    }catch(_){ window.location.href='../login.html'; }
+    }).catch(function(){window.location.href='../login.html';});
   })();
 </script>
 </body>
