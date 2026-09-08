@@ -384,16 +384,18 @@
     box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1);
   }
 
-  .phone-code-select {
+  .phone-group .phone-code-select {
     border: 0;
     border-right: 1px solid var(--border-strong);
     background: var(--bg);
     height: 100%;
-    padding: 0 32px 0 16px;
+    padding: 0 30px 0 14px;
     font-size: 15px;
     font-weight: 600;
     color: var(--text-1);
-    width: 120px;
+    width: 118px;
+    flex: 0 0 118px;
+    border-radius: 0;
     cursor: pointer;
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235b6670' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
@@ -467,6 +469,10 @@
   .terms-note { font-size: 13px; color: var(--text-3); text-align: center; margin-top: 24px; line-height: 1.6; }
   .terms-note a { color: var(--primary); font-weight: 700; text-decoration: none; }
   .terms-note a:hover { text-decoration: underline; }
+  .consent2 { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: var(--text-2); line-height: 1.5; margin: 4px 0 16px; text-align: left; cursor: pointer; }
+  .consent2 input { width: 18px; height: 18px; flex: 0 0 18px; margin-top: 1px; accent-color: var(--primary); cursor: pointer; }
+  .consent2 a { color: var(--primary); font-weight: 700; text-decoration: none; }
+  .consent2 a:hover { text-decoration: underline; }
 
   .security-box {
     display: flex;
@@ -728,10 +734,9 @@
           </div>
         </div>
 
+        <label class="consent2"><input type="checkbox" id="su-consent"><span>I agree to FlowGuard's <a href="https://flowguardsolutions.com.ng/terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a href="https://flowguardsolutions.com.ng/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
         <div class="form-err" id="err1"></div>
         <button class="btn-primary" id="btn1" onclick="step1Next()">Continue <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-        
-        <p class="terms-note">By clicking continue, you agree to our <a onclick="openLegal('terms')">Terms</a> and <a onclick="openLegal('privacy')">Privacy Policy</a>.</p>
       </div>
 
       <!-- STEP 2: PHONE -->
@@ -1043,12 +1048,11 @@
            organization → review → create account → dashboard.
      ============================================================ */
   const API = 'https://api.flowguard.ng/api/v1';
-  const S = { name:'', email:'', password:'', phone:'', emailToken:'', verifyToken:'', org:'', title:'', property:'', location:'', ptype:'', psize:'', concern:'', source:'' };
+  const S = { name:'', email:'', password:'', phone:'', emailToken:'', verifyToken:'', org:'', title:'', property:'', location:'', ptype:'', psize:'', concern:'', source:'', consent:false, consentAt:'' };
 
   const $ = id => document.getElementById(id);
   function showErr(n, msg){ const e=$('err'+n); if(!e) return; e.textContent=msg; e.classList.add('show'); }
   function clearErr(n){ const e=$('err'+n); if(e) e.classList.remove('show'); }
-  function setBtn(btn, loading, label){ if(!btn) return; btn.disabled=loading; if(label!=null) btn.textContent=loading?label:label; }
   const emailOk = v => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v);
 
   // live password rule feedback
@@ -1067,6 +1071,10 @@
     if (name.length < 2) return showErr(1, 'Please enter your full name.');
     if (!emailOk(email)) return showErr(1, 'Please enter a valid email address.');
     if (pw.length < 8 || !/\d/.test(pw)) return showErr(1, 'Password needs at least 8 characters and one number.');
+    if (!$('su-consent').checked) return showErr(1, 'Please accept the Terms of Service and Privacy Policy to continue.');
+    S.consent = true; S.consentAt = new Date().toISOString();
+    // if we already sent a code to this same email, don't re-issue (avoids invalidating it)
+    if (S.emailToken && S.email === email) { S.name = name; S.password = pw; $('otp-email').textContent = email; return goTo(2); }
     const btn = $('btn1'); btn.disabled = true; btn.style.opacity = '.6';
     try {
       const r = await fetch(API + '/auth/send-email-code', {
@@ -1113,20 +1121,32 @@
     } finally { btn.disabled = false; btn.style.opacity = '1'; }
   }
 
-  // resend the code
+  // resend the code (with a cooldown to prevent spamming the send endpoint)
+  let resendCooldown = 0, resendTimer = null;
+  function startResendCooldown(sec){
+    const link = $('resend-link'); resendCooldown = sec;
+    link.style.opacity = '.55'; link.style.pointerEvents = 'none';
+    link.textContent = 'Resend in ' + resendCooldown + 's';
+    clearInterval(resendTimer);
+    resendTimer = setInterval(() => {
+      resendCooldown--;
+      if (resendCooldown <= 0) { clearInterval(resendTimer); link.textContent = 'Resend'; link.style.opacity = ''; link.style.pointerEvents = ''; }
+      else link.textContent = 'Resend in ' + resendCooldown + 's';
+    }, 1000);
+  }
   async function resendCode(){
+    if (resendCooldown > 0) return;
     clearErr(3);
-    const link = $('resend-link'); const prev = link.textContent; link.textContent = 'Sending…';
+    const link = $('resend-link'); link.textContent = 'Sending…';
     try {
       const r = await fetch(API + '/auth/send-email-code', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ email: S.email })
       });
       const d = await r.json();
-      if (d.success) { S.emailToken = d.data.token; link.textContent = 'Code sent ✓'; }
-      else { showErr(3, d.error || 'Could not resend.'); link.textContent = prev; }
-    } catch(_) { showErr(3, 'Could not resend right now.'); link.textContent = prev; }
-    setTimeout(()=>{ link.textContent = 'Resend'; }, 4000);
+      if (d.success) { S.emailToken = d.data.token; startResendCooldown(30); }
+      else { showErr(3, d.error || 'Could not resend.'); link.textContent = 'Resend'; }
+    } catch(_) { showErr(3, 'Could not resend right now.'); link.textContent = 'Resend'; }
   }
 
   // STEP 4 → organization
@@ -1162,6 +1182,8 @@
   // STEP 5 → create the account for real
   async function step5Confirm(){
     clearErr(5);
+    if (!S.verifyToken) return showErr(5, 'Please verify your email before creating your account.');
+    if (!S.consent) return showErr(5, 'Please accept the Terms of Service and Privacy Policy.');
     const btn = $('btn5'); btn.disabled = true; btn.style.opacity = '.6'; const label = btn.innerHTML;
     btn.textContent = 'Creating account…';
     try {
@@ -1170,7 +1192,7 @@
         body: JSON.stringify({
           fullName: S.name, email: S.email, phone: S.phone, password: S.password,
           company: S.org, jobTitle: S.title, emailVerifyToken: S.verifyToken,
-          source: S.source,
+          source: S.source, consent: S.consent, consentAt: S.consentAt,
           property: { name: S.property, location: S.location, type: S.ptype, size: S.psize, primaryConcern: S.concern }
         })
       });
@@ -1192,14 +1214,34 @@
 
   function goDashboard(){ window.location.href = 'index.html'; }
 
-  document.querySelectorAll('.otp-box2').forEach((box, i, all) => {
+  const otpBoxes = Array.from(document.querySelectorAll('.otp-box2'));
+  otpBoxes.forEach((box, i) => {
     box.addEventListener('input', (e) => {
+      box.value = box.value.replace(/\D/g, '').slice(0, 1);   // numeric only
       if (e.inputType === 'deleteContentBackward') return;
-      if (box.value && all[i+1]) all[i+1].focus();
+      if (box.value && otpBoxes[i+1]) otpBoxes[i+1].focus();
     });
     box.addEventListener('keydown', (e) => {
-      if (e.key === 'Backspace' && !box.value && all[i-1]) all[i-1].focus();
+      if (e.key === 'Backspace' && !box.value && otpBoxes[i-1]) otpBoxes[i-1].focus();
     });
+    box.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const digits = ((e.clipboardData || window.clipboardData).getData('text') || '').replace(/\D/g, '').slice(0, otpBoxes.length).split('');
+      if (!digits.length) return;
+      otpBoxes.forEach((b, j) => { if (digits[j] != null) b.value = digits[j]; });
+      otpBoxes[Math.min(digits.length, otpBoxes.length) - 1].focus();
+    });
+  });
+
+  // Enter advances the current step (there is no <form>, so wire it manually)
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const t = e.target;
+    if (!t || (t.tagName !== 'INPUT' && t.tagName !== 'SELECT')) return;
+    if (t.type === 'checkbox') return;
+    const view = t.closest('.step-view.visible'); if (!view) return;
+    const btn = view.querySelector('.btn-primary');
+    if (btn && !btn.disabled) { e.preventDefault(); btn.click(); }
   });
 
   try { S.source = new URLSearchParams(location.search).get('source') || 'direct'; } catch(_) { S.source = 'direct'; }
