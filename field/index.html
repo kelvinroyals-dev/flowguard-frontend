@@ -149,6 +149,24 @@
   .msg{padding:11px 13px;border-radius:var(--rx);font-size:13px;margin:10px 0;display:none}
   .msg.err{background:var(--alert-bg);color:var(--alert);display:block}
   .msg.ok{background:var(--ok-bg);color:var(--ok);display:block}
+  /* ── profile ── */
+  .phead{display:flex;align-items:center;gap:18px;padding:24px}
+  .phead .pav{width:64px;height:64px;border-radius:18px;background:var(--brand-soft);color:var(--brand-deep);display:grid;place-items:center;font-family:var(--ff-d);font-weight:700;font-size:24px;flex-shrink:0}
+  .phead .pnm{font-family:var(--ff-d);font-size:22px;font-weight:700;letter-spacing:-.01em}
+  .phead .pmeta{color:var(--ink-3);font-size:13px;margin-top:3px}
+  .phead .pact{margin-left:auto;display:flex;gap:8px}
+  .pgrid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;align-items:start}
+  @media(max-width:820px){.pgrid{grid-template-columns:1fr}}
+  .card-h{font-family:var(--ff-d);font-size:14px;font-weight:600;padding:16px 20px;border-bottom:1px solid var(--line)}
+  .card-b{padding:18px 20px}
+  .glance{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+  .glance .g{background:var(--surface);padding:16px 18px}
+  .glance .gn{font-family:var(--ff-d);font-size:26px;font-weight:700;line-height:1}
+  .glance .gl{font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;margin-top:6px}
+  .prow{display:flex;justify-content:space-between;gap:16px;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .prow:last-child{border-bottom:0}
+  .prow .k{color:var(--ink-3);font-weight:500;flex-shrink:0}
+  .prow .v{text-align:right}
   /* ── modal ── */
   .mo-back{position:fixed;inset:0;background:rgba(6,12,16,.55);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;animation:mo-fade .15s ease}
   @keyframes mo-fade{from{opacity:0}to{opacity:1}}
@@ -615,23 +633,48 @@
     var st=({active:['ok','Active'],pending:['warn','Under review'],rejected:['alert','Not approved'],suspended:['neutral','Suspended']})[o.status]||['neutral',o.status||'—'];
     var pendingSubmit=o.status==='pending'&&!o.verification_submitted_at;
     var editable=isAdmin();
-    var actions=editable?'<button class="btn ghost sm" id="prof-edit">Edit</button>':'';
+    var actions=editable?'<button class="btn ghost sm" id="prof-edit">Edit profile</button>':'';
+    var row=function(k,v){return '<div class="prow"><span class="k">'+esc(k)+'</span><span class="v">'+v+'</span></div>';};
     $('view').innerHTML=topBar('Company profile',(STATE.org&&STATE.org.name)||'',actions)+pendingBanner()
-      +'<div class="card"><div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">'
-        +'<span class="me-av" style="width:52px;height:52px;font-size:18px;border-radius:14px;background:var(--brand-soft);color:var(--brand-deep)">'+esc((o.name||'F').slice(0,2).toUpperCase())+'</span>'
-        +'<div><div style="font-family:var(--ff-d);font-size:20px;font-weight:700">'+esc(o.name||'Your organisation')+'</div>'
-        +'<span class="chip '+st[0]+'"><span class="d"></span>'+st[1]+'</span></div></div>'
-      +'<dl class="kv"><dt>Contact person</dt><dd>'+esc(o.contact_person||'—')+'</dd>'
-      +'<dt>Email</dt><dd>'+esc(o.email||'—')+'</dd><dt>Phone</dt><dd>'+esc(o.phone||'—')+'</dd>'
-      +'<dt>Coverage area</dt><dd>'+esc(o.coverage_area||'—')+'</dd>'
-      +'<dt>Services</dt><dd>'+svc(o.service_types)+'</dd>'
-      +'<dt>Member since</dt><dd>'+fmtDate(o.created_at)+'</dd></dl>'
-      +(pendingSubmit?'<div class="actions"><button class="btn" id="submitVerify">Submit for verification</button></div>'
-        :(o.status==='pending'?'<p style="margin-top:14px;color:var(--warn)">Submitted — awaiting FlowGuard review.</p>':''))
+      +'<div class="card" style="padding:0;overflow:hidden">'
+        +'<div class="phead"><span class="pav">'+esc((o.name||'F').slice(0,2).toUpperCase())+'</span>'
+          +'<div><div class="pnm">'+esc(o.name||'Your organisation')+'</div>'
+          +'<div style="margin-top:6px"><span class="chip '+st[0]+'"><span class="d"></span>'+st[1]+'</span></div></div>'
+          +(editable?'<div class="pact"><button class="btn ghost sm" id="prof-edit2">Edit profile</button></div>':'')+'</div>'
+      +'</div>'
+      +'<div class="pgrid">'
+        +'<div class="card" style="padding:0"><div class="card-h">Company details</div><div class="card-b">'
+          +row('Contact person',esc(o.contact_person||'—'))
+          +row('Email',esc(o.email||'—'))
+          +row('Phone',esc(o.phone||'—'))
+          +row('Coverage area',esc(o.coverage_area||'—'))
+          +row('Services','<span style="display:inline-flex;flex-wrap:wrap;gap:6px;justify-content:flex-end">'+svc(o.service_types)+'</span>')
+          +row('Member since',fmtDate(o.created_at))
+          +'</div></div>'
+        +'<div><div class="card" style="padding:0"><div class="card-h">At a glance</div>'
+          +'<div class="glance" id="p-glance">'
+            +'<div class="g"><div class="gn" id="g-team">–</div><div class="gl">Team members</div></div>'
+            +'<div class="g"><div class="gn" id="g-props">–</div><div class="gl">Properties</div></div>'
+            +'<div class="g"><div class="gn" id="g-open">–</div><div class="gl">Open jobs</div></div>'
+            +'<div class="g"><div class="gn" id="g-verified">–</div><div class="gl">Verified jobs</div></div>'
+          +'</div></div>'
+          +(pendingSubmit?'<div class="card"><div class="card-b" style="padding:18px 20px"><div style="font-weight:600;margin-bottom:6px">Ready for review?</div><p class="muted" style="font-size:13px;margin-bottom:12px">Submit your profile and FlowGuard will verify your organisation.</p><button class="btn" id="submitVerify">Submit for verification</button></div></div>'
+            :(o.status==='pending'?'<div class="card"><div class="card-b"><span class="chip warn"><span class="d"></span>Submitted — awaiting review</span></div></div>':''))
+          +'</div>'
       +'</div>';
+    var wire=function(id){var e=$(id);if(e)e.addEventListener('click',editProfile);};wire('prof-edit');wire('prof-edit2');
     var sv=$('submitVerify');if(sv)sv.addEventListener('click',function(){sv.disabled=true;sv.textContent='Submitting…';
       api('/service-providers/me/submit-verification','POST',{}).then(function(){STATE.org.verification_submitted_at=new Date().toISOString();renderProfile();});});
-    var ed=$('prof-edit');if(ed)ed.addEventListener('click',editProfile);
+    // live counts for "At a glance"
+    if(o.status==='active'){
+      Promise.all([api('/service-providers/me/members'),api('/service-providers/me/properties'),api('/jobs')]).then(function(r){
+        var mem=(r[0].ok&&r[0].j.data)||[],prp=(r[1].ok&&r[1].j.data)||[],jb=(r[2].ok&&r[2].j.data)||[];
+        var set=function(id,v){var e=$(id);if(e)e.textContent=v;};
+        set('g-team',mem.length);set('g-props',prp.length);
+        set('g-open',jb.filter(function(j){return ['dispatched','accepted','en_route','in_progress','rejected'].indexOf(j.status)>-1;}).length);
+        set('g-verified',jb.filter(function(j){return j.status==='verified';}).length);
+      });
+    } else { ['g-team','g-props','g-open','g-verified'].forEach(function(id){var e=$(id);if(e)e.textContent='0';}); }
   }
   function editProfile(){
     var o=STATE.org||{};
