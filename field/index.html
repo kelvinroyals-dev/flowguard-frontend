@@ -49,6 +49,39 @@
   .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink-2)}
   .btn:disabled{opacity:.6;cursor:not-allowed}
   @media(max-width:760px){.app{grid-template-columns:1fr}.side{position:fixed;bottom:0;left:0;right:0;top:auto;flex-direction:row;border-right:0;border-top:1px solid var(--line);overflow-x:auto;z-index:9}.side .brand,.side .su,.side .sp,.theme{display:none}.nav{display:flex;gap:2px}.nav a span:not(.lk){display:none}.main{padding:18px 16px 90px}}
+  /* jobs */
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+  .chip{font-size:12.5px;font-weight:700;padding:7px 13px;border-radius:20px;background:var(--surface);border:1px solid var(--line);color:var(--ink-2);cursor:pointer}
+  .chip.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .jrow{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:15px 17px;margin-bottom:10px;cursor:pointer}
+  .jrow:hover{border-color:var(--brand)}
+  .jrow .nm{font-weight:700;font-size:15px}
+  .jrow .sub{font-size:12.5px;color:var(--ink-3);margin-top:3px}
+  .jrow .ref{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--ink-3)}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;white-space:nowrap;margin-left:auto}
+  .pill .d{width:7px;height:7px;border-radius:50%}
+  .pri{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px}
+  .empty{padding:40px 18px;text-align:center;color:var(--ink-3);font-size:14px;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+  .back{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--ink-2);cursor:pointer;margin-bottom:14px}
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 14px;font-size:14px;margin:4px 0 6px}
+  .kv dt{color:var(--ink-3);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.3px}
+  .req{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:12px;margin:4px 5px 0 0}
+  .req.ok{color:#0a8a6a;background:rgba(16,185,129,.14)}
+  .req.no{color:var(--warn);background:var(--warn-bg)}
+  .ev{display:flex;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--line);border-radius:10px;margin-top:8px;font-size:13px}
+  .ev .k{font-weight:800;text-transform:capitalize;color:var(--ink-2)}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .field{margin:12px 0}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--ink-2);margin-bottom:6px}
+  .field input,.field select,.field textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:14px;background:var(--bg);color:var(--ink)}
+  .tl{margin-top:6px;border-left:2px solid var(--line);padding-left:14px}
+  .tl-i{position:relative;padding:5px 0}
+  .tl-i::before{content:'';position:absolute;left:-21px;top:9px;width:9px;height:9px;border-radius:50%;background:var(--brand);border:2px solid var(--surface)}
+  .tl-t{font-size:13px;font-weight:600}
+  .tl-d{font-size:11px;color:var(--ink-3)}
+  .msg{padding:11px 13px;border-radius:10px;font-size:13px;margin:10px 0;display:none}
+  .msg.err{background:var(--warn-bg);color:var(--warn);display:block}
+  .msg.ok{background:rgba(16,185,129,.14);color:#0a8a6a;display:block}
 </style>
 </head>
 <body>
@@ -125,7 +158,133 @@
     $('pageTitle').textContent=(MENU.filter(function(x){return x[0]===key;})[0]||['','Dashboard'])[1];
     if(key==='profile') return renderProfile();
     if(key==='support') return renderSupport();
+    if(key==='jobs') return renderJobs();
     $('content').innerHTML='<div class="card"><h3>Coming soon</h3><p>This section is part of the Field product build.</p></div>';
+  }
+
+  /* ---- jobs ---- */
+  var esc=function(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var JT={inspection:'Inspection',drain_cleaning:'Drain cleaning',sensor_maintenance:'Sensor maintenance',repair:'Repair',survey:'Survey',other:'Other'};
+  var PR={low:'Low',normal:'Normal',high:'High',urgent:'Urgent'};
+  var PRC={low:'#6b8090',normal:'var(--brand-d)',high:'#b45309',urgent:'#dc2626'};
+  var SP_={dispatched:['#2563eb','New — respond'],accepted:['#0d7fa0','Accepted'],en_route:['#7c3aed','En route'],in_progress:['#b45309','In progress'],completed:['#0a8a6a','Awaiting verification'],verified:['#0a8a6a','Verified'],declined:['#dc2626','Declined'],rejected:['#dc2626','Rework needed'],cancelled:['#6b8090','Cancelled'],draft:['#6b8090','Draft']};
+  var JOB_FILTER='active';
+  var FBUCKET={active:['dispatched','accepted','en_route','in_progress','rejected'],completed:['completed'],verified:['verified']};
+  function fmtDT(d){return d?new Date(d).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';}
+  function pill(s){var c=SP_[s]||SP_.draft;return '<span class="pill" style="color:'+c[0]+';background:'+c[0]+'1f"><span class="d" style="background:'+c[0]+'"></span>'+c[1]+'</span>';}
+  function api(path,method,body){return fetch(API+path,{method:method||'GET',headers:{'Authorization':'Bearer '+tok(),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined}).then(function(r){return r.json().then(function(j){return {ok:r.ok,status:r.status,j:j};});});}
+
+  function renderJobs(){
+    var tabs=[['active','Active'],['completed','Submitted'],['verified','Verified']];
+    $('content').innerHTML='<div class="chips" id="jchips">'+tabs.map(function(t){return '<button class="chip '+(t[0]===JOB_FILTER?'on':'')+'" data-s="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div><div id="jlist"><div class="empty">Loading…</div></div>';
+    $('jchips').addEventListener('click',function(e){var b=e.target.closest('.chip');if(!b)return;JOB_FILTER=b.dataset.s;renderJobs();});
+    api('/jobs').then(function(res){
+      var el=$('jlist');
+      if(!res.ok){el.innerHTML='<div class="empty">Couldn\'t load jobs. '+esc((res.j&&res.j.error)||'')+'</div>';return;}
+      var rows=(res.j&&res.j.data)||[];
+      rows=rows.filter(function(r){return (FBUCKET[JOB_FILTER]||[]).indexOf(r.status)>-1;});
+      if(!rows.length){el.innerHTML='<div class="empty">No jobs here.</div>';return;}
+      el.innerHTML=rows.map(function(j){
+        var pr=PR[j.priority]?'<span class="pri" style="color:'+PRC[j.priority]+'">'+PR[j.priority]+'</span> · ':'';
+        return '<div class="jrow" data-id="'+j.id+'"><div style="flex:1;min-width:0"><div class="nm">'+esc(j.title)+'</div>'
+          +'<div class="sub">'+pr+esc(JT[j.job_type]||j.job_type)+(j.property_name?(' · '+esc(j.property_name)):'')+'</div>'
+          +'<div class="ref">'+esc(j.reference||'')+(j.sla_due_at?(' · due '+fmtDT(j.sla_due_at)):'')+'</div></div>'+pill(j.status)+'</div>';
+      }).join('');
+      Array.prototype.forEach.call(el.querySelectorAll('.jrow'),function(r){r.addEventListener('click',function(){openJob(r.dataset.id);});});
+    });
+  }
+
+  function openJob(id){
+    $('content').innerHTML='<div class="empty">Loading…</div>';
+    api('/jobs/'+id).then(function(res){
+      if(!res.ok||!res.j.success){$('content').innerHTML='<div class="empty">Couldn\'t load this job.</div>';return;}
+      var j=res.j.data;
+      var have={};(j.evidence||[]).forEach(function(e){if(e.evidence_key)have[e.evidence_key]=1;});
+      var reqs=Array.isArray(j.required_evidence)?j.required_evidence:[];
+      var reqHtml=reqs.length?reqs.map(function(r){return '<span class="req '+(have[r.key]?'ok':'no')+'">'+(have[r.key]?'✓':'○')+' '+esc(r.label||r.key)+'</span>';}).join(''):'<span class="tl-d">No specific evidence required.</span>';
+      var evHtml=(j.evidence||[]).map(function(e){return '<div class="ev"><span class="k">'+esc(e.kind)+'</span><span style="flex:1;color:var(--ink-2)">'+esc(e.caption||e.evidence_key||'—')+'</span>'+(e.file_url?'<a href="'+esc(e.file_url)+'" target="_blank" rel="noopener" style="color:var(--brand-d);font-weight:700">Open</a>':'')+((e.lat!=null&&e.lng!=null)?'<span class="tl-d">'+Number(e.lat).toFixed(3)+','+Number(e.lng).toFixed(3)+'</span>':'')+'</div>';}).join('')||'<div class="tl-d" style="margin-top:6px">Nothing uploaded yet.</div>';
+      var LB={created:'Created',dispatched:'Dispatched to you',accepted:'Accepted',declined:'Declined',en_route:'En route',started:'Work started',completed:'Marked complete',verified:'Verified by FlowGuard',rejected:'Returned for rework',cancelled:'Cancelled',evidence_added:'Evidence added',note:'Note'};
+      var tl=(j.events||[]).map(function(e){return '<div class="tl-i"><div class="tl-t">'+esc(LB[e.event_type]||e.event_type)+(e.note?' — '+esc(e.note):'')+'</div><div class="tl-d">'+fmtDT(e.created_at)+'</div></div>';}).join('')||'<div class="tl-d">No activity yet.</div>';
+      var canEvidence=['accepted','en_route','in_progress'].indexOf(j.status)>-1;
+      $('content').innerHTML='<div class="back" id="jback">‹ Back to jobs</div>'
+        +'<div class="card"><div style="display:flex;align-items:flex-start;gap:12px"><div style="flex:1"><h3 style="font-size:18px">'+esc(j.title)+'</h3><div class="ref">'+esc(j.reference||'')+'</div></div>'+pill(j.status)+'</div>'
+        +'<div class="msg" id="jmsg"></div>'
+        +'<dl class="kv" style="margin-top:12px"><dt>Type</dt><dd>'+esc(JT[j.job_type]||j.job_type)+' · '+esc(PR[j.priority]||j.priority)+'</dd>'
+        +'<dt>Property</dt><dd>'+esc(j.property_name||'—')+(j.property_address?(' · '+esc(j.property_address)):'')+'</dd>'
+        +'<dt>Schedule</dt><dd>'+fmtDT(j.scheduled_for)+'</dd><dt>SLA due</dt><dd>'+fmtDT(j.sla_due_at)+'</dd>'
+        +(j.description?'<dt>Details</dt><dd>'+esc(j.description)+'</dd>':'')
+        +(j.reject_reason?'<dt>Rework</dt><dd style="color:var(--warn)">'+esc(j.reject_reason)+'</dd>':'')+'</dl>'
+        +'<div style="margin-top:12px"><div class="kv" style="grid-template-columns:1fr"><dt>Required evidence</dt></div>'+reqHtml+'</div>'
+        +(canEvidence?'<div id="evForm"></div>':'')
+        +'<div style="margin-top:14px"><div class="kv" style="grid-template-columns:1fr"><dt>Uploaded</dt></div>'+evHtml+'</div>'
+        +'<div class="actions" id="jactions"></div></div>'
+        +'<div class="card"><h3 style="font-size:15px">Activity</h3><div class="tl">'+tl+'</div></div>';
+      $('jback').addEventListener('click',renderJobs);
+      if(canEvidence) renderEvidenceForm(j);
+      renderActions(j);
+    });
+  }
+
+  function msg(t,cls){var m=$('jmsg');if(!m)return;m.className='msg '+cls;m.textContent=t;}
+  function act(j,path,body,okText){
+    return api('/jobs/'+j.id+path,'POST',body||{}).then(function(res){
+      if(res.ok&&res.j.success){openJob(j.id);}
+      else if(res.status===422&&res.j.missing){msg('Add these first: '+res.j.missing.join(', '),'err');}
+      else{msg((res.j&&res.j.error)||'Action failed','err');}
+    }).catch(function(){msg('Network error — try again','err');});
+  }
+
+  function renderActions(j){
+    var a=$('jactions');if(!a)return;var b=[];
+    if(j.status==='dispatched'){
+      b.push('<button class="btn" id="a-accept">Accept job</button>');
+      b.push('<button class="btn ghost" id="a-decline">Decline</button>');
+    } else if(j.status==='accepted'){
+      b.push('<button class="btn" id="a-enroute">On my way</button>');
+      b.push('<button class="btn ghost" id="a-start">Start work</button>');
+    } else if(j.status==='en_route'){
+      b.push('<button class="btn" id="a-start">Start work</button>');
+    } else if(j.status==='in_progress'){
+      b.push('<button class="btn" id="a-complete">Mark complete</button>');
+    }
+    a.innerHTML=b.join('');
+    var bind=function(id,fn){var el=$(id);if(el)el.addEventListener('click',fn);};
+    bind('a-accept',function(){$('a-accept').disabled=true;act(j,'/accept');});
+    bind('a-enroute',function(){act(j,'/en-route');});
+    bind('a-start',function(){act(j,'/start');});
+    bind('a-complete',function(){$('a-complete').disabled=true;act(j,'/complete');});
+    bind('a-decline',function(){
+      var reason=prompt('Why are you declining this job?');
+      if(reason&&reason.trim())act(j,'/decline',{reason:reason.trim()});
+    });
+  }
+
+  function renderEvidenceForm(j){
+    var host=$('evForm');if(!host)return;
+    host.innerHTML='<div class="card" style="background:var(--surface-2);margin-top:14px;box-shadow:none">'
+      +'<h3 style="font-size:14px">Add evidence</h3>'
+      +'<div class="field"><label>What is it</label><select id="ev-key"><option value="">General note / photo</option>'
+      +(Array.isArray(j.required_evidence)?j.required_evidence.map(function(r){return '<option value="'+esc(r.key)+'" data-kind="'+esc(r.kind||'photo')+'">'+esc(r.label||r.key)+'</option>';}).join(''):'')
+      +'</select></div>'
+      +'<div class="field"><label>Type</label><select id="ev-kind"><option value="photo">Photo</option><option value="note">Note</option><option value="document">Document</option><option value="video">Video</option><option value="signature">Signature</option><option value="gps">GPS check-in</option></select></div>'
+      +'<div class="field"><label>Caption / note</label><input id="ev-cap" placeholder="Short description"></div>'
+      +'<div class="field"><label>File link (optional)</label><input id="ev-url" placeholder="Paste a photo/document URL"></div>'
+      +'<div class="actions"><button class="btn ghost" id="ev-gps">Use my location</button><button class="btn" id="ev-add">Add evidence</button></div></div>';
+    $('ev-key').addEventListener('change',function(){var o=this.options[this.selectedIndex];if(o&&o.dataset.kind)$('ev-kind').value=o.dataset.kind;});
+    $('ev-gps').addEventListener('click',function(){
+      if(!navigator.geolocation){msg('Location not available on this device','err');return;}
+      $('ev-gps').disabled=true;$('ev-gps').textContent='Locating…';
+      navigator.geolocation.getCurrentPosition(function(p){
+        act(j,'/evidence',{kind:'gps',evidence_key:($('ev-key').value||'gps'),caption:'On-site GPS check-in',lat:p.coords.latitude,lng:p.coords.longitude});
+      },function(){msg('Couldn\'t get your location','err');$('ev-gps').disabled=false;$('ev-gps').textContent='Use my location';});
+    });
+    $('ev-add').addEventListener('click',function(){
+      var kind=$('ev-kind').value,cap=$('ev-cap').value.trim(),url=$('ev-url').value.trim(),key=$('ev-key').value||null;
+      if(kind==='note'&&!cap){msg('Add a note','err');return;}
+      if(kind!=='note'&&kind!=='gps'&&!url&&!cap){msg('Add a file link or caption','err');return;}
+      $('ev-add').disabled=true;
+      act(j,'/evidence',{kind:kind,evidence_key:key,caption:cap||null,file_url:url||null});
+    });
   }
 
   function renderProfile(){
