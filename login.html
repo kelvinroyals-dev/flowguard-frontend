@@ -195,7 +195,6 @@
         if(data.success){
           localStorage.setItem('token',data.data.token);
           localStorage.setItem('user',JSON.stringify(data.data.user));
-          showAlert('success','Signed in — redirecting…');
           setTimeout(()=>{
             const role=data.data.user.role;
             const FIELD_ROLES=['field_lead','field_team'];
