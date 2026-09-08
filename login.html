@@ -196,12 +196,16 @@
           localStorage.setItem('token',data.data.token);
           localStorage.setItem('user',JSON.stringify(data.data.user));
           setTimeout(()=>{
-            const role=data.data.user.role;
-            const FIELD_ROLES=['field_lead','field_team'];
-            const OPS_ROLES=['admin','operations','super_admin','operations_manager','dispatcher','analyst','finance'];
-            if(FIELD_ROLES.includes(role)) window.location.href='https://neon.flowguard.ng/field.html';
-            else if(OPS_ROLES.includes(role)) window.location.href='https://neon.flowguard.ng';
-            else window.location.href='index.html';
+            const u=data.data.user;
+            if(u.user_type==='service_provider'){
+              // external providers get the local field portal (never neon)
+              window.location.href='field/';
+            } else if(u.user_type==='internal'){
+              const role=u.role, FIELD_ROLES=['field_lead','field_team'];
+              window.location.href = FIELD_ROLES.includes(role) ? 'https://neon.flowguard.ng/field.html' : 'https://neon.flowguard.ng';
+            } else {
+              window.location.href='index.html';
+            }
           },800);
         }else{setLoading(false);showAlert('error',data.error||'Invalid email or password. Please try again.');}
       }catch(err){console.error('Login error:',err);setLoading(false);showAlert('error','Connection failed. Please check your internet and try again.');}

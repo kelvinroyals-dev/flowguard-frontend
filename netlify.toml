@@ -10,6 +10,16 @@
   to = "/index.html"
   status = 200
 
+# Service Provider portal lives under /field — resolve it before the SPA catch-all
+[[redirects]]
+  from = "/field"
+  to = "/field/index.html"
+  status = 200
+[[redirects]]
+  from = "/field/"
+  to = "/field/index.html"
+  status = 200
+
 # SPA catch-all — keeps URL clean on refresh, but never intercept real files or /js assets
 [[redirects]]
   from = "/*"
