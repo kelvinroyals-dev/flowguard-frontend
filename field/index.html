@@ -159,7 +159,24 @@
     if(key==='profile') return renderProfile();
     if(key==='support') return renderSupport();
     if(key==='jobs') return renderJobs();
+    if(key==='properties') return renderProperties();
     $('content').innerHTML='<div class="card"><h3>Coming soon</h3><p>This section is part of the Field product build.</p></div>';
+  }
+
+  /* ---- properties (assigned to this provider) ---- */
+  function renderProperties(){
+    $('content').innerHTML='<div class="empty">Loading…</div>';
+    api('/service-providers/me/properties').then(function(res){
+      if(!res.ok){$('content').innerHTML='<div class="empty">Couldn\'t load properties. '+esc((res.j&&res.j.error)||'')+'</div>';return;}
+      var rows=(res.j&&res.j.data)||[];
+      if(!rows.length){$('content').innerHTML='<div class="empty">No properties assigned yet.<br><span style="font-size:12.5px">FlowGuard assigns properties when they dispatch you a job there.</span></div>';return;}
+      $('content').innerHTML=rows.map(function(p){
+        var loc=[p.city,p.state].filter(Boolean).join(', ')||'—';
+        var ptype=p.property_type?(' · '+esc(String(p.property_type).replace(/_/g,' '))):'';
+        return '<div class="jrow"><div style="flex:1;min-width:0"><div class="nm">'+esc(p.property_name||p.property_id)+'</div>'
+          +'<div class="sub">'+esc(loc)+ptype+'</div></div></div>';
+      }).join('');
+    });
   }
 
   /* ---- jobs ---- */
