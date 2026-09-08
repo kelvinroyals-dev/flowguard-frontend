@@ -10,11 +10,26 @@ const UI = (function () {
     ));
   }
 
+  const TOAST_ICONS = {
+    ok:   '<circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/>',
+    error:'<circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/>',
+    warn: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+    info: '<circle cx="12" cy="12" r="10"/><path d="M12 11v5M12 8h.01"/>'
+  };
   function toast(msg, type = 'info') {
     const wrap = document.getElementById('toasts');
+    if (!wrap) return;
+    const cls = type === 'success' ? 'ok' : (type === 'warning' ? 'warn' : type);
+    const key = TOAST_ICONS[cls] ? cls : 'info';
     const el = document.createElement('div');
-    el.className = 'toast ' + (type === 'success' ? 'ok' : type);
-    el.textContent = msg;
+    el.className = 'toast ' + cls;
+    const ic = document.createElement('span');
+    ic.className = 't-ic';
+    ic.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + TOAST_ICONS[key] + '</svg>';
+    const txt = document.createElement('span');
+    txt.className = 't-msg';
+    txt.textContent = msg;                 // text set safely — no markup injection
+    el.appendChild(ic); el.appendChild(txt);
     wrap.appendChild(el);
     setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 200); }, 3200);
   }
