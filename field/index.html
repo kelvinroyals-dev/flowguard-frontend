@@ -59,6 +59,8 @@
   .navbtn.locked{color:var(--ink-3);cursor:not-allowed}
   .navbtn .lk{margin-left:auto;color:var(--lock);display:none}
   .navbtn.locked .lk{display:block}
+  .navbtn .nbadge{margin-left:auto;min-width:18px;height:18px;border-radius:9px;background:var(--alert);color:#fff;font-size:10px;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 5px}
+  .navbtn.on .nbadge{background:rgba(255,255,255,.28)}
   .rail-foot{margin-top:auto;display:flex;flex-direction:column;gap:4px;padding-top:12px;border-top:1px solid var(--line)}
   .rail-user{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:10px;border:none;background:none;cursor:pointer;text-align:left}
   .rail-user .me-av{width:32px;height:32px;border-radius:50%;background:var(--brand-deep);color:#fff;display:grid;place-items:center;font-family:var(--ff-d);font-weight:600;font-size:13px;flex-shrink:0}
@@ -224,7 +226,11 @@
   var $=function(id){return document.getElementById(id);};
   function tok(){try{return localStorage.getItem('token');}catch(_){return null;}}
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-  function api(path,method,body){return fetch(API+path,{method:method||'GET',headers:{'Authorization':'Bearer '+tok(),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined}).then(function(r){return r.json().then(function(j){return {ok:r.ok,status:r.status,j:j};});});}
+  function api(path,method,body){return fetch(API+path,{method:method||'GET',headers:{'Authorization':'Bearer '+tok(),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined}).then(function(r){
+    if(r.status===401){ try{localStorage.removeItem('token');localStorage.removeItem('user');}catch(_){}
+      window.location.href='../login.html'; return {ok:false,status:401,j:{}}; }
+    return r.json().then(function(j){return {ok:r.ok,status:r.status,j:j};},function(){return {ok:r.ok,status:r.status,j:{}};});
+  },function(){return {ok:false,status:0,j:{}};});}
   function fmtDT(d){return d?new Date(d).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';}
   function fmtDate(d){return d?new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—';}
 
@@ -263,9 +269,21 @@
 
   function navBtn(k,label,alwaysOpen,active){
     var locked=STATE.locked&&!alwaysOpen;
-    return '<button class="navbtn'+(k===active?' on':'')+(locked?' locked':'')+'" data-tab="'+k+'">'
+    var extra=k==='notifications'?'<span class="nbadge" id="nbadge">0</span>':'';
+    return '<button class="navbtn'+(k===active?' on':'')+(locked?' locked':'')+'" data-tab="'+k+'"'+(k===active?' aria-current="page"':'')+'>'
       +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+IC[k]+'</svg>'
-      +'<span class="navlabel">'+label+'</span>'+LOCK+'</button>';
+      +'<span class="navlabel">'+label+'</span>'+extra+LOCK+'</button>';
+  }
+  var _notifUnread=0;
+  function setBadge(){var b=$('nbadge');if(b){b.textContent=_notifUnread>9?'9+':String(_notifUnread);b.style.display=_notifUnread?'flex':'none';}}
+  function updateNotifBadge(){
+    if(STATE.locked)return;
+    api('/notifications').then(function(res){
+      if(!res.ok)return;
+      var rows=(res.j&&res.j.data)||[];
+      _notifUnread=rows.filter(function(n){return !n.is_read;}).length;
+      setBadge();
+    });
   }
   function renderRail(active){
     $('nav-work').innerHTML=NAV_WORK.map(function(m){return navBtn(m[0],m[1],m[2],active);}).join('');
@@ -273,6 +291,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('.navbtn[data-tab]'),function(b){
       b.addEventListener('click',function(){ if(b.classList.contains('locked'))return; $('rail').classList.remove('open'); go(b.dataset.tab); });
     });
+    setBadge();
   }
 
   /* ── header ── */
@@ -338,6 +357,18 @@
       var awaiting=jobs.filter(function(j){return j.status==='completed';});
       var verified=jobs.filter(function(j){return j.status==='verified';});
       var needAction=jobs.filter(function(j){return j.status==='dispatched'||j.status==='rejected';});
+      // freshly-approved provider with nothing yet — orient them
+      if(!jobs.length&&!props.length){
+        $('dash').innerHTML='<div class="card"><div class="phead" style="padding:22px"><span class="pav">✓</span>'
+          +'<div><div class="pnm" style="font-size:18px">You\'re approved and ready</div>'
+          +'<div class="pmeta">FlowGuard will dispatch jobs to you here. When they do, you\'ll get a notification and the job appears under Jobs.</div></div></div>'
+          +'<div class="card-b" style="border-top:1px solid var(--line)"><div style="font-weight:600;margin-bottom:8px">Get set up</div>'
+          +'<div class="prow"><span class="k">Add your team</span><span class="v"><a style="color:var(--brand-deep);font-weight:600;cursor:pointer" onclick="go(\'team\')">Invite members →</a></span></div>'
+          +'<div class="prow"><span class="k">Complete your company profile</span><span class="v"><a style="color:var(--brand-deep);font-weight:600;cursor:pointer" onclick="go(\'profile\')">Open profile →</a></span></div>'
+          +'<div class="prow"><span class="k">Questions?</span><span class="v"><a style="color:var(--brand-deep);font-weight:600;cursor:pointer" onclick="go(\'support\')">Contact support →</a></span></div>'
+          +'</div></div>';
+        return;
+      }
       var html='<div class="kpi-row">'
         +kpi('Open jobs',open.length,open.length?'In progress or awaiting you':'All clear',IC.jobs)
         +kpi('Awaiting verification',awaiting.length,'Submitted to FlowGuard',IC.clock)
@@ -361,16 +392,25 @@
 
   /* ── JOBS ── */
   var JOB_FILTER='active';
+  var JOB_SCOPE='team'; // team | mine (admins/supervisors can switch; techs forced to mine)
   var FBUCKET={active:ACTIVE_ST,completed:['completed'],verified:['verified']};
   function renderJobs(){
+    var canScope=STATE.user&&['owner_admin','supervisor'].indexOf(STATE.user.sp_role)>-1;
+    if(!canScope)JOB_SCOPE='mine';
     var tabs=[['active','Active'],['completed','Submitted'],['verified','Verified']];
+    var scopeCtl=canScope?'<div class="seg" style="margin-left:auto"><button class="'+(JOB_SCOPE==='mine'?'on':'')+'" data-scope="mine">My jobs</button><button class="'+(JOB_SCOPE==='team'?'on':'')+'" data-scope="team">All team</button></div>':'';
     $('view').innerHTML=topBar('Jobs','Work dispatched to you by FlowGuard')
-      +'<div class="seg" id="jchips">'+tabs.map(function(t){return '<button class="'+(t[0]===JOB_FILTER?'on':'')+'" data-s="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div><div id="jlist">'+stateBox('empty','Loading…','')+'</div>';
+      +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+      +'<div class="seg" id="jchips">'+tabs.map(function(t){return '<button class="'+(t[0]===JOB_FILTER?'on':'')+'" data-s="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</div>'
+      +scopeCtl+'</div><div id="jlist" style="margin-top:16px">'+stateBox('empty','Loading…','')+'</div>';
     $('jchips').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;JOB_FILTER=b.dataset.s;renderJobs();});
+    Array.prototype.forEach.call(document.querySelectorAll('[data-scope]'),function(b){b.addEventListener('click',function(){JOB_SCOPE=b.dataset.scope;renderJobs();});});
     api('/jobs').then(function(res){
       var el=$('jlist');
       if(!res.ok){el.innerHTML=stateBox('error',"Couldn't load jobs",(res.j&&res.j.error)||'Please try again.');return;}
-      var rows=((res.j&&res.j.data)||[]).filter(function(r){return (FBUCKET[JOB_FILTER]||[]).indexOf(r.status)>-1;});
+      var uid=STATE.user&&STATE.user.id;
+      var rows=((res.j&&res.j.data)||[]).filter(function(r){return (FBUCKET[JOB_FILTER]||[]).indexOf(r.status)>-1;})
+        .filter(function(r){return JOB_SCOPE==='team'?true:r.assigned_technician_id===uid;});
       if(!rows.length){el.innerHTML=stateBox('empty','No jobs here',JOB_FILTER==='active'?'New jobs FlowGuard dispatches to you will appear here.':'Nothing in this view yet.');return;}
       el.innerHTML='<div class="card tbl-wrap"><table class="tbl"><thead><tr><th>Job</th><th>Property</th><th>Priority</th><th>Status</th><th>SLA due</th><th></th></tr></thead><tbody>'
         +rows.map(function(j){var pr=PR[j.priority]?'<span class="pri" style="color:'+PRC[j.priority]+'">'+PR[j.priority]+'</span>':'—';
@@ -393,7 +433,10 @@
       var have={};(j.evidence||[]).forEach(function(e){if(e.evidence_key)have[e.evidence_key]=1;});
       var reqs=Array.isArray(j.required_evidence)?j.required_evidence:[];
       var reqHtml=reqs.length?reqs.map(function(r){return '<span class="req '+(have[r.key]?'ok':'no')+'">'+(have[r.key]?'✓':'○')+' '+esc(r.label||r.key)+'</span>';}).join(''):'<span class="tl-d">No specific evidence required.</span>';
-      var evHtml=(j.evidence||[]).map(function(e){return '<div class="ev"><span class="k">'+esc(e.kind)+'</span><span style="flex:1;color:var(--ink-2)">'+esc(e.caption||e.evidence_key||'—')+'</span>'+(e.file_url?'<a href="'+esc(e.file_url)+'" target="_blank" rel="noopener" style="color:var(--brand-deep);font-weight:700">Open</a>':'')+((e.lat!=null&&e.lng!=null)?'<span class="tl-d">'+Number(e.lat).toFixed(3)+','+Number(e.lng).toFixed(3)+'</span>':'')+'</div>';}).join('')||'<div class="tl-d" style="margin-top:6px">Nothing uploaded yet.</div>';
+      var evHtml=(j.evidence||[]).map(function(e){
+        var isImg=(e.kind==='photo'||e.kind==='signature')&&e.file_url;
+        var thumb=isImg?'<a href="'+esc(e.file_url)+'" target="_blank" rel="noopener"><img src="'+esc(e.file_url)+'" style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--line)"></a>':'';
+        return '<div class="ev">'+thumb+'<span class="k">'+esc(e.kind)+'</span><span style="flex:1;color:var(--ink-2)">'+esc(e.caption||e.evidence_key||'—')+'</span>'+(e.file_url&&!isImg?'<a href="'+esc(e.file_url)+'" target="_blank" rel="noopener" style="color:var(--brand-deep);font-weight:700">Open</a>':'')+((e.lat!=null&&e.lng!=null)?'<span class="tl-d">'+Number(e.lat).toFixed(3)+','+Number(e.lng).toFixed(3)+'</span>':'')+'</div>';}).join('')||'<div class="tl-d" style="margin-top:6px">Nothing uploaded yet.</div>';
       var LB={created:'Created',dispatched:'Dispatched to you',accepted:'Accepted',declined:'Declined',en_route:'En route',started:'Work started',completed:'Marked complete',verified:'Verified by FlowGuard',rejected:'Returned for rework',cancelled:'Cancelled',evidence_added:'Evidence added',note:'Note'};
       var tl=(j.events||[]).map(function(e){return '<div class="tl-i"><div class="tl-t">'+esc(LB[e.event_type]||e.event_type)+(e.note?' — '+esc(e.note):'')+'</div><div class="tl-d">'+fmtDT(e.created_at)+'</div></div>';}).join('')||'<div class="tl-d">No activity yet.</div>';
       var canEvidence=['accepted','en_route','in_progress'].indexOf(j.status)>-1;
@@ -403,6 +446,7 @@
         +'<div class="msg" id="jmsg"></div>'
         +'<dl class="kv"><dt>Priority</dt><dd>'+esc(PR[j.priority]||j.priority)+'</dd>'
         +'<dt>Property</dt><dd>'+esc(j.property_name||'—')+(j.property_address?(' · '+esc(j.property_address)):'')+'</dd>'
+        +'<dt>Technician</dt><dd>'+esc(j.technician_name||'Unassigned')+(canAssign(j)?' <a id="reassign" style="color:var(--brand-deep);font-weight:600;cursor:pointer">'+(j.assigned_technician_id?'Reassign':'Assign')+'</a>':'')+'</dd>'
         +'<dt>Scheduled</dt><dd>'+fmtDT(j.scheduled_for)+'</dd><dt>SLA due</dt><dd>'+fmtDT(j.sla_due_at)+'</dd>'
         +(j.description?'<dt>Details</dt><dd>'+esc(j.description)+'</dd>':'')
         +(j.reject_reason?'<dt>Rework</dt><dd style="color:var(--warn)">'+esc(j.reject_reason)+'</dd>':'')+'</dl>'
@@ -410,10 +454,48 @@
         +(canEvidence?'<div id="evForm"></div>':'')
         +'<div style="margin-top:16px"><dt style="color:var(--ink-3);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">Uploaded</dt>'+evHtml+'</div>'
         +'<div class="actions" id="jactions"></div></div>'
-        +'<div class="card"><h3 style="font-size:15px">Activity</h3><div class="tl">'+tl+'</div></div>';
+        +'<div class="card"><h3 style="font-size:15px;margin-bottom:10px">Activity</h3><div class="tl">'+tl+'</div></div>'
+        +'<div class="card"><h3 style="font-size:15px;margin-bottom:10px">Messages</h3><div id="jcomments">'+stateBox('empty','Loading…','')+'</div>'
+          +'<div class="fld" style="margin-top:14px"><textarea id="jc-body" rows="2" placeholder="Message FlowGuard about this job…"></textarea></div>'
+          +'<div class="actions" style="margin-top:0"><button class="btn sm" id="jc-send">Send</button></div></div>';
       $('jback').addEventListener('click',function(){go('jobs');});
       if(canEvidence)renderEvidenceForm(j);
       renderActions(j);
+      var ra=$('reassign');if(ra)ra.addEventListener('click',function(){assignJob(j);});
+      renderComments(j);
+    });
+  }
+  function canAssign(j){return STATE.user&&['owner_admin','supervisor'].indexOf(STATE.user.sp_role)>-1&&['dispatched','accepted','en_route','in_progress'].indexOf(j.status)>-1;}
+  function assignJob(j){
+    api('/service-providers/me/members').then(function(res){
+      var mem=((res.j&&res.j.data)||[]).filter(function(m){return m.is_active;});
+      if(!mem.length){modal('Assign technician','<p class="muted">No active team members yet. Add one from the Team screen first.</p>',[{label:'Close',cls:'ghost',onClick:closeModal}]);return;}
+      modal('Assign technician',
+        '<div class="msg" id="mo-msg"></div><div class="fld"><label>Technician</label><select id="mo-tech">'
+        +mem.map(function(m){return '<option value="'+m.id+'"'+(m.id===j.assigned_technician_id?' selected':'')+'>'+esc(m.full_name||m.email)+' · '+esc((m.sp_role||'').replace(/_/g,' '))+'</option>';}).join('')+'</select></div>',
+        [{label:'Cancel',cls:'ghost',onClick:closeModal},
+         {label:'Assign',onClick:function(btn){var t=$('mo-tech').value;btn.disabled=true;
+           api('/jobs/'+j.id+'/assign','POST',{technician_id:t}).then(function(r){if(r.ok&&r.j.success){closeModal();openJob(j.id);}else{moErr((r.j&&r.j.error)||'Failed');btn.disabled=false;}});}}]);
+    });
+  }
+  function renderComments(j){
+    api('/jobs/'+j.id+'/comments').then(function(res){
+      var el=$('jcomments');if(!el)return;
+      var rows=(res.j&&res.j.data)||[];
+      el.innerHTML=rows.length?rows.map(function(c){
+        var mine=c.author_type===(STATE.user&&STATE.user.user_type);
+        return '<div style="margin:10px 0;display:flex;flex-direction:column;'+(mine?'align-items:flex-end':'align-items:flex-start')+'">'
+          +'<div style="max-width:80%;background:'+(mine?'var(--brand-soft)':'var(--surface-2)')+';color:var(--ink);padding:9px 12px;border-radius:12px;font-size:13.5px;line-height:1.45">'+esc(c.body)+'</div>'
+          +'<div class="tl-d" style="margin-top:3px">'+esc(c.author_name||(c.author_type==='internal'?'FlowGuard':'Provider'))+' · '+fmtDT(c.created_at)+'</div></div>';
+      }).join(''):'<div class="tl-d">No messages yet. Start the conversation below.</div>';
+    });
+    var send=$('jc-send');if(send)send.addEventListener('click',function(){
+      var b=$('jc-body').value.trim();if(!b)return;
+      send.disabled=true;
+      api('/jobs/'+j.id+'/comments','POST',{body:b}).then(function(r){
+        send.disabled=false;
+        if(r.ok&&r.j.success){$('jc-body').value='';renderComments(j);}
+      });
     });
   }
 
@@ -542,15 +624,18 @@
     });
   }
   /* ── reusable modal ── */
-  function closeModal(){var m=$('mo-root');if(m)m.remove();}
+  var _moEsc=null;
+  function closeModal(){var m=$('mo-root');if(m)m.remove();if(_moEsc){document.removeEventListener('keydown',_moEsc);_moEsc=null;}}
   function modal(title,bodyHtml,buttons){
     closeModal();
     var back=document.createElement('div');back.className='mo-back';back.id='mo-root';
-    back.innerHTML='<div class="mo"><div class="mo-h"><span>'+esc(title)+'</span><button class="x" data-x>&times;</button></div>'
+    back.setAttribute('role','dialog');back.setAttribute('aria-modal','true');back.setAttribute('aria-label',title);
+    back.innerHTML='<div class="mo"><div class="mo-h"><span>'+esc(title)+'</span><button class="x" data-x aria-label="Close">&times;</button></div>'
       +'<div class="mo-b">'+bodyHtml+'</div><div class="mo-f" id="mo-foot"></div></div>';
     document.body.appendChild(back);
     back.addEventListener('mousedown',function(e){if(e.target===back)closeModal();});
     back.querySelector('[data-x]').addEventListener('click',closeModal);
+    _moEsc=function(e){if(e.key==='Escape')closeModal();};document.addEventListener('keydown',_moEsc);
     var foot=back.querySelector('#mo-foot');
     (buttons||[]).forEach(function(b){var el=document.createElement('button');el.className='btn'+(b.cls?' '+b.cls:'');el.textContent=b.label;el.addEventListener('click',function(){b.onClick(el);});foot.appendChild(el);});
     var first=back.querySelector('input,select,textarea');if(first)first.focus();
@@ -565,15 +650,16 @@
       '<div class="msg" id="mo-msg"></div>'
       +'<div class="fld"><label>Full name</label><input id="mo-name" placeholder="e.g. Chidi Okafor"></div>'
       +'<div class="fld"><label>Work email</label><input id="mo-email" type="email" placeholder="name@company.com"></div>'
+      +'<div class="fld"><label>Phone (optional)</label><input id="mo-phone" placeholder="0803 000 0000"></div>'
       +'<div class="fld"><label>Role</label><select id="mo-role">'+ROLE_OPTS+adminOpt+'</select></div>'
       +'<p class="tl-d" style="margin-top:4px">They\'ll get an email with a link to set their password and sign in.</p>',
       [{label:'Cancel',cls:'ghost',onClick:closeModal},
        {label:'Send invite',onClick:function(btn){
-         var name=$('mo-name').value.trim(),email=$('mo-email').value.trim(),role=$('mo-role').value;
+         var name=$('mo-name').value.trim(),email=$('mo-email').value.trim(),phone=$('mo-phone').value.trim(),role=$('mo-role').value;
          if(name.length<2)return moErr('Enter their full name');
          if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return moErr('Enter a valid email');
          btn.disabled=true;btn.textContent='Sending…';
-         api('/service-providers/me/members','POST',{full_name:name,email:email,sp_role:role}).then(function(res){
+         api('/service-providers/me/members','POST',{full_name:name,email:email,phone:phone||null,sp_role:role}).then(function(res){
            if(res.ok&&res.j.success){closeModal();renderTeam();}
            else{moErr((res.j&&res.j.error)||'Could not add member');btn.disabled=false;btn.textContent='Send invite';}
          });
@@ -587,7 +673,8 @@
       +'<div class="fld"><label>Role</label><select id="mo-role"><option value="field_technician"'+(cur==='field_technician'?' selected':'')+'>Field technician</option>'
         +'<option value="supervisor"'+(cur==='supervisor'?' selected':'')+'>Supervisor</option>'
         +'<option value="owner_admin"'+(cur==='owner_admin'?' selected':'')+'>Admin</option></select></div>'
-      +'<p class="tl-d" style="margin-top:4px">'+esc(m.email)+'</p>',
+      +'<p class="tl-d" style="margin-top:4px">'+esc(m.email)+(m.email_verified?'':' · invite pending')+'</p>'
+      +(m.email_verified?'':'<div class="actions" style="margin-top:10px"><button class="btn ghost sm" id="mo-resend">Resend set-password link</button></div>'),
       [{label:'Remove from team',cls:'ghost',onClick:function(btn){
           btn.disabled=true;
           api('/service-providers/me/members/'+m.id,'DELETE').then(function(res){
@@ -600,28 +687,41 @@
             if(res.ok&&res.j.success){closeModal();renderTeam();}else{moErr((res.j&&res.j.error)||'Failed');btn.disabled=false;btn.textContent='Save';}
           });
         }}]);
+    var rs=$('mo-resend');if(rs)rs.addEventListener('click',function(){rs.disabled=true;rs.textContent='Sending…';
+      api('/service-providers/me/members/'+m.id+'/resend','POST',{}).then(function(res){
+        rs.textContent=res.ok&&res.j.success?'Sent ✓':'Failed'; if(!(res.ok&&res.j.success))moErr((res.j&&res.j.error)||'Failed to resend');});});
   }
 
   /* ── NOTIFICATIONS ── */
   function renderNotifications(){
     $('view').innerHTML=topBar('Notifications','Updates from FlowGuard',
       '<button class="btn ghost sm" id="ntf-readall">Mark all read</button>')+'<div id="nlist">'+stateBox('empty','Loading…','')+'</div>';
-    $('ntf-readall').addEventListener('click',function(){api('/notifications/read-all','PUT',{}).then(renderNotifications);});
+    $('ntf-readall').addEventListener('click',function(){api('/notifications/read-all','PUT',{}).then(function(){_notifUnread=0;setBadge();renderNotifications();});});
     api('/notifications').then(function(res){
       var el=$('nlist');
       if(!res.ok){el.innerHTML=stateBox('error',"Couldn't load notifications",(res.j&&res.j.error)||'');return;}
       var rows=(res.j&&res.j.data)||[];
+      _notifUnread=rows.filter(function(n){return !n.is_read;}).length;setBadge();
       if(!rows.length){el.innerHTML=stateBox('empty','No notifications','Job dispatches, verifications and updates from FlowGuard will show up here.');return;}
       var TC={success:'ok',error:'alert',warning:'warn',info:'info'};
       el.innerHTML='<div class="card" style="padding:0">'+rows.map(function(n){
-        return '<div style="display:flex;gap:12px;align-items:flex-start;padding:14px 18px;border-bottom:1px solid var(--line);'+(n.is_read?'':'background:var(--surface-2)')+'">'
+        return '<div class="ntf-item" data-id="'+esc(n.id)+'" data-read="'+(n.is_read?'1':'0')+'" style="display:flex;gap:12px;align-items:flex-start;padding:14px 18px;border-bottom:1px solid var(--line);cursor:'+(n.is_read?'default':'pointer')+';'+(n.is_read?'':'background:var(--surface-2)')+'">'
           +'<span class="chip '+(TC[n.type]||'neutral')+'" style="margin-top:2px"><span class="d"></span></span>'
           +'<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px">'+esc(n.title||'')+'</div>'
           +(n.message?'<div class="muted" style="font-size:13px;margin-top:2px">'+esc(n.message)+'</div>':'')
-          +'<div class="tl-d" style="margin-top:3px">'+fmtDT(n.created_at)+'</div></div></div>';
+          +'<div class="tl-d" style="margin-top:3px">'+fmtDT(n.created_at)+'</div></div>'
+          +(n.is_read?'':'<span style="width:8px;height:8px;border-radius:50%;background:var(--brand);flex-shrink:0;margin-top:6px"></span>')+'</div>';
       }).join('')+'</div>';
-      // mark all as read on view (best-effort)
-      api('/notifications/read-all','PUT',{});
+      // mark an item read when the user actually opens/clicks it
+      Array.prototype.forEach.call(el.querySelectorAll('.ntf-item'),function(it){
+        it.addEventListener('click',function(){
+          if(it.dataset.read==='1')return;
+          it.dataset.read='1';it.style.background='';it.style.cursor='default';
+          var dot=it.lastElementChild;if(dot&&dot.tagName==='SPAN'&&dot.style.borderRadius)dot.remove();
+          _notifUnread=Math.max(0,_notifUnread-1);setBadge();
+          api('/notifications/'+encodeURIComponent(it.dataset.id)+'/read','PUT',{});
+        });
+      });
     });
   }
 
@@ -666,12 +766,11 @@
       api('/service-providers/me/submit-verification','POST',{}).then(function(){STATE.org.verification_submitted_at=new Date().toISOString();renderProfile();});});
     // live counts for "At a glance"
     if(o.status==='active'){
-      Promise.all([api('/service-providers/me/members'),api('/service-providers/me/properties'),api('/jobs')]).then(function(r){
-        var mem=(r[0].ok&&r[0].j.data)||[],prp=(r[1].ok&&r[1].j.data)||[],jb=(r[2].ok&&r[2].j.data)||[];
+      Promise.all([api('/service-providers/me/members'),api('/service-providers/me/properties'),api('/jobs/stats')]).then(function(r){
+        var mem=(r[0].ok&&r[0].j.data)||[],prp=(r[1].ok&&r[1].j.data)||[],st2=(r[2].ok&&r[2].j.data)||{};
         var set=function(id,v){var e=$(id);if(e)e.textContent=v;};
         set('g-team',mem.length);set('g-props',prp.length);
-        set('g-open',jb.filter(function(j){return ['dispatched','accepted','en_route','in_progress','rejected'].indexOf(j.status)>-1;}).length);
-        set('g-verified',jb.filter(function(j){return j.status==='verified';}).length);
+        set('g-open',st2.open!=null?st2.open:0);set('g-verified',st2.verified!=null?st2.verified:0);
       });
     } else { ['g-team','g-props','g-open','g-verified'].forEach(function(id){var e=$(id);if(e)e.textContent='0';}); }
   }
@@ -723,6 +822,7 @@
       applyTheme();
       go(STATE.locked?'profile':'dashboard');
       $('app').style.visibility='visible';
+      if(!STATE.locked){ updateNotifBadge(); setInterval(updateNotifBadge,60000); }
     }).catch(function(){window.location.href='../login.html';});
   })();
 </script>
