@@ -180,6 +180,23 @@
     </div>
   </div>
 
+  <style>
+    .cp-load{position:fixed;inset:0;z-index:9999;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center}
+    .cp-load.show{display:flex}
+    .cp-load img{height:44px;margin-bottom:26px}
+    .cp-load-h{font-size:30px;font-weight:800;color:var(--ink);letter-spacing:-.01em}
+    .cp-load-p{color:var(--text-2);font-size:16px;margin-top:10px}
+    .cp-load-bar{width:min(440px,80vw);height:6px;border-radius:4px;background:#eceef0;overflow:hidden;margin-top:30px}
+    .cp-load-bar>span{display:block;height:100%;width:30%;border-radius:4px;background:var(--primary);animation:cpslide 1.1s ease-in-out infinite}
+    @keyframes cpslide{0%{margin-left:-30%}100%{margin-left:100%}}
+  </style>
+  <div class="cp-load" id="cp-load">
+    <img src="fg-logo-light.png" alt="FlowGuard">
+    <div class="cp-load-h" id="cp-load-h">Loading your dashboard…</div>
+    <div class="cp-load-p" id="cp-load-p">Preparing your properties and alerts.</div>
+    <div class="cp-load-bar"><span></span></div>
+  </div>
+
   <script>
     const pwInput=document.getElementById('password'),pwToggle=document.getElementById('pw-toggle'),eyeShow=document.getElementById('eye-show'),eyeHide=document.getElementById('eye-hide');
     pwToggle.addEventListener('click',()=>{const h=pwInput.type==='password';pwInput.type=h?'text':'password';eyeShow.style.display=h?'none':'block';eyeHide.style.display=h?'block':'none';});
@@ -196,8 +213,14 @@
         if(data.success){
           localStorage.setItem('token',data.data.token);
           localStorage.setItem('user',JSON.stringify(data.data.user));
+          const u=data.data.user;
+          // role-aware loading screen wording
+          const lh=document.getElementById('cp-load-h'), lp=document.getElementById('cp-load-p');
+          if(u.user_type==='service_provider'){ lh.textContent='Loading your provider workspace…'; lp.textContent='Preparing your jobs and assignments.'; }
+          else if(u.user_type==='internal'){ lh.textContent='Loading FlowGuard…'; lp.textContent='Taking you to the operations center.'; }
+          else { lh.textContent='Loading your dashboard…'; lp.textContent='Preparing your properties and alerts.'; }
+          document.getElementById('cp-load').classList.add('show');
           setTimeout(()=>{
-            const u=data.data.user;
             if(u.user_type==='service_provider'){
               // external providers get the local field portal (never neon)
               window.location.href='field/';
@@ -207,7 +230,7 @@
             } else {
               window.location.href='index.html';
             }
-          },800);
+          },1400);
         }else{setLoading(false);showAlert('error',data.error||'Invalid email or password. Please try again.');}
       }catch(err){console.error('Login error:',err);setLoading(false);showAlert('error','Connection failed. Please check your internet and try again.');}
     });
