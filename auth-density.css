@@ -1,0 +1,5 @@
+/* Match the approved 80% desktop view at normal browser zoom.
+   Keep mobile/tablet controls at their original readable, touch-friendly size. */
+@media (min-width: 1024px) {
+  body { zoom: .8; min-height: 125svh; }
+}

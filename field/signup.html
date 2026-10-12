@@ -1,168 +1,89 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Become a FlowGuard Service Provider</title>
+<title>Join the provider network — FlowGuard</title>
 <meta name="robots" content="noindex">
+<link rel="icon" href="../favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
-<style>
-  /* Matches the client portal design system (cyan --brand, Inter + Space Grotesk). */
-  :root{--bg:#f7fafb;--card:#fff;--surface-2:#f7fafb;--ink:#12222b;--ink-2:#4a626d;--ink-3:#6f8794;--line:#e2e9ed;--line-2:#d3dde2;--brand:#0891b2;--brand-d:#0e5b6e;--brand-soft:#e0f5fa;--red:#ef4444;--red-tint:#fdeceb;--ok:#10b981;--rs:13px;--ff:'Inter',sans-serif;--ff-d:'Space Grotesk',sans-serif;}
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:var(--ff);background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased;padding:28px 16px;min-height:100vh;display:flex;align-items:flex-start;justify-content:center}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:0 2px 4px rgba(18,34,43,.03),0 12px 32px rgba(18,34,43,.06);width:100%;max-width:520px;padding:34px 30px}
-  .eyebrow{font-family:var(--ff-d);font-size:12px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--brand)}
-  h1{font-family:var(--ff-d);font-size:26px;font-weight:700;letter-spacing:-.02em;margin:8px 0 6px}
-  .sub{color:var(--ink-2);font-size:14.5px;margin-bottom:22px}
-  .ff{margin-bottom:15px}
-  label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
-  input,select{width:100%;height:48px;font-size:15px;font-family:inherit;padding:0 14px;border:1px solid var(--line-2);border-radius:var(--rs);background:#fff;color:var(--ink)}
-  select[multiple]{height:auto;padding:8px 10px}
-  input:focus,select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 4px rgba(8,145,178,.14)}
-  .row{display:flex;gap:12px}.row .ff{flex:1}
-  .hint{font-size:11.5px;color:var(--ink-3);margin-top:5px}
-  .btn{width:100%;height:50px;border:0;border-radius:100px;background:var(--brand);color:#fff;font-size:15px;font-weight:600;font-family:var(--ff-d);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px;transition:.15s}
-  .btn:hover:not(:disabled){background:var(--brand-d)}
-  .btn:disabled{opacity:.6;cursor:not-allowed}
-  .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .msg{display:none;align-items:center;gap:8px;margin:6px 0 2px;padding:11px 13px;border-radius:10px;font-size:13px;line-height:1.4}
-  .msg.show{display:flex}
-  .msg.error{background:var(--red-tint);color:#b42318}
-  .msg.ok{background:#e6f7f1;color:#087443}
-  .msg svg{width:16px;height:16px;flex-shrink:0;animation:pop .4s cubic-bezier(.2,.9,.3,1.35) both}
-  @keyframes pop{0%{transform:scale(.4);opacity:0}55%{transform:scale(1.15);opacity:1}100%{transform:scale(1)}}
-  .consent{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--ink-2);margin:6px 0 4px}
-  .consent input{width:17px;height:17px;flex:0 0 17px;margin-top:1px;accent-color:var(--brand)}
-  .otp{display:flex;gap:8px;justify-content:space-between;margin:6px 0}
-  .otp input{text-align:center;font-size:20px;font-weight:700;padding:0}
-  .foot{margin-top:18px;font-size:13px;color:var(--ink-3);text-align:center}
-  .foot a{color:var(--brand-d);font-weight:600;text-decoration:none}
-  .step{display:none}.step.on{display:block}
-  a{color:var(--brand-d)}
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem('flowguard_theme')==='light'?'light':'dark';}catch{}</script>
+<link rel="stylesheet" href="../login.css?v=2">
+<link rel="stylesheet" href="signup.css?v=1">
+<link rel="stylesheet" href="../auth-density.css?v=1">
+<script src="signup.js?v=1" defer></script>
 </head>
 <body>
-<div class="card">
-  <div class="eyebrow">Service Provider</div>
-
-  <!-- STEP 1: details -->
-  <div class="step on" id="s1">
-    <h1>Join FlowGuard as a provider</h1>
-    <p class="sub">Register your organisation. After a quick review we'll activate your portal so you can receive jobs.</p>
-    <div class="ff"><label>Company / organisation name *</label><input id="f-company" placeholder="e.g. ABC Drainage Ltd" autocomplete="organization"></div>
-    <div class="row">
-      <div class="ff"><label>Contact person *</label><input id="f-name" placeholder="Your full name" autocomplete="name"></div>
-      <div class="ff"><label>Phone *</label><input id="f-phone" type="tel" placeholder="0803 000 0000" autocomplete="tel"></div>
-    </div>
-    <div class="ff"><label>Work email *</label><input id="f-email" type="email" placeholder="you@company.com" autocomplete="email"></div>
-    <div class="ff"><label>Service coverage area *</label><input id="f-coverage" placeholder="e.g. Lekki, Ajah, Victoria Island"><div class="hint">Where do you operate? (LGAs / areas)</div></div>
-    <div class="ff"><label>Services offered *</label>
-      <select id="f-services" multiple size="6">
-        <option>Inspection</option><option>Drain cleaning</option><option>Blockage response</option>
-        <option>Device installation</option><option>Device maintenance</option><option>Emergency response</option>
-      </select><div class="hint">Hold Ctrl/Cmd to select multiple.</div>
-    </div>
-    <div class="ff"><label>Create password *</label><input id="f-pass" type="password" placeholder="Min. 8 characters, incl. a number" autocomplete="new-password"></div>
-    <label class="consent"><input type="checkbox" id="f-consent"><span>I agree to FlowGuard's <a href="https://flowguardsolutions.com.ng/terms.html" target="_blank" rel="noopener">Terms</a> and <a href="https://flowguardsolutions.com.ng/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
-    <div class="msg error" id="m1"></div>
-    <button class="btn" id="b1">Continue</button>
-    <div class="foot">Already a provider? <a href="../login.html">Sign in</a></div>
-  </div>
-
-  <!-- STEP 2: verify email -->
-  <div class="step" id="s2">
-    <h1>Verify your email</h1>
-    <p class="sub">Enter the 6-digit code we sent to <b id="v-email"></b>.</p>
-    <div class="otp">
-      <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
-      <input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric">
-    </div>
-    <div class="msg error" id="m2"></div>
-    <button class="btn" id="b2">Verify &amp; create account</button>
-    <div class="foot"><a id="resend">Resend code</a></div>
-  </div>
-
-  <!-- STEP 3: done -->
-  <div class="step" id="s3">
-    <h1>Application received 🎉</h1>
-    <p class="sub">Thanks — your organisation is <b>under review</b>. We'll email you when it's approved. You can sign in now to complete your profile.</p>
-    <button class="btn" id="b3">Go to my portal</button>
-  </div>
+<header class="util-bar">
+<a class="util-logo" href="../login.html" aria-label="FlowGuard sign in"><img class="logo-light" src="../fg-logo-light.png" alt=""><img class="logo-dark" src="../fg-logo-dark.png" alt=""><span>FlowGuard</span></a>
+<div class="util-right"><button class="theme-switch" type="button" id="provider-theme" aria-label="Switch to light mode"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg><span id="provider-theme-label">Light mode</span></button><span>Already a provider?</span><a class="ghost-btn" href="../login.html">Sign in →</a></div>
+</header>
+<main class="provider-shell">
+<aside class="provider-story" aria-labelledby="provider-story-title">
+<div class="badge-label">FlowGuard provider network</div>
+<h2 id="provider-story-title">Your expertise.<br>Stronger communities.</h2>
+<p>Help property owners keep their drainage working. Apply to join our network of inspection, cleaning and maintenance providers.</p>
+<div class="estate-visual"><img src="../assets/guide-normal-device-v1.png" alt="An estate with drainage monitoring by a FlowGuard device" width="1280" height="1280"><span class="protection-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 8 3v6c0 5-8 11-8 11S4 16 4 11V5z"/><path d="m8 11 3 3 5-5"/></svg></span></div>
+<ol class="journey">
+<li><span class="journey-number">1</span><div><strong>Tell us about your team</strong>Your services and the areas you cover.</div></li>
+<li><span class="journey-number">2</span><div><strong>Verify your email</strong>Confirm your address with a six-digit code.</div></li>
+<li><span class="journey-number">3</span><div><strong>We review your application</strong>We’ll email you when your organisation is approved.</div></li>
+</ol>
+</aside>
+<section class="provider-card" aria-label="Provider application">
+<ol class="application-progress" aria-label="Application progress"><li id="progress-s1" aria-current="step"><span>1</span>Your details</li><li id="progress-s2"><span>2</span>Verify email</li><li id="progress-s3"><span>3</span>Submitted</li></ol>
+<div class="step on" id="s1">
+<h1 tabindex="-1">Join our provider network</h1>
+<p class="sub">Tell us about your organisation. Your application will be reviewed before your team can receive jobs.</p>
+<p class="required-note">All fields are required. Choose at least one service.</p>
+<form id="provider-details" novalidate>
+<h2 class="section-title">Organisation &amp; contact</h2>
+<div class="ff"><label for="f-company">Company / organisation name</label><input id="f-company" name="company" type="text" placeholder="e.g. ABC Drainage Ltd" autocomplete="organization" required></div>
+<div class="row"><div class="ff"><label for="f-name">Contact person</label><input id="f-name" name="name" type="text" placeholder="Your full name" autocomplete="name" required></div><div class="ff"><label for="f-phone">Phone number</label><input id="f-phone" name="phone" type="tel" placeholder="0803 000 0000" autocomplete="tel" required></div></div>
+<div class="ff"><label for="f-email">Work email</label><input id="f-email" name="email" type="email" placeholder="you@company.com" autocomplete="email" required></div>
+<h2 class="section-title">Where you work &amp; what you do</h2>
+<div class="ff"><label for="f-coverage">Service coverage area</label><input id="f-coverage" name="coverage" type="text" placeholder="e.g. Lekki, Ajah, Victoria Island" autocomplete="off" required aria-describedby="coverage-hint"><p class="hint" id="coverage-hint">Add the areas or LGAs where your team operates.</p></div>
+<fieldset id="f-services" aria-describedby="services-hint"><legend>Services offered</legend><p class="hint" id="services-hint">Select all that apply.</p><div class="service-options"><label class="service-option" for="service-0"><input id="service-0" type="checkbox" name="services" value="Inspection"><span>Inspection</span></label>
+<label class="service-option" for="service-1"><input id="service-1" type="checkbox" name="services" value="Drain cleaning"><span>Drain cleaning</span></label>
+<label class="service-option" for="service-2"><input id="service-2" type="checkbox" name="services" value="Blockage response"><span>Blockage response</span></label>
+<label class="service-option" for="service-3"><input id="service-3" type="checkbox" name="services" value="Device installation"><span>Device installation</span></label>
+<label class="service-option" for="service-4"><input id="service-4" type="checkbox" name="services" value="Device maintenance"><span>Device maintenance</span></label>
+<label class="service-option" for="service-5"><input id="service-5" type="checkbox" name="services" value="Emergency response"><span>Emergency response</span></label></div></fieldset>
+<h2 class="section-title">Your account</h2>
+<div class="ff"><label for="f-pass">Create password</label><div class="password-wrap"><input id="f-pass" name="password" type="password" autocomplete="new-password" placeholder="Create a password" required minlength="8" aria-describedby="password-hint"><button type="button" class="password-toggle" id="password-toggle" aria-controls="f-pass" aria-label="Show password" aria-pressed="false">Show</button></div><p class="hint" id="password-hint">At least 8 characters, including a number.</p></div>
+<label class="consent" for="f-consent"><input type="checkbox" id="f-consent" required><span>I agree to FlowGuard’s <a href="https://flowguardsolutions.com.ng/terms.html" target="_blank" rel="noopener">Terms</a> and <a href="https://flowguardsolutions.com.ng/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
+<div class="msg error" id="m1" role="alert" aria-live="assertive"></div>
+<button class="btn-primary" type="submit" id="b1">Continue to email verification →</button>
+</form>
+<p class="foot">Already have an account? <a href="../login.html">Sign in →</a></p>
 </div>
-
-<script>
-  var API='https://api.flowguard.ng/api/v1';
-  var S={email:'',token:'',verifyToken:''};
-  var $=function(id){return document.getElementById(id);};
-  function msg(id,txt,type){var e=$(id);e.className='msg '+(type||'error')+' show';e.innerHTML=(type==='ok'?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>')+'<span></span>';e.querySelector('span').textContent=txt;}
-  function clr(id){$(id).className='msg';}
-  function show(step){['s1','s2','s3'].forEach(function(s){$(s).classList.toggle('on',s===step);});window.scrollTo(0,0);}
-  function load(btn,on,label){btn.disabled=on;btn.innerHTML=on?'<span class="spinner"></span>'+(label||'Working…'):label;}
-
-  $('b1').addEventListener('click',async function(){
-    clr('m1');
-    var company=$('f-company').value.trim(),name=$('f-name').value.trim(),email=$('f-email').value.trim().toLowerCase(),
-        phone=$('f-phone').value.trim(),coverage=$('f-coverage').value.trim(),pass=$('f-pass').value,
-        services=Array.from($('f-services').selectedOptions).map(function(o){return o.value;});
-    if(company.length<2) return msg('m1','Enter your company name.');
-    if(name.length<2) return msg('m1','Enter a contact person.');
-    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return msg('m1','Enter a valid work email.');
-    if(phone.replace(/\D/g,'').length<7) return msg('m1','Enter a valid phone number.');
-    if(!coverage) return msg('m1','Enter your coverage area.');
-    if(!services.length) return msg('m1','Select at least one service.');
-    if(pass.length<8||!/\d/.test(pass)) return msg('m1','Password needs 8+ characters and a number.');
-    if(!$('f-consent').checked) return msg('m1','Please accept the Terms and Privacy Policy.');
-    S={email:email,company:company,name:name,phone:phone,coverage:coverage,services:services,pass:pass};
-    load($('b1'),true,'Continue');
-    try{
-      var r=await fetch(API+'/auth/send-email-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})});
-      var d=await r.json();
-      if(!d.success) { load($('b1'),false,'Continue'); return msg('m1',d.error||'Could not send a code.'); }
-      S.token=d.data.token; $('v-email').textContent=email; show('s2');
-    }catch(_){ msg('m1','Connection failed. Try again.'); }
-    load($('b1'),false,'Continue');
-  });
-
-  var otp=Array.from(document.querySelectorAll('.otp input'));
-  otp.forEach(function(b,i){
-    b.addEventListener('input',function(){b.value=b.value.replace(/\D/g,'').slice(0,1);if(b.value&&otp[i+1])otp[i+1].focus();});
-    b.addEventListener('keydown',function(e){if(e.key==='Backspace'&&!b.value&&otp[i-1])otp[i-1].focus();});
-    b.addEventListener('paste',function(e){e.preventDefault();var ds=(e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,6).split('');ds.forEach(function(x,j){if(otp[j])otp[j].value=x;});(otp[Math.min(ds.length,6)-1]||b).focus();});
-  });
-
-  $('b2').addEventListener('click',async function(){
-    clr('m2');
-    var code=otp.map(function(b){return b.value.trim();}).join('');
-    if(code.length!==6) return msg('m2','Enter the full 6-digit code.');
-    load($('b2'),true,'Verify & create account');
-    try{
-      var v=await fetch(API+'/auth/verify-email-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:S.token,code:code})});
-      var vd=await v.json();
-      if(!vd.success){ load($('b2'),false,'Verify & create account'); return msg('m2',vd.error||'That code is incorrect.'); }
-      S.verifyToken=vd.data.verifyToken;
-      var r=await fetch(API+'/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-        accountType:'service_provider', company:S.company, fullName:S.name, contactPerson:S.name,
-        email:S.email, phone:S.phone, coverageArea:S.coverage, serviceTypes:S.services,
-        password:S.pass, emailVerifyToken:S.verifyToken
-      })});
-      var d=await r.json();
-      if(!d.success){ load($('b2'),false,'Verify & create account'); return msg('m2',d.error||'Could not create your account.'); }
-      try{ localStorage.setItem('token',d.data.token); localStorage.setItem('user',JSON.stringify(d.data.user)); }catch(_){}
-      show('s3');
-    }catch(_){ msg('m2','Connection failed. Try again.'); }
-    load($('b2'),false,'Verify & create account');
-  });
-
-  $('resend').addEventListener('click',async function(){
-    clr('m2');
-    try{ var r=await fetch(API+'/auth/send-email-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:S.email})}); var d=await r.json(); if(d.success){S.token=d.data.token;msg('m2','A new code has been sent.','ok');} }catch(_){}
-  });
-
-  $('b3').addEventListener('click',function(){ window.location.href='./'; });
-</script>
+<div class="step" id="s2">
+<h1 tabindex="-1">Check your email</h1>
+<p class="sub">Enter the six-digit code sent to <strong id="v-email"></strong>. Check your spam folder if you can’t find it.</p>
+<form id="provider-verification" novalidate>
+<div class="otp" role="group" aria-label="Six-digit email verification code">
+<input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Code digit 1" autocomplete="one-time-code" required>
+<input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Code digit 2" autocomplete="off" required>
+<input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Code digit 3" autocomplete="off" required>
+<input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Code digit 4" autocomplete="off" required>
+<input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Code digit 5" autocomplete="off" required>
+<input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" aria-label="Code digit 6" autocomplete="off" required>
+</div>
+<div class="msg error" id="m2" role="status" aria-live="polite"></div>
+<button class="btn-primary" type="submit" id="b2">Verify &amp; submit application</button>
+</form>
+<div class="verify-actions"><button class="ghost-btn" id="edit-details" type="button">← Edit details</button><button class="text-action" type="button" id="resend">Resend code</button></div>
+</div>
+<div class="step" id="s3">
+<div class="success-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 8 3v6c0 5-8 11-8 11S4 16 4 11V5z"/><path d="m8 11 3 3 5-5"/></svg></div>
+<h1 tabindex="-1">Application received.</h1>
+<p class="sub">Thanks for applying. Your organisation is now under review. We’ll email you when it’s approved.</p>
+<div class="review-note"><strong>What happens next?</strong>You can open your provider workspace and complete your profile. Receiving jobs depends on approval.</div>
+<button class="btn-primary" type="button" id="b3">Open provider workspace →</button>
+</div>
+</section>
+</main>
 </body>
 </html>

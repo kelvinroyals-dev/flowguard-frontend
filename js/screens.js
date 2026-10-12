@@ -8,7 +8,7 @@ const Screens = (function () {
   const icons = {
     check: '<path d="M20 6L9 17l-5-5"/>',
     warn: '<path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/>',
-    bell: '<path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>',
+    bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M10 20a2 2 0 0 0 4 0M12 2V1" stroke-linecap="round"/>',
     sensor: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
     doc: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/>',
     drop: '<path d="M12 2.7s6 6.3 6 10.3a6 6 0 01-12 0c0-4 6-10.3 6-10.3z"/>',
@@ -16,27 +16,23 @@ const Screens = (function () {
   };
 
   function demoBanner() {
+    if(window.PortalPreview)return '';
     if (!Demo.isOn()) return '';
     return `<div class="demo-banner">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
       <span><b>Demo mode</b> — showing sample data to explore the portal.</span>
-      <button onclick="App.toggleDemo(false)">Turn off</button>
+      ${window.PortalPreview ? '<span>Local review</span>' : '<button onclick="App.toggleDemo(false)">Turn off</button>'}
     </div>`;
   }
 
   // ---------------- OVERVIEW (adaptive home) ----------------
-  function greeting() {
-    const h = new Date().getHours();
-    return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  }
-
   // ---- property scope: cache, selector control, filter ----
   let _propsCache = null, _propsCacheAt = 0;
   async function getMyProperties() {
     if (Demo.isOn()) return Demo.data.properties;
     if (_propsCache && Date.now() - _propsCacheAt < 60e3) return _propsCache;
     try { const r = await apiRequest('/properties'); _propsCache = (r && r.data) || []; _propsCacheAt = Date.now(); }
-    catch (_) { _propsCache = _propsCache || []; }
+    catch (e) { throw new Error('Properties unavailable: '+e.message); }
     return _propsCache;
   }
   // resolve the active property to a real one (no all-estates view)
@@ -54,24 +50,18 @@ const Screens = (function () {
   }
   // filter any collection to the active property (matches id or name fields)
   function scopeToProperty(items, props) {
-    const cur = resolveActive(props);
-    if (!cur || !items) return items || [];
-    const sel = (props || []).find(p => p.property_id === cur);
-    const name = sel ? sel.property_name : null;
-    const match = it => it.property_id === cur
-      || (name && (it.property_name === name || it.property === name || it.site_name === name));
-    // if nothing in this collection is property-linked at all, don't filter (backend gap: e.g. sensors)
-    const linkable = items.some(it => it.property_id || it.property_name || it.property || it.site_name);
-    return linkable ? items.filter(match) : items;
+    return PortalModel.scope(items,props,resolveActive(props));
   }
 
   // ---- Property health score: weighted blend of data we already have ----
   // drainage condition (latest report, 50%) + sensor network (30%) + open alerts (20%)
   function computeHealth(reports, risk, alerts) {
-    const latest = (reports || []).find(r => r.drainage_condition_score != null);
+    if (!Array.isArray(alerts) || !risk?.has_data || !risk?.sensors_total || !risk.sensors_online) return null;
+    const latest = (reports || []).slice().sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).find(r => r.drainage_condition_score != null);
     const rep = latest ? Number(latest.drainage_condition_score) : null;
+    if(rep==null)return null;
     const sens = (risk && risk.sensors_total) ? Math.round((risk.sensors_online / risk.sensors_total) * 100) : null;
-    const openAlerts = (alerts || []).filter(a => a.status === 'active').length;
+    const openAlerts = (alerts || []).filter(a=>PortalModel.active(a)&&!['info','informational'].includes(a.severity||a.type)).length;
     const alertScore = Math.max(0, 100 - openAlerts * 12);
     const parts = [];
     if (rep != null) parts.push([rep, .5]);
@@ -88,53 +78,8 @@ const Screens = (function () {
     };
   }
 
-  // ---- Weather context: Open-Meteo (free, no key). Lekki fallback coords. ----
-  async function renderWeather(props) {
-    const el = document.getElementById('ov-weather');
-    if (!el) return;
-    let days, current = null;
-    if (Demo.isOn()) {
-      const d = i => new Date(Date.now() + i * 864e5).toISOString().slice(0, 10);
-      days = [
-        { date: d(0), mm: 0.4, prob: 20 },
-        { date: d(1), mm: 5.8, prob: 70 },   // matches the "light rain tomorrow" alert in the demo story
-        { date: d(2), mm: 1.2, prob: 30 },
-        { date: d(3), mm: 0, prob: 10 },
-        { date: d(4), mm: 0, prob: 5 },
-      ];
-      const hr = new Date().getHours();
-      current = { code: 2, isDay: hr >= 6 && hr < 19 ? 1 : 0 };
-    } else {
-      const p = (props || []).find(x => x.latitude && x.longitude);
-      const lat = p ? p.latitude : 6.4478, lon = p ? p.longitude : 3.5476;
-      try {
-        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum,precipitation_probability_max&current=weather_code,is_day&timezone=Africa%2FLagos&forecast_days=5`);
-        const j = await r.json();
-        days = j.daily.time.map((t, i) => ({ date: t, mm: j.daily.precipitation_sum[i] || 0, prob: j.daily.precipitation_probability_max[i] || 0 }));
-        if (j.current) current = { code: j.current.weather_code, isDay: j.current.is_day };
-      } catch (_) { el.innerHTML = ''; return; }
-    }
-    const worst = days.reduce((a, b) => (b.mm > a.mm ? b : a), days[0]);
-    const dayName = t => {
-      const diff = Math.round((new Date(t) - new Date(new Date().toISOString().slice(0, 10))) / 864e5);
-      return diff <= 0 ? 'today' : diff === 1 ? 'tomorrow' : new Date(t).toLocaleDateString('en-GB', { weekday: 'long' });
-    };
-    let kind, msg;
-    if (worst.mm >= 20) { kind = 'alert'; msg = `<b>Heavy rain expected ${dayName(worst.date)}</b> — est. ${Math.round(worst.mm)}mm (${worst.prob}% chance). Your drainage network is monitored and the team is on standby.`; }
-    else if (worst.mm >= 5) { kind = 'warn'; msg = `<b>Rain expected ${dayName(worst.date)}</b> — est. ${Math.round(worst.mm)}mm (${worst.prob}% chance). Drainage is clear and monitoring is active.`; }
-    else { kind = 'ok'; msg = `<b>No significant rain</b> expected over the next 5 days.`; }
-    const wIcon = current
-      ? weatherGlyph(current.code, 40, current.isDay ? 1 : 0)
-      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16.2A4.5 4.5 0 0017.5 8h-1.8A7 7 0 104 14.9"/><path d="M8 19v2M12 20v2M16 19v2"/></svg>`;
-    el.innerHTML = `
-      <div class="weather-strip ${kind}">
-        ${wIcon}
-        <span>${msg}</span>
-      </div>`;
-  }
-
   // ---- Seasonal readiness (Lagos: rains Apr–Jul, second peak Sep–Oct) ----
-  function renderSeasonal() {
+  function renderSeasonal(document=window.document) {
     const el = document.getElementById('ov-season');
     if (!el) return;
     const m = new Date().getMonth() + 1; // 1-12
@@ -144,7 +89,7 @@ const Screens = (function () {
       body = 'Lagos rains typically intensify next month. A pre-season inspection catches silt buildup and blockages before they become flooding.';
     } else if ((m >= 4 && m <= 7) || m === 9 || m === 10) {
       title = 'Rainy season readiness';
-      body = 'Peak rainfall period is here. Your network is monitored 24/7 — if you\'ve noticed slow drainage or pooling anywhere, flag it early.';
+      body = 'Peak rainfall period is here. Check monitoring coverage. If you\'ve noticed slow drainage or pooling, request an inspection.';
     }
     if (!title) { el.innerHTML = ''; return; }
     el.innerHTML = `
@@ -153,35 +98,14 @@ const Screens = (function () {
           <b>${title}</b>
           <p>${body}</p>
         </div>
-        <button class="btn sm" style="flex-shrink:0" onclick="App.openTicket('general','Pre-rain readiness inspection request','normal')">Book readiness check</button>
+        <button class="btn sm" style="flex-shrink:0" onclick="App.openTicket('general','Pre-rain readiness inspection request','normal')">Request readiness check</button>
       </div>`;
   }
 
   // ---- Outcomes: the value narrative (what FlowGuard has done for this property) ----
   function outcomesBlock(o, p) {
-    if (!o) return '';
-    const stat = (v, l) => `<div class="oc-stat"><b>${v}</b><span>${l}</span></div>`;
-    return `
-      <div class="panel panel-pad mb-20">
-        <div class="row-between mb-10">
-          <h3 style="margin:0">Protection outcomes</h3>
-          <span class="muted" style="font-size:12px">Protected since ${UI.fmtDate(o.protected_since || p.created_at)}</span>
-        </div>
-        <div class="oc-grid">
-          <div class="oc-hero">
-            <b>${o.days_since_flood != null ? o.days_since_flood : '—'}</b>
-            <span>days flood-free</span>
-            <small class="muted">${o.flood_free_basis === 'last_incident' ? 'since the last incident' : 'since monitoring began'}</small>
-          </div>
-          <div class="oc-stats">
-            ${stat(o.clearings || 0, 'silt clearings')}
-            ${stat(o.dispatches || 0, 'dispatches')}
-            ${stat(o.incidents_prevented || 0, 'incidents prevented')}
-            ${stat(o.refills || 0, 'enzyme refills')}
-            ${stat(o.maintenance_visits || 0, 'maintenance visits')}
-          </div>
-        </div>
-      </div>`;
+    if(!o?.records?.length)return '';
+    return '<section class="panel panel-pad"><h3>Recorded provider activity</h3><p>Provider-reported work; not evidence of incidents prevented.</p>'+o.records.map(r=>'<p><a href="#service-request/'+encodeURIComponent(r.service_request_id)+'">'+UI.esc(r.label)+'</a> · '+UI.fmtDate(r.occurred_at)+'</p>').join('')+'</section>';
   }
 
   // ---- Health trend: 90-day score history with bands + event markers ----
@@ -197,11 +121,11 @@ const Screens = (function () {
     const y = v => padT + (1 - (v - min) / (max - min)) * (h - padT - padB);
     const path = vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
     // threshold bands: Good ≥75, Fair 50–75, Poor <50
-    const band = (top, bot, c, lbl) => `<rect x="${padL}" y="${y(top)}" width="${w - padL - padR}" height="${(y(Math.max(bot, min)) - y(top)).toFixed(1)}" fill="${c}" fill-opacity=".05"/><text x="${w - padR + 6}" y="${y((top + Math.max(bot, min)) / 2) + 3}" fill="${c}" font-size="10">${lbl}</text>`;
+    const band = (top, bot, c, lbl) => `<rect x="${padL}" y="${y(top)}" width="${w - padL - padR}" height="${(y(Math.max(bot, min)) - y(top)).toFixed(1)}" fill="${c}" fill-opacity="0"/><text x="${w - padR + 6}" y="${y((top + Math.max(bot, min)) / 2) + 3}" fill="${c}" font-size="10">${lbl}</text>`;
     const bands = band(100, 75, 'var(--ok)', 'Good') + band(75, 50, 'var(--warn)', 'Fair') + (min < 50 ? band(50, min, 'var(--alert)', 'Poor') : '');
     // y gridlines
     const grid = [50, 75].filter(g => g > min).map(g => `<line x1="${padL}" y1="${y(g)}" x2="${w - padR}" y2="${y(g)}" stroke="var(--line)" stroke-width="1" stroke-dasharray="2 3"/><text x="${padL - 5}" y="${y(g) + 3}" fill="var(--ink-3)" font-size="10" text-anchor="end">${g}</text>`).join('');
-    // event markers (silt clearings, dispatches, refills) pinned to their dates
+    // event markers (recorded provider work) pinned to their dates
     let markers = '';
     (events || []).forEach(ev => {
       const evDate = new Date(ev.occurred_at || ev.date).toISOString().slice(0, 10);
@@ -218,12 +142,12 @@ const Screens = (function () {
     return `
       <div class="panel panel-pad mb-20">
         <div class="row-between mb-10">
-          <h3 style="margin:0">Health trend</h3>
+          <h3 style="margin:0">Site status history</h3>
           <span style="font-weight:600;font-size:13px;color:${delta >= 0 ? 'var(--ok)' : 'var(--alert)'}">${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)} pts · 90 days</span>
         </div>
-        <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto" role="img" aria-label="Drainage health trend">
+        <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto" role="img" aria-label="Combined site status history">
           ${bands}${grid}
-          <path d="${path} L${x(vals.length - 1).toFixed(1)},${y(min)} L${x(0).toFixed(1)},${y(min)} Z" fill="${color}" fill-opacity=".08"/>
+          <path d="${path} L${x(vals.length - 1).toFixed(1)},${y(min)} L${x(0).toFixed(1)},${y(min)} Z" fill="${color}" fill-opacity="0"/>
           <path d="${path}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
           ${markers}
           <circle cx="${x(vals.length - 1)}" cy="${y(last)}" r="4.5" fill="${color}" stroke="var(--surface)" stroke-width="2"/>
@@ -232,69 +156,44 @@ const Screens = (function () {
           <text x="${w - padR}" y="${h - 6}" fill="var(--ink-3)" font-size="10" text-anchor="end">${endLbl}</text>
         </svg>
         <div class="row-between" style="margin-top:4px">
-          <span class="muted" style="font-size:12px">Markers show completed work — clearings, dispatches, refills.</span>
+          <span class="muted" style="font-size:12px">${events?.length?'Markers identify recorded events, not proven causes of score changes.':'No linked work events supplied.'}</span>
           <b style="font-size:13px;color:${color}">Now: ${last}/100</b>
         </div>
       </div>`;
   }
 
-  // ---- Lagos flood-prone zone context (from FlowGuard's verified zone list) ----
-  const FLOOD_ZONES = [
-    ['lekki', 'Lekki', 'high'], ['ajah', 'Ajah', 'high'], ['victoria island', 'Victoria Island', 'high'],
-    ['ikoyi', 'Ikoyi', 'moderate'], ['agungi', 'Agungi', 'high'], ['osapa', 'Osapa London', 'high'],
-    ['ikota', 'Ikota', 'high'], ['chevron', 'Chevron Drive', 'high'], ['dolphin', 'Dolphin Estate', 'high'],
-    ['surulere', 'Surulere', 'moderate'], ['gbagada', 'Gbagada', 'moderate'], ['ketu', 'Ketu', 'high'],
-    ['mile 12', 'Mile 12', 'high'], ['agiliti', 'Agiliti', 'high'], ['ajegunle', 'Ajegunle', 'high'],
-    ['isolo', 'Isolo', 'moderate'], ['okota', 'Okota', 'moderate'], ['amuwo', 'Amuwo-Odofin', 'high'],
-    ['festac', 'Festac Town', 'moderate']
-  ];
   function zoneContextBlock(p) {
-    const hay = `${p.city || ''} ${p.address_line1 || ''} ${p.property_name || ''}`.toLowerCase();
-    const zone = FLOOD_ZONES.find(z => hay.includes(z[0]));
-    if (!zone) return '';
-    const high = zone[2] === 'high';
-    return `
-      <div class="panel panel-pad mb-20">
-        <div class="row-between mb-10">
-          <h3 style="margin:0">Flood zone context</h3>
-          ${UI.chip(high ? 'alert' : 'warn', (high ? 'High' : 'Moderate') + '-risk zone')}
-        </div>
-        <p style="font-size:14px;color:var(--ink-2);line-height:1.6;margin:0">
-          ${UI.esc(zone[1])} is one of Lagos's ${high ? 'highest' : 'recognised'}-risk flood corridors.
-          Your estate's drainage is actively managed and monitored — most surrounding properties in this zone are not.
-          Managed drainage significantly reduces flood exposure during peak rainfall.
-        </p>
-      </div>`;
+    if(!p.zone_context?.source||!p.zone_context?.assessed_at)return '';
+    return '<section class="panel panel-pad"><h3>Regional flood context</h3><p>'+UI.esc(p.zone_context.summary)+'</p><p class="muted">'+UI.esc(p.zone_context.source)+' · '+UI.fmtDate(p.zone_context.assessed_at)+'</p></section>';
   }
 
   async function overview(view) {
+    const document=UI.scopedDocument(view);
     const allProps = await getMyProperties();
-    const user = Auth.getUser() || {};
-    const name = (user.fullName || user.full_name || '').split(' ')[0] || 'there';
     view.innerHTML = `
-      <div class="top">
-        <div class="greeting"><h1>${greeting()}, ${UI.esc(name)}</h1><div class="sub"><span id="ov-date">${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span> · <span id="ov-sub">Here's the latest on your drainage network.</span></div></div>
-        <div class="top-actions">
-          <button class="icon-btn" aria-label="Notifications" onclick="App.go('notifications')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons.bell}</svg><span class="badge" id="nav-notif-badge" style="display:none">0</span></button>
-          ${App.can('manage_properties') ? '<button class="btn" onclick="App.openRegister()">+ Add property</button>' : ''}
-        </div>
-      </div>
+      <div class="top" hidden></div>
       ${demoBanner()}
-      <div id="ov-journey"></div>
-      <div id="ov-kpis"></div>
-      <div id="ov-season"></div>
+      <section class="property-heading"><div><span class="home-eyebrow">YOUR PROPERTY, AT A GLANCE</span><h2 id="ov-property-name">Your property</h2></div><a class="portal-text-link" href="#support">Talk to us →</a></section>
+      <div class="home-focus"><div id="ov-kpis"></div></div>
+      <div id="ov-attention"></div>
+      <div id="ov-journey" hidden></div>
+      <div id="ov-season" hidden></div>
       <div class="ov-cols">
-        <div class="minw0">
-          <div class="section-t">Live monitoring <a onclick="App.go('monitoring')" class="clickable">View all →</a></div>
+        <details class="overview-conditions minw0">
+          <summary class="home-details-title"><span>Want to see the readings?<small>Water levels, device updates and technical details</small></span><span class="details-action">Show readings +</span></summary>
           <div id="ov-mon">${UI.loading(2)}</div>
-          <div class="section-t">Your FlowGuard services</div>
+        </details>
+        <div class="home-main-stack">
+        <section class="overview-services">
+          <div class="section-t"><span>Your requests<small>See what is happening, without chasing updates.</small></span><a class="portal-text-link" href="#services">All requests →</a></div>
           <div id="ov-services" class="grid-3"></div>
-          <div id="ov-bottom"></div>
+        </section>
+        <div id="ov-bottom"></div>
         </div>
-        <aside class="ov-side">
+        <div class="home-side-stack">
           <div id="ov-weather"></div>
           <div id="ov-activity"></div>
-        </aside>
+        </div>
       </div>`;
 
     // Gather data (real or demo)
@@ -303,11 +202,11 @@ const Screens = (function () {
       props = Demo.data.properties; risk = Demo.data.floodRisk; sensors = Demo.data.sensors;
       alerts = Demo.data.alerts; reports = Demo.data.reports;
     } else {
-      try { const r = await apiRequest('/properties'); props = (r && r.data) || []; } catch (_) { props = []; }
-      try { const r = await apiRequest('/monitoring/flood-risk'); risk = r && r.data; } catch (_) { risk = null; }
-      try { const r = await apiRequest('/monitoring/sensors'); sensors = (r && r.data) || []; } catch (_) { sensors = []; }
-      try { const r = await apiRequest('/alerts'); alerts = (r && r.data) || []; } catch (_) { alerts = []; }
-      try { const r = await apiRequest('/field-reports?limit=5'); reports = (r && r.data) || []; } catch (_) { reports = []; }
+      try { const r = await apiRequest('/properties'); props = (r && r.data) || []; } catch(e) { throw new Error('Property data unavailable: '+e.message); }
+      try { const r = await apiRequest('/monitoring/flood-risk?property_id='+encodeURIComponent(resolveActive(allProps))); risk = r && r.data; } catch (_) { risk = null; }
+      try { const r = await apiRequest('/monitoring/sensors'); sensors = (r && r.data) || []; } catch(e) { throw new Error('Sensors unavailable: '+e.message); }
+      try { const r = await apiRequest('/alerts'); alerts = (r && r.data) || []; } catch(e) { throw new Error('Alerts unavailable: '+e.message); }
+      try { const r = await apiRequest('/field-reports?limit=5'); reports = (r && r.data) || []; } catch(e) { throw new Error('Reports unavailable: '+e.message); }
       try { const r = await apiRequest('/audit-logs/mine?limit=30'); notifs = (r && r.data) || []; } catch (_) { notifs = []; }
     }
 
@@ -316,56 +215,60 @@ const Screens = (function () {
     sensors = scopeToProperty(sensors, allProps);
     alerts = scopeToProperty(alerts, allProps);
     reports = scopeToProperty(reports, allProps);
+    risk = PortalModel.riskFor(risk,sensors,resolveActive(allProps));
 
     // ---- Journey hero (adapts to where the customer is) ----
-    renderJourney(props);
+    document.getElementById('ov-property-name').textContent=props[0]?.property_name||props[0]?.name||'Your property';
+    if(!['active','monitoring_active'].includes(props[0]?.status)){document.getElementById('ov-journey').hidden=false;renderJourney(props,document);}
 
     // ---- KPI row (denser, like the old board) ----
-    const activeCount = (props || []).filter(p => ['active', 'monitoring_active'].includes(p.status)).length;
-    const pendingCount = (props || []).filter(p => ['submitted', 'inspection_scheduled', 'inspection_ongoing'].includes(p.status)).length;
-    const alertCount = (alerts || []).length;
-    document.getElementById('ov-kpis').innerHTML = `<div class="kpi-row">
-      ${kpiCard('Areas monitored', activeCount, activeCount ? 'Live' : 'None yet', '<path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>')}
-      ${kpiCard('In progress', pendingCount, pendingCount ? 'Being set up' : 'None', '<path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0114.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0020.5 15"/>')}
-      ${kpiCard('Sensors online', risk && risk.has_data ? `${risk.sensors_online}/${risk.sensors_total}` : (risk && risk.sensors_total ? `0/${risk.sensors_total}` : '—'), 'Reporting', '<path d="M2 8.8a15 15 0 0120 0M5 12.3a10 10 0 0114 0M8.5 15.8a5 5 0 017 0"/><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none"/>')}
-      ${kpiCard('Active alerts', alertCount, alertCount ? 'Need attention' : 'All clear', '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>')}
+    const alertCount = (alerts || []).filter(a=>PortalModel.active(a)&&!['info','informational'].includes(a.severity||a.type)).length;
+    const hasRisk=risk?.has_data&&risk.risk_index!=null&&Number.isFinite(Number(risk.risk_index));
+    const estateScore=hasRisk?Math.max(0,Math.min(100,Number(risk.risk_index))):null;
+    const urgentSensor=PortalModel.prioritySensors(sensors).find(s=>PortalModel.waterState(s)==='high');
+    document.getElementById('ov-kpis').innerHTML = `<div class="estate-summary">
+      <section class="estate-risk" data-level="${UI.esc(risk?.level||'unknown')}" aria-label="Estate risk score"><div><h3>Estate risk score</h3><div class="estate-score" style="--risk-fill:${estateScore||0}%"><strong>${hasRisk?estateScore:'—'}</strong><span>/100</span><b>${hasRisk?risk.level==='high'?'High risk':risk.level==='moderate'?'Moderate risk':'Low risk':'Awaiting readings'}</b></div><div class="estate-meter" aria-hidden="true"><i style="width:${estateScore||0}%"></i></div></div>${urgentSensor?`<a class="btn risk-priority" href="#sensor/${encodeURIComponent(urgentSensor.sensor_id||urgentSensor.id)}">High water needs a check →</a>`:''}<details class="score-help"><summary>What does this mean?</summary><p>Combines the available readings for this estate. Higher means more concern. It is not a percentage chance of flooding. Always check individual high-water alerts.</p></details></section>
+      <section class="summary-metric"><span class="summary-label">Devices reporting</span><strong>${risk?.sensors_total?`${risk.sensors_online}/${risk.sensors_total}`:'—'}</strong><span>${risk?.sensors_total?'Sending monitoring updates':'No devices connected yet'}</span><a class="btn" href="#monitoring">View devices →</a></section>
+      <section class="summary-metric" data-tone="${alertCount?'attention':'normal'}"><span class="summary-label">Needs attention</span><strong>${alertCount}</strong><span>${alertCount?'Open alerts to review':'No open alerts recorded'}</span><a class="btn" href="#alerts">View alerts →</a></section>
     </div>`;
+    const offline=sensors.filter(s=>s.status==='offline');
+    const highWater=sensors.filter(s=>PortalModel.waterState(s)==='high');
+    document.getElementById('ov-attention').innerHTML=(highWater.length?`<div class="attention-notice water-alert" role="status"><strong>High water · review now</strong><p>${highWater.map(s=>`<a href="#sensor/${encodeURIComponent(s.sensor_id||s.id)}">${UI.esc(s.name||s.sensor_id)} · ${PortalModel.levelText(s)} ↗</a>`).join(' · ')} — at or above the 70% alert level. View the device to see what needs attention and request help.</p></div>`:'')+(offline.length?`<div class="attention-notice"><strong>Coverage interrupted</strong><p>${offline.map(s=>`<a href="#sensor/${encodeURIComponent(s.sensor_id||s.id)}">${UI.esc(s.name||s.sensor_id)} ↗</a>`).join(' · ')} — no current reading. This is a device-coverage issue, not a water-level measurement.</p></div>`:'');
 
-    renderSeasonal();
+    renderSeasonal(document);
 
     // ---- Property health score (computed from data already loaded) ----
     const health = computeHealth(reports, risk, alerts);
-    let healthDelta = null;
+    let healthDelta = null, healthPeriod = '', healthLatestScore = null;
     try {
       const cur = resolveActive(allProps);
       let hist = [];
-      if (Demo.isOn()) hist = Demo.data.healthHistory || [];
+      if (Demo.isOn()) hist = Demo.data.healthHistory.filter(x=>x.property_id===cur);
       else if (cur) { const rh = await apiRequest(`/properties/${cur}/health-history?days=30`); hist = (rh && rh.data) || []; }
-      if (hist.length >= 2) healthDelta = Number(hist[hist.length - 1].score) - Number(hist[0].score);
+      const dated=hist.filter(h=>h.score!=null&&Number.isFinite(Number(h.score))&&Number.isFinite(Date.parse(h.recorded_at))).sort((a,b)=>Date.parse(a.recorded_at)-Date.parse(b.recorded_at));
+      if (dated.length >= 2) {
+        healthLatestScore=Number(dated.at(-1).score);
+        healthDelta = Number(dated.at(-1).score) - Number(dated[0].score);
+        healthPeriod=UI.fmtDate(dated[0].recorded_at)+'–'+UI.fmtDate(dated.at(-1).recorded_at);
+      }
     } catch (_) {}
-    renderForecastWidget(allProps, health); // 14-day risk calendar (async, fills #ov-weather)
+    renderForecastWidget(allProps, health,document); // 14-day risk calendar (async, fills #ov-weather)
 
     // ---- Monitoring section (gauge + sensors together) ----
     const mon = document.getElementById('ov-mon');
     if (risk && risk.has_data) {
-      document.getElementById('ov-sub').textContent = `${risk.sensors_online}/${risk.sensors_total} sensors online · updated just now`;
-      const msg = risk.level === 'low' ? "Everything's flowing normally"
-        : risk.level === 'moderate' ? 'Levels slightly elevated — watching closely' : 'Elevated flood risk — team responding';
-      const shown = (sensors || []);
-      const moreCard = '';
+      const msg = risk.level === 'low' ? "Current readings below the alert threshold"
+        : risk.level === 'moderate' ? 'Review current levels and alerts' : 'Elevated risk index — review recommended';
+      const shown = PortalModel.prioritySensors(sensors).slice(0,4);
       mon.innerHTML = `
         <div class="mon-wrap">
-          ${UI.gauge(risk.risk_index, risk.level)}
           <div class="minw0">
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">
-              <h3 style="font-family:var(--ff-d);font-size:18px;font-weight:600;margin:0">${msg}</h3>
-              ${health ? `<span class="health-chip ${health.kind}" title="Drainage ${health.rep != null ? health.rep : '—'} · Sensors ${health.sens != null ? health.sens + '%' : '—'} · ${health.openAlerts} open alert${health.openAlerts === 1 ? '' : 's'}">Estate health ${health.score}/100 · ${health.label}${healthDelta != null ? ` <span style="color:${healthDelta >= 0 ? 'var(--ok)' : 'var(--alert)'}">${healthDelta >= 0 ? '▲' : '▼'}${Math.abs(healthDelta)}</span>` : ''}</span>` : ''}
+              <h3 style="font-family:var(--ff-d);font-size:18px;font-weight:600;margin:0">Latest sensor readings</h3>
+              ${health ? `<span class="health-chip ${health.kind}" title="Drainage ${health.rep != null ? health.rep : '—'} · Sensors ${health.sens != null ? health.sens + '%' : '—'} · ${health.openAlerts} open alerts">Site status index ${health.score}/100 · ${health.label}</span>${healthDelta!=null&&healthLatestScore===health.score?`<small class="health-comparison">${healthDelta>=0?'+':''}${healthDelta} points · ${UI.esc(healthPeriod)}</small>`:''}` : ''}
             </div>
-            <p style="color:var(--ink-2);font-size:14px;margin-bottom:16px;max-width:440px">Peak level today ${risk.peak_level}% · ${risk.sensors_online} of ${risk.sensors_total} sensors reporting. We'll alert you the moment anything changes.</p>
-            <div class="sensor-carousel">
-              ${shown.map(UI.sensorCard).join('')}
-            </div>
-            <div class="carousel-hint">Scroll for more →</div>
+            <p class="conditions-note">High water first, then interrupted coverage. Alert threshold: 70%.</p>
+            <div class="overview-readings">${shown.map(s=>`<a class="reading-row" data-water-state="${PortalModel.waterState(s)}" href="#sensor/${encodeURIComponent(s.sensor_id||s.id)}"><span><strong>${UI.esc(s.name||s.sensor_id)}</strong><small class="reading-state">${s.status==='offline'?'Offline · no current reading':PortalModel.waterState(s)==='high'?'High water level':PortalModel.waterState(s)==='unavailable'?'Reading unavailable':PortalModel.waterState(s)==='elevated'?'Raised water · below alert threshold':'Low water · below alert threshold'}</small><small>${s.status==='offline'?'Last seen ':'Observed '}${s.last_ping?UI.esc(UI.fmtRelative(s.last_ping)):'time unavailable'}</small></span><b>${PortalModel.levelText(s)}</b><span class="row-open">View →</span></a>`).join('')}</div><a class="btn" href="#monitoring">View all ${sensors.length} devices →</a>
           </div>
         </div>`;
     } else {
@@ -379,26 +282,26 @@ const Screens = (function () {
       </div>`;
     }
 
-    // ---- Services: the 3 FlowGuard layers ----
-    let services;
-    if (Demo.isOn()) services = Demo.data.services;
-    else services = deriveServices(props, risk);
-    document.getElementById('ov-services').innerHTML = services.map(serviceCard).join('');
 
+    let requestResult;try{requestResult=await apiRequest('/service-requests');}catch(_){requestResult=null;}
+    const requests=scopeToProperty(requestResult?.data||[],allProps);
+    const serviceSlot=document.getElementById('ov-services');
+    serviceSlot.className='';
+    const currentRequests=[...requests].sort((a,b)=>Number(['completed','verified','cancelled','declined'].includes(a.work_order_status||a.status))-Number(['completed','verified','cancelled','declined'].includes(b.work_order_status||b.status))||Date.parse(b.created_at)-Date.parse(a.created_at));
+    serviceSlot.innerHTML=!requestResult?'<p>Service requests could not be loaded.</p><a class="btn" href="#services">Try again in Services →</a>':requests.length?currentRequests.slice(0,3).map(ClientServices.progressCard).join(''):'<div class="service-empty"><h3>No requests yet</h3><p>Need a drain inspection or device check?</p><a class="btn" href="#services">Explore services →</a></div>';
     // ---- Bottom: recent activity + reports ----
     document.getElementById('ov-activity').innerHTML = `
       <div class="panel panel-pad">
         <div class="row-between" style="margin-bottom:12px">
-          <h3 style="margin:0">Activity stream</h3>
-          <a onclick="App.go('notifications')" class="clickable" style="color:var(--brand);font-size:13px;font-weight:500">All →</a>
+            <h3 style="margin:0">Updates for you</h3><a class="portal-text-link" href="#alerts">All alerts →</a>
         </div>
-        ${(() => { const ev = buildActivity(notifs, alerts); return ev.length ? ev.slice(0, 6).map(activityEvent).join('') : `<p class="muted">No recent activity yet — dispatches, inspections, node health, and account events will appear here.</p>`; })()}
+        ${(() => { const ev = buildActivity(notifs, alerts); return ev.length ? ev.slice(0, 3).map(activityEvent).join('') : `<p class="muted">No updates yet. We will show your property updates here.</p>`; })()}
       </div>`;
     document.getElementById('ov-bottom').innerHTML = `
       <div class="panel panel-pad">
         <div class="row-between" style="margin-bottom:14px">
           <h3 style="margin:0">Reports &amp; documents</h3>
-          <a onclick="App.go('reports')" class="clickable" style="color:var(--brand);font-size:13px;font-weight:500">All →</a>
+          <a href="#reports" class="portal-text-link">All reports →</a>
         </div>
         ${reports && reports.length ? reports.slice(0, 3).map(docRow).join('')
           : `<p class="muted">No reports yet. Inspection reports and documents FlowGuard sends you will appear here.</p>`}
@@ -432,30 +335,32 @@ const Screens = (function () {
           type: classifyEvent(a.action),
           title: `${a.actor_name || 'System'} ${a.action}`,
           sub: objName, ts: a.created_at,
-          when: a.created_at ? UI.fmtRelative(a.created_at) : (a.when || '')
+          when: a.created_at ? UI.fmtRelative(a.created_at) : (a.when || ''), href:a.link&&a.link.startsWith('#')?a.link:null
         });
       } else {
         ev.push(a); // demo entries come pre-shaped
       }
     });
     // alert-fired events belong in the stream too (the alert itself lives on the Alerts screen)
-    (alerts || []).filter(a => a.status === 'active').forEach(a => ev.push({
-      type: classifyEvent((a.title || '') + ' ' + (a.description || '')),
+    (alerts || []).filter(PortalModel.active).forEach(a => ev.push({
+      type: 'alert', severity:a.severity||a.type,
       title: `Alert fired: ${a.title}`, sub: a.description, ts: a.created_at,
-      when: a.created_at || ''
+      when: a.created_at ? UI.fmtRelative(a.created_at) : 'Time unavailable', href:(a.id||a.alert_id)?'#alert/'+encodeURIComponent(a.id||a.alert_id):null
     }));
-    // sort by timestamp when we have real ones; demo arrays arrive pre-ordered
+    // Both preview and server events use real timestamps, newest first.
     if (ev.some(e => e.ts && !isNaN(Date.parse(e.ts)))) {
       ev.sort((x, y) => (Date.parse(y.ts) || 0) - (Date.parse(x.ts) || 0));
     }
     return ev;
   }
   function activityEvent(e) {
-    const ic = icons[ACT_ICON[e.type] || 'bell'] || icons.bell;
-    return `<div class="evt ${e.type === 'battery' || e.type === 'offline' || e.type === 'alert' ? 'warn' : 'ok'}">
+    const critical=['critical','high','emergency'].includes(e.severity);
+    const attention=['battery','offline'].includes(e.type) || critical;
+    const ic = icons[e.type==='alert'&&!critical?'bell':ACT_ICON[e.type] || 'bell'] || icons.bell;
+    return `<div class="evt ${attention ? 'attention' : 'neutral-event'}" data-severity="${UI.esc(e.severity||'info')}">
       <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${ic}</svg></div>
-      <div style="flex:1"><b>${UI.esc(e.title)}</b>${e.sub ? `<small>${UI.esc(e.sub)}</small>` : ''}</div>
-      <div class="muted" style="white-space:nowrap;font-size:12px">${UI.esc(e.when)}</div>
+      <div class="event-copy"><b>${UI.esc(e.title.replace(/^Alert fired: /,''))}</b>${e.sub ? `<small>${UI.esc(e.sub)}</small>` : ''}<span class="event-time muted">${UI.esc(e.when)}</span></div>
+      ${e.href?`<a class="btn neutral compact-action activity-open" href="${UI.esc(e.href)}">View ${e.type==='alert'?'alert':'update'} →</a>`:''}
     </div>`;
   }
 
@@ -483,24 +388,21 @@ const Screens = (function () {
       { key: 'sentinel', name: 'Sentinel Network', desc: 'IoT drainage monitoring', icon: 'sensor',
         status: sensorsReporting ? 'active' : 'pending',
         detail: sensorsReporting ? `${risk.sensors_online} sensors online` : (risk && risk.sensors_total ? `${risk.sensors_total} sensors registered` : 'Not yet installed') },
-      { key: 'biotreatment', name: 'Bio-Treatment', desc: 'Biological drainage prevention', icon: 'drop',
+      { key: 'dispatch', name: 'Provider services', desc: 'Drain inspections, cleaning and repairs', icon: 'truck',
         status: hasActive ? 'active' : 'pending',
-        detail: hasActive ? 'Included in your plan' : 'Begins after activation' },
-      { key: 'dispatch', name: 'Heavy-Plant Dispatch', desc: 'Clearing & maintenance crews', icon: 'truck',
-        status: hasActive ? 'active' : 'pending',
-        detail: hasActive ? 'On-call for your property' : 'Available after activation' }
+        detail: 'Request a provider; attendance needs confirmation' }
     ];
   }
 
-  function kpiCard(label, value, sub, icon) {
-    return `<div class="kpi-c">
+  function kpiCard(label, value, sub, icon, tone='unknown') {
+    return `<div class="kpi-c" data-tone="${UI.esc(tone)}">
       <div class="kpi-top"><span class="kl">${UI.esc(label)}</span><span class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icon}</svg></span></div>
       <div class="kn">${value}</div><div class="ks">${UI.esc(sub)}</div>
     </div>`;
   }
 
   // Journey hero: reads the furthest-along property and shows a stage-appropriate message
-  function renderJourney(props) {
+  function renderJourney(props,document=window.document) {
     const el = document.getElementById('ov-journey');
     if (!props || !props.length) {
       el.innerHTML = `<div class="journey stage-pending">
@@ -514,17 +416,17 @@ const Screens = (function () {
     const order = ['submitted', 'inspection_scheduled', 'inspection_ongoing', 'report_ready', 'quote_sent', 'payment_pending', 'payment_completed', 'deployment_scheduled', 'active', 'monitoring_active'];
     const p = [...props].sort((a, b) => order.indexOf(b.status) - order.indexOf(a.status))[0];
     const map = {
-      submitted: { s: 'progress', b: 'Property submitted', t: `We've received ${p.property_name || 'your property'} and will schedule an inspection soon.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
-      inspection_scheduled: { s: 'progress', b: 'Inspection scheduled', t: p.inspection_date ? `Our team will assess ${p.property_name || 'your property'} on ${UI.fmtDate(p.inspection_date)}.` : `Our team will assess ${p.property_name || 'your property'} shortly — we'll confirm the date soon.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
-      inspection_ongoing: { s: 'progress', b: 'Inspection underway', t: `Our team is assessing ${p.property_name || 'your property'} right now.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
-      awaiting_approval: { s: 'progress', b: 'Awaiting approval', t: `The inspection of ${p.property_name || 'your property'} is complete — your report is being reviewed and will be available shortly.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
+      submitted: { s: 'progress', b: 'Property submitted', t: `We've received ${p.property_name || 'your property'} and will schedule an inspection soon.`, cta: 'View details', act: `App.openProperty('${UI.jsq(p.property_id)}')` },
+      inspection_scheduled: { s: 'progress', b: 'Inspection scheduled', t: p.inspection_date ? `Recorded inspection date: ${UI.fmtDate(p.inspection_date)}. Review your property details for updates.` : `${p.property_name || 'Your property'} is marked for inspection. No confirmed appointment date is supplied.`, cta: 'View details', act: `App.openProperty('${UI.jsq(p.property_id)}')` },
+      inspection_ongoing: { s: 'progress', b: 'Inspection underway', t: `Your provider is assessing ${p.property_name || 'your property'} right now.`, cta: 'View details', act: `App.openProperty('${UI.jsq(p.property_id)}')` },
+      awaiting_approval: { s: 'progress', b: 'Awaiting approval', t: `The inspection of ${p.property_name || 'your property'} is complete — your report is being reviewed and will be available shortly.`, cta: 'View details', act: `App.openProperty('${UI.jsq(p.property_id)}')` },
       report_ready: { s: 'active', b: 'Your report is ready', t: 'Your inspection report is approved and available to download.', cta: 'View report', act: `App.go('reports')` },
       quote_sent: { s: 'active', b: 'Quote ready', t: `Your service quote for ${p.property_name || 'your property'} is ready to review and accept.`, cta: 'View billing', act: `App.go('billing')` },
       payment_pending: { s: 'progress', b: 'Payment pending', t: 'Complete payment to activate monitoring for your property.', cta: 'View billing', act: `App.go('billing')` },
-      payment_completed: { s: 'active', b: 'Payment confirmed', t: 'Thank you — we\'re scheduling the installation of your Sentinel devices.', cta: 'View details', act: `App.openProperty('${p.property_id}')` },
-      deployment_scheduled: { s: 'progress', b: 'Deployment scheduled', t: `Your Sentinel devices are scheduled for installation at ${p.property_name || 'your property'}.`, cta: 'View details', act: `App.openProperty('${p.property_id}')` },
-      active: { s: 'active', b: 'Monitoring active', t: `${p.property_name || 'Your property'} is being monitored 24/7. Everything's handled.`, cta: 'View monitoring', act: `App.go('monitoring')` },
-      monitoring_active: { s: 'active', b: 'Monitoring active', t: `${p.property_name || 'Your property'} is being monitored 24/7. Everything's handled.`, cta: 'View monitoring', act: `App.go('monitoring')` },
+      payment_completed: { s: 'active', b: 'Payment confirmed', t: 'Thank you — we\'re scheduling the installation of your Sentinel devices.', cta: 'View details', act: `App.openProperty('${UI.jsq(p.property_id)}')` },
+      deployment_scheduled: { s: 'progress', b: 'Deployment scheduled', t: `Your Sentinel devices are scheduled for installation at ${p.property_name || 'your property'}.`, cta: 'View details', act: `App.openProperty('${UI.jsq(p.property_id)}')` },
+      active: { s: 'active', b: 'Monitoring active', t: `${p.property_name || 'Your property'} is configured for monitoring. Check sensor availability and active alerts.`, cta: 'View monitoring', act: `App.go('monitoring')` },
+      monitoring_active: { s: 'active', b: 'Monitoring active', t: `${p.property_name || 'Your property'} is configured for monitoring. Check sensor availability and active alerts.`, cta: 'View monitoring', act: `App.go('monitoring')` },
       suspended: { s: 'progress', b: 'Monitoring paused', t: `Monitoring for ${p.property_name || 'your property'} is currently paused. Contact us if this is unexpected.`, cta: 'Contact support', act: `App.go('support')` },
       cancelled: { s: 'progress', b: 'Service cancelled', t: `Service for ${p.property_name || 'this property'} has been cancelled.`, cta: 'Contact support', act: `App.go('support')` }
     };
@@ -548,7 +450,7 @@ const Screens = (function () {
     return `<div class="doc">
       <div class="dic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></div>
       <div class="dmain"><b>${UI.esc(r.title || r.report_type || 'Inspection report')}</b><small>${UI.esc(r.property_name || '')} · ${UI.fmtDate(r.created_at || r.sent_at)}</small></div>
-      <div class="dl"><a onclick="App.go('reports')" class="clickable">View</a></div>
+      <div class="dl"><a class="btn" href="#report/${encodeURIComponent(r.report_id||r.id)}" aria-label="View report: ${UI.esc(r.title||r.report_type||'Inspection report')}">View report →</a></div>
     </div>`;
   }
 
@@ -589,7 +491,7 @@ const Screens = (function () {
       return order.map((st, i) => ({
         status: i < curIdx ? 'done' : i === curIdx ? 'now' : 'pending',
         title: labels[st].title, sub: labels[st].sub,
-        when: i <= curIdx ? UI.fmtDate(p.created_at) : 'Upcoming'
+        when: i===0?UI.fmtDate(p.created_at):'Date not recorded'
       }));
     } catch (_) { return []; }
   }
@@ -599,72 +501,62 @@ const Screens = (function () {
   let _monSensors = [], _monHist = { series: [], log: [] };
 
   async function monitoring(view) {
+    const document=UI.scopedDocument(view);
     const allProps = await getMyProperties();
     view.innerHTML = `
-      <div class="top"><div><h1>Monitoring</h1><div class="sub">Live readings, trends, and history across your sensors</div></div>
-      <div style="display:flex;gap:10px;align-items:center"><button class="btn ghost" onclick="App.go('overview')">← Overview</button></div></div>
+      <div class="top"><div><h1>Water &amp; devices</h1><div class="sub">See where water is building up and which devices need a check.</div></div>
+      </div>
       ${demoBanner()}
-      <div id="mon-refill"></div>
+      <div class="detail-tabs" role="tablist" aria-label="Monitoring views"><button id="mon-tab-devices" role="tab" aria-selected="true" aria-controls="mon-devices">Devices</button><button id="mon-tab-trends" role="tab" aria-selected="false" aria-controls="mon-trends" tabindex="-1">Monitoring trends</button><button id="mon-tab-history" role="tab" aria-selected="false" aria-controls="mon-history" tabindex="-1">Reading history</button></div><section id="mon-devices" role="tabpanel" aria-labelledby="mon-tab-devices"><div id="mon-notices"></div>
       <div class="mon-controls">
         <div class="search-box">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-          <input id="mon-search" placeholder="Search sensors…" value="${UI.esc(_monSearch)}" oninput="App.monSearch(this.value)">
+          <input id="mon-search" placeholder="Search devices…" value="${UI.esc(_monSearch)}" oninput="App.monSearch(this.value)">
         </div>
         <div class="seg" id="mon-filters"></div>
       </div>
-      <div id="mon-grid">${UI.loading(1)}</div>
-      <div class="section-t" style="margin-top:26px">Network trend
-        <span class="seg">
-          <button class="${_monMetric === 'level' ? 'on' : ''}" onclick="App.monMetric('level')">Water level</button>
-          <button class="${_monMetric === 'flow' ? 'on' : ''}" onclick="App.monMetric('flow')">Flow rate</button>
-        </span>
-      </div>
-      <div class="panel panel-pad" id="mon-chart">${UI.loading(2)}</div>
-      <div class="section-t" style="margin-top:26px">Reading history</div>
-      <div class="panel panel-pad" id="mon-log"></div>`;
+      <div id="mon-grid">${UI.loading(1)}</div></section><section id="mon-trends" role="tabpanel" aria-labelledby="mon-tab-trends" hidden>
+      <div class="section-t" style="margin-top:26px">Monitoring trends</div>
+      <div id="mon-chart">${UI.loading(2)}</div>
+      </section><section id="mon-history" role="tabpanel" aria-labelledby="mon-tab-history" hidden><div class="section-t" style="margin-top:26px">Reading history</div>
+      <div class="panel panel-pad" id="mon-log"></div></section>`;
+    const monitorTabs=[...view.querySelectorAll('[role="tab"]')];
+    const activateTab=tab=>{monitorTabs.forEach(t=>{const selected=t===tab;t.setAttribute("aria-selected",String(selected));t.tabIndex=selected?0:-1;view.querySelector("#"+t.getAttribute("aria-controls")).hidden=!selected;});};
+    monitorTabs.forEach((tab,i)=>{tab.addEventListener("click",()=>activateTab(tab));tab.addEventListener("keydown",e=>{if(!["ArrowLeft","ArrowRight","Home","End"].includes(e.key))return;e.preventDefault();const next=e.key==="Home"?0:e.key==="End"?monitorTabs.length-1:(i+(e.key==="ArrowRight"?1:-1)+monitorTabs.length)%monitorTabs.length;activateTab(monitorTabs[next]);monitorTabs[next].focus();});});
 
     const _scopeProps = await getMyProperties();
-    if (Demo.isOn()) { _monSensors = scopeToProperty(Demo.data.sensors, _scopeProps); _monHist = Demo.data.history; }
+    if (Demo.isOn()) { _monSensors = scopeToProperty(Demo.data.sensors, _scopeProps); _monHist = PortalModel.history(_monSensors); }
     else {
-      try { const r = await apiRequest('/monitoring/sensors'); _monSensors = scopeToProperty((r && r.data) || [], _scopeProps); } catch (_) { _monSensors = []; }
-      try { const r = await apiRequest('/monitoring/history?hours=24'); _monHist = (r && r.data) || { series: [], log: [] }; } catch (_) { _monHist = { series: [], log: [] }; }
+      try { const r = await apiRequest('/monitoring/sensors'); _monSensors = scopeToProperty((r && r.data) || [], _scopeProps); } catch(e) { throw new Error('Sensors unavailable: '+e.message); }
+      try { const r = await apiRequest('/monitoring/history?hours=24&property_id='+encodeURIComponent(resolveActive(_scopeProps))); _monHist = r?.data?.property_id===resolveActive(_scopeProps) ? r.data : {series:[],log:[],has_data:false}; } catch(e) { throw new Error('History unavailable: '+e.message); }
     }
 
-    // Action banners: offline nodes and bio-enzyme refills — each with a
+    // Action banners: offline devices — each with a
     // pre-filled "Request support" CTA.
-    const q = str => String(str == null ? '' : str).replace(/['"\\\n]/g, ' ').replace(/\s+/g, ' ').trim();
+    const q = UI.jsq;
     let banners = '';
+    const highNodes=_monSensors.filter(s=>PortalModel.waterState(s)==='high');
+    if(highNodes.length)banners+=`<div class="attention-notice water-alert" role="status"><strong>High water · review now</strong><p>${highNodes.map(s=>`<a href="#sensor/${encodeURIComponent(s.sensor_id)}">${UI.esc(s.name||s.sensor_id)} · ${PortalModel.levelText(s)} ↗</a>`).join(' · ')} — at or above the 70% alert level. View the device to see what needs attention and request help.</p></div>`;
     const offlineNodes = _monSensors.filter(s => s.status === 'offline');
     if (offlineNodes.length) {
       const names = offlineNodes.map(s => s.name || s.sensor_id).join(', ');
-      banners += `<div class="refill-banner">
+      banners += `<div class="device-notice">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
-        <div><b>${offlineNodes.length} sensor${offlineNodes.length === 1 ? '' : 's'} offline</b>
-        <span>${UI.esc(names)} — not reporting. Request a field visit to restore monitoring.</span></div>
-        <button class="btn" onclick="App.openTicket('sensor','${q('Offline sensors: ' + names)}','high','${q('These sensors are offline and not reporting: ' + names + '. Please arrange a field visit to restore monitoring.')}')">Request support</button>
+        <div><b>${offlineNodes.length} device${offlineNodes.length === 1 ? '' : 's'} offline</b>
+        <span>${UI.esc(names)} · no current reading.</span></div>
+        ${App.can('manage_properties')?`<button class="btn" data-service-property="${UI.esc(resolveActive(_scopeProps))}" data-service-title="${UI.esc('Check offline device'+(offlineNodes.length>1?'s':'')+': '+names)}" data-service-type="sensor_maintenance" ${offlineNodes.length===1?`data-source-id="${UI.esc(offlineNodes[0].sensor_id||offlineNodes[0].id)}"`:''}>Request a device check</button>`:'<span class="hint">Ask your account administrator to request a device check.</span>'}
       </div>`;
     }
-    const needsRefill = _monSensors.filter(s => s.enzyme && ['due_replacement', 'depleted', 'low'].includes(s.enzyme.status));
-    if (needsRefill.length) {
-      const names = needsRefill.map(s => s.name || s.sensor_id).join(', ');
-      banners += `<div class="refill-banner">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.7s6 6.3 6 10.3a6 6 0 01-12 0c0-4 6-10.3 6-10.3z"/></svg>
-        <div><b>${needsRefill.length} bio-enzyme ${needsRefill.length === 1 ? 'unit needs' : 'units need'} refilling</b>
-        <span>${UI.esc(names)} — schedule a Heavy-Plant Dispatch refill.</span></div>
-        <button class="btn" onclick="App.openTicket('dispatch','${q('Bio-enzyme refill: ' + names)}','normal','${q('Please schedule a bio-enzyme cartridge refill for: ' + names + '.')}')">Request refill</button>
-      </div>`;
-    }
-    document.getElementById('mon-refill').innerHTML = banners;
+    document.getElementById('mon-notices').innerHTML = banners;
 
     // filter chips (counts)
     const zones = [...new Set(_monSensors.map(s => s.zone).filter(Boolean))];
-    const bioCount = _monSensors.filter(s => s.device_variant === 'bio_dispenser').length;
-    const offCount = _monSensors.filter(s => s.status !== 'active').length;
+    const offCount = _monSensors.filter(s => s.status === 'offline').length;
     document.getElementById('mon-filters').innerHTML = [
       ['all', `All (${_monSensors.length})`],
-      ['bio', `Bio-dispensers (${bioCount})`],
+      ['attention', `Needs a check (${_monSensors.filter(s => PortalModel.attentionRank(s)>=200).length})`],
       ['offline', `Offline (${offCount})`]
-    ].map(([k, l]) => `<button class="${_monFilter === k ? 'on' : ''}" onclick="App.monFilter('${k}')">${l}</button>`).join('');
+    ].map(([k, l]) => `<button class="${_monFilter === k ? 'on' : ''}" aria-pressed="${_monFilter===k}" onclick="App.monFilter('${k}')">${l}</button>`).join('');
 
     renderMonGrid();
     renderMonChart();
@@ -675,27 +567,37 @@ const Screens = (function () {
     const grid = document.getElementById('mon-grid');
     if (!grid) return;
     let list = _monSensors;
-    if (_monFilter === 'bio') list = list.filter(s => s.device_variant === 'bio_dispenser');
-    if (_monFilter === 'offline') list = list.filter(s => s.status !== 'active');
+    if (_monFilter === 'attention') list = list.filter(s => PortalModel.attentionRank(s)>=200);
+    if (_monFilter === 'offline') list = list.filter(s => s.status === 'offline');
     if (_monSearch) { const q = _monSearch.toLowerCase(); list = list.filter(s => (s.name || s.sensor_id || '').toLowerCase().includes(q) || (s.zone || '').toLowerCase().includes(q)); }
     if (!_monSensors.length) { grid.className = ''; grid.innerHTML = UI.state('awaiting', 'No sensor data yet', 'Live readings appear here once your sensors are online.', Demo.isOn() ? null : 'Explore with demo data', 'onclick="App.toggleDemo(true)"'); return; }
     if (!list.length) { grid.innerHTML = `<div style="color:var(--ink-3);font-size:13px;padding:20px 0">No sensors match your search.</div>`; return; }
-    grid.innerHTML = `<div class="sensors">${list.map(UI.sensorCard).join('')}</div>`;
+    grid.innerHTML = `<div class="sensor-directory"><div class="sensor-directory-head" aria-hidden="true"><span>Device / location</span><span>Water level</span><span>Condition / last report</span><span></span></div>${PortalModel.prioritySensors(list).map(UI.sensorRow).join('')}</div>`;
   }
 
   function renderMonChart() {
     const ch = document.getElementById('mon-chart');
     if (!ch) return;
     if (_monHist.series && _monHist.series.length > 1) {
-      const isFlow = _monMetric === 'flow';
-      ch.innerHTML = `${UI.lineChart(_monHist.series, { metric: _monMetric, threshold: _monMetric === 'flow' ? null : { v: 70, label: 'Alert' } })}
-        <div style="display:flex;gap:18px;margin-top:10px;font-size:12px;color:var(--ink-3)">
-          <span><span style="display:inline-block;width:14px;height:3px;background:var(--brand);vertical-align:middle;margin-right:5px"></span>${isFlow ? 'Flow rate (L/s)' : 'Average level'}</span>
-          ${isFlow ? '' : '<span><span style="display:inline-block;width:14px;height:0;border-top:2px dashed var(--warn);vertical-align:middle;margin-right:5px"></span>Peak level</span>'}
-        </div>`;
+      ch.innerHTML = metricCharts(_monHist.series,true);
     } else {
       ch.innerHTML = `<div class="muted">Trend charts appear here once sensors have recorded a few hours of readings.</div>`;
     }
+  }
+
+  function metricCharts(series,aggregate=false){
+    const metrics=[
+      {key:'avg',label:'Water level',unit:'%',threshold:{v:70,label:'Alert'}},
+      {key:'flow',metric:'flow',label:'Flow rate',unit:' L/s'},
+      {key:'silt',label:'Silt level',unit:'%'},
+      {key:'temperature',label:'Temperature',unit:'°C'},
+      {key:'battery',label:'Battery',unit:'%'},
+      {key:'signal',label:'Signal strength',unit:'%'}
+    ];
+    return '<div class="metric-chart-grid">'+metrics.map(m=>{
+      const available=(series||[]).filter(p=>p[m.key]!=null&&Number.isFinite(Number(p[m.key]))).length>=2;
+      return '<section class="panel metric-chart" data-chart-metric="'+m.key+'"><h3>'+m.label+'</h3><p class="chart-description">'+(aggregate?'Network average · ':'')+m.unit.trim()+' · selected time range</p>'+(available?UI.lineChart(series,{...m,compact:true,aggregate}):'<div class="metric-chart-empty"><strong>—</strong><span>Not enough recorded history</span><small>We won’t estimate a trend from a single reading.</small></div>')+'</section>';
+    }).join('')+'</div>';
   }
 
   function renderMonLog() {
@@ -721,24 +623,25 @@ const Screens = (function () {
   function monSearch(v) { _monSearch = v; renderMonGrid(); }
   function monFilter(f) {
     _monFilter = f;
-    document.querySelectorAll('#mon-filters .chip').forEach((c, i) => {
-      const keys = ['all', 'bio', 'offline'];
-      c.classList.toggle('ok', keys[i] === f);
+    document.querySelectorAll('#mon-filters button').forEach((c, i) => {
+      const keys = ['all', 'attention', 'offline'];
+      c.classList.toggle('on', keys[i] === f);c.setAttribute('aria-pressed',String(keys[i]===f));
     });
     renderMonGrid();
   }
   function monMetric(m) {
     _monMetric = m;
-    document.querySelectorAll('.section-t .chip').forEach(c => {
-      c.classList.toggle('ok', c.textContent.toLowerCase().includes(m === 'level' ? 'water' : 'flow'));
+    document.querySelectorAll('#mon-trends .section-t button').forEach(c => {
+      const selected=c.textContent.toLowerCase().includes(m === 'level' ? 'water' : 'flow');c.classList.toggle('on', selected);c.setAttribute('aria-pressed',String(selected));
     });
     renderMonChart();
   }
 
   // ---------------- PROPERTIES (richer cards, clickable → detail) ----------------
   async function properties(view) {
+    const document=UI.scopedDocument(view);
     view.innerHTML = `
-      <div class="top"><div><h1>My properties</h1><div class="sub">Areas you've registered for monitoring</div></div>
+      <div class="top"><div><h1>My properties</h1><div class="sub">Account-wide portfolio · all your registered properties</div></div>
       ${App.can('manage_properties') ? '<button class="btn" onclick="App.openRegister()">+ Add property</button>' : ''}</div>
       ${demoBanner()}
       <div id="prop-portfolio"></div>
@@ -747,8 +650,8 @@ const Screens = (function () {
     if (Demo.isOn()) { props = Demo.data.properties; reports = Demo.data.reports; alerts = Demo.data.alerts; }
     else {
       try { const r = await apiRequest('/properties'); props = (r && r.data) || []; } catch (_) { props = null; }
-      try { const r = await apiRequest('/field-reports?limit=100'); reports = (r && r.data) || []; } catch (_) { reports = []; }
-      try { const r = await apiRequest('/alerts'); alerts = (r && r.data) || []; } catch (_) { alerts = []; }
+      try { const r = await apiRequest('/field-reports?limit=100'); reports = (r && r.data) || []; } catch(e) { throw new Error('Reports unavailable: '+e.message); }
+      try { const r = await apiRequest('/alerts'); alerts = (r && r.data) || []; } catch(e) { throw new Error('Alerts unavailable: '+e.message); }
     }
     const el = document.getElementById('prop-list');
 
@@ -775,15 +678,15 @@ const Screens = (function () {
         }).length;
         document.getElementById('prop-portfolio').innerHTML = `<div class="kpi-row mb-20">
           ${kpiCard('Portfolio', props.length, `${live} live · ${setup} in setup`, icons.check)}
-          ${kpiCard('Avg drainage score', avg != null ? avg + '/100' : '—', avg != null ? (avg >= 70 ? 'Healthy' : avg >= 50 ? 'Fair' : 'Needs work') : 'No reports yet', icons.sensor)}
-          ${kpiCard('Need attention', atRisk, atRisk ? 'High urgency or low score' : 'All clear', icons.warn)}
-          ${kpiCard('Monthly spend', spend ? UI.fmtNaira(spend) : '—', spend ? 'Across portfolio' : 'No active billing', icons.bell)}
+          ${kpiCard('Avg drainage score', avg != null ? avg + '/100' : '—', `${scored.length} of ${props.length} properties have a reported score`, icons.sensor)}
+          ${kpiCard('Flagged properties', atRisk, 'High urgency or score below 50 · not a setup count', icons.warn)}
+          ${kpiCard('Monthly fees', spend ? UI.fmtNaira(spend) : '—', 'Recorded fees across the portfolio', '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/>')}
         </div>`;
       }
       el.innerHTML = `
         <div class="card tbl-wrap">
           <table class="tbl">
-            <thead><tr><th>Property</th><th>Location</th><th>Type</th><th>Score</th><th>Status</th><th>Monthly fee</th><th></th></tr></thead>
+            <thead><tr><th>Property</th><th>Location</th><th>Type</th><th>Drainage score</th><th>Status</th><th>Monthly fee</th><th></th></tr></thead>
             <tbody>${props.map(p => propertyRow(p, scores.get(p.property_id))).join('')}</tbody>
           </table>
         </div>`;
@@ -796,14 +699,14 @@ const Screens = (function () {
   // Table row for the properties listview
   function propertyRow(p, score) {
     const scoreColor = score == null ? 'var(--ink-3)' : score >= 70 ? 'var(--ok)' : score >= 50 ? 'var(--warn)' : 'var(--alert)';
-    return `<tr class="rowlink" onclick="App.openProperty('${UI.esc(p.property_id)}')">
-      <td data-label="Property"><b>${UI.esc(p.property_name || 'Unnamed property')}</b></td>
+    return `<tr class="rowlink" onclick="App.openProperty('${UI.jsq(p.property_id)}')">
+      <td data-label="Property"><b>${UI.esc(p.property_name || 'Unnamed property')}</b>${(score!=null&&score<50)||['high','critical'].includes(p.urgency_level)?'<small class="property-flag">● Review needed: '+(['high','critical'].includes(p.urgency_level)?'high urgency':'score below 50')+'</small>':''}</td>
       <td class="muted" data-label="Location">${UI.esc([p.city, p.state].filter(Boolean).join(', ') || '—')}</td>
       <td class="muted" data-label="Type">${UI.esc(UI.prettyType(p.property_type))}</td>
-      <td data-label="Score"><b style="color:${scoreColor}">${score != null ? score + '/100' : '—'}</b></td>
+      <td data-label="Drainage score"><b style="color:${scoreColor}">${score != null ? score + '/100' : '—'}</b></td>
       <td data-label="Status">${statusChip(p.status)}</td>
       <td data-label="Fee">${p.monthly_fee ? UI.fmtNaira(p.monthly_fee) + '/mo' : '—'}</td>
-      <td class="tbl-arrow" style="text-align:right;color:var(--brand);font-weight:600">→</td>
+      <td class="table-actions" data-label="Open"><a class="btn" href="#property/${encodeURIComponent(p.property_id)}" onclick="event.stopPropagation()" aria-label="View property: ${UI.esc(p.property_name||'Unnamed property')}">View property →</a></td>
     </tr>`;
   }
 
@@ -824,38 +727,44 @@ const Screens = (function () {
 
   // ---------------- BILLING ----------------
   async function billing(view) {
+    const document=UI.scopedDocument(view);
     view.innerHTML = `
-      <div class="top"><div><h1>Billing, contract &amp; SLA</h1><div class="sub">Your plan, service guarantees, and payment history</div></div></div>
+      <div class="top"><div><h1>Payments &amp; your plan</h1><div class="sub">See what you owe, check past payments and understand your plan.</div></div></div>
       ${demoBanner()}
-      <div id="bill-sub"></div>
-      <div class="section-t">Service level agreement</div>
-      <div class="panel panel-pad" id="bill-sla"></div>
-      <div class="section-t" style="margin-top:24px">Payment history</div>
-      <div class="card panel-pad" id="bill-list">${UI.loading(3)}</div>`;
+      <div class="detail-tabs" role="tablist" aria-label="Billing sections"><button id="billing-invoices-tab" role="tab" aria-selected="true" aria-controls="billing-invoices">Invoices</button><button id="billing-contract-tab" role="tab" aria-selected="false" aria-controls="billing-contract" tabindex="-1">Plan & agreement</button></div>
+      <section id="billing-invoices" role="tabpanel" aria-labelledby="billing-invoices-tab"><h2 class="section-t">Account invoices</h2><p class="hint">Each invoice identifies the property it belongs to.</p><div class="billing-ledger" id="bill-list">${UI.loading(3)}</div></section>
+      <section id="billing-contract" role="tabpanel" aria-labelledby="billing-contract-tab" hidden><div id="bill-sub"></div><h2 class="section-t">What your agreement says</h2><p class="record-context">These are the monitoring and response terms recorded for this property. A response time is not a promise that a provider will arrive within that time.</p><div class="panel panel-pad" id="bill-sla"></div></section>`;
 
     let invoices, contract;
-    if (Demo.isOn()) { invoices = Demo.data.invoices; contract = Demo.data.contract; }
+    if (Demo.isOn()) { invoices = Demo.data.invoices; contract = App.activeProperty()==='PROP-DEMO-1'?Demo.data.contract:null; }
     else {
       try { const r = await apiRequest('/billing/invoices'); invoices = (r && r.data) || []; } catch (_) { invoices = null; }
       // subscription + SLA come from the property billing endpoint; try the first property
       try {
         const rp = await apiRequest('/properties');
-        const first = ((rp && rp.data) || [])[0];
+        const first = ((rp && rp.data) || []).find(p=>p.property_id===App.activeProperty());
         if (first) { const rb = await apiRequest(`/billing/${first.property_id}`); contract = rb && rb.data; }
       } catch (_) { contract = null; }
     }
 
     // Subscription summary
+    const unpaid=(invoices||[]).filter(i=>!['paid','cancelled','void'].includes(String(i.payment_status||i.status).toLowerCase()));
+    const knownAmounts=unpaid.every(i=>(i.balance_due??i.total_amount)!=null&&Number.isFinite(Number(i.balance_due??i.total_amount)));
+    const due=knownAmounts?unpaid.reduce((sum,i)=>sum+Number(i.balance_due??i.total_amount),0):null;
+    const nextDue=unpaid.filter(i=>i.due_date).sort((a,b)=>new Date(a.due_date)-new Date(b.due_date))[0];
+    const summary=document.createElement('section');summary.className='payment-summary';
+    summary.innerHTML=`<div><span class="guide-eyebrow">YOUR ACCOUNT PAYMENTS</span><h2>${invoices===null?'Payment details unavailable':unpaid.length?'You have a payment to make':'No unpaid invoices shown'}</h2><p>${invoices===null?'Try again before making a payment.':nextDue?'Earliest unpaid invoice is due '+UI.fmtDate(nextDue.due_date)+'. Open the invoice to check payment details.':'Your invoices and recorded payments are listed below.'}</p></div>${invoices!==null?`<div class="payment-total"><span>Outstanding amount</span><b>${due==null?'Check invoice amounts':UI.fmtNaira(due)}</b>${nextDue?`<button class="btn" onclick="App.openInvoice('${UI.jsq(nextDue.invoice_id)}')">Check invoice & payment details →</button>`:''}</div>`:''}`;
+    view.querySelector('.detail-tabs').before(summary);
     const sub = document.getElementById('bill-sub');
     if (contract && (contract.subscription || contract.plan)) {
       const s = contract.subscription || contract;
       sub.innerHTML = `<div class="grid-3" style="margin-bottom:8px">
         ${UI.stat('Current plan', `<span style="font-size:20px">${UI.esc(s.plan || s.plan_name || 'FlowGuard')}</span>`, s.tier ? cap(s.tier) + ' tier' : 'Drainage-as-a-Service')}
-        ${UI.stat('Monthly fee', UI.fmtNaira(s.monthly_fee || s.amount || 0), 'Billed monthly')}
-        ${UI.stat('Next billing', `<span style="font-size:18px">${UI.fmtDate(s.next_billing || contract.next_billing)}</span>`, 'Upcoming charge')}
+        ${UI.stat('Monthly fee', (s.monthly_fee??s.amount)!=null?UI.fmtNaira(s.monthly_fee??s.amount):'Not supplied', 'Billed monthly')}
+        ${UI.stat('Next billing', `<span style="font-size:18px">${UI.fmtDate(s.next_billing || contract.next_billing)}</span>`, new Date(s.next_billing || contract.next_billing)<new Date()?'Past billing date — verify status':'Upcoming charge')}
       </div>`;
     } else {
-      sub.innerHTML = '';
+      sub.innerHTML = '<p class="muted">No subscription agreement supplied for this property.</p>';
     }
 
     // SLA section
@@ -863,16 +772,12 @@ const Screens = (function () {
     const slaData = contract && (contract.sla || contract);
     if (slaData && (slaData.uptime_guarantee || slaData.uptime || slaData.response_time)) {
       sla.innerHTML = `<div class="sla-grid">
-        <div class="sla-c"><div class="l">Uptime guarantee</div><div class="v">${slaData.uptime_guarantee || '98'}%</div><div class="s">Monitoring availability</div></div>
-        <div class="sla-c"><div class="l">Current uptime</div><div class="v c-ok">${slaData.uptime || slaData.current_uptime || '99.8'}%</div><div class="s">Last 30 days</div></div>
-        <div class="sla-c"><div class="l">Response time</div><div class="v">${slaData.response_time || '4h'}</div><div class="s">Critical incident SLA</div></div>
+        <div class="sla-c"><div class="l">Uptime guarantee</div><div class="v">${slaData.uptime_guarantee!=null?slaData.uptime_guarantee+'%':'Not supplied'}</div><div class="s">Monitoring availability</div></div>
+        <div class="sla-c"><div class="l">Current uptime</div><div class="v c-ok">${(slaData.uptime??slaData.current_uptime)!=null?(slaData.uptime??slaData.current_uptime)+'%':'Not supplied'}</div><div class="s">Last 30 days</div></div>
+        <div class="sla-c"><div class="l">Response time</div><div class="v">${slaData.response_time || 'Not supplied'}</div><div class="s">Critical incident SLA</div></div>
       </div>`;
     } else {
-      sla.innerHTML = `<div class="sla-grid">
-        <div class="sla-c"><div class="l">Uptime guarantee</div><div class="v">98%</div><div class="s">Monitoring availability</div></div>
-        <div class="sla-c"><div class="l">Current uptime</div><div class="v c-ok">99.8%</div><div class="s">Last 30 days</div></div>
-        <div class="sla-c"><div class="l">Response time</div><div class="v">4h</div><div class="s">Critical incident SLA</div></div>
-      </div>`;
+      sla.innerHTML='<p class="muted">No agreed SLA supplied for this property.</p>';
     }
 
     // Payment history
@@ -889,10 +794,10 @@ const Screens = (function () {
         const sub = paid ? 'Paid ' + UI.fmtDate(inv.paid_date || inv.issue_date)
           : partial ? 'Part-paid · ' + UI.fmtNaira(bal != null ? bal : inv.total_amount) + ' due'
           : 'Due ' + UI.fmtDate(inv.due_date);
-        return `<div class="row clickable" onclick="App.openInvoice('${UI.esc(inv.invoice_id || '')}')">
+        return `<div class="row">
           <div class="rmain"><b>${UI.esc(cap(inv.invoice_type || 'Service'))} — ${UI.fmtDate(inv.issue_date)}</b>
-            <small>${sub}</small></div>
-          <div class="rright" style="display:flex;gap:10px;align-items:center"><div class="amt">${UI.fmtNaira(inv.total_amount)}</div>${UI.chip(paid ? 'ok' : 'warn', paid ? 'Paid' : partial ? 'Part-paid' : 'Due')}<span style="color:var(--brand);font-size:13px;font-weight:600">View →</span></div>
+            <small>${UI.esc(inv.property_name||'Account-level invoice · property not specified')} · ${sub}</small></div>
+          <div class="rright" style="display:flex;gap:10px;align-items:center"><div class="amt">${UI.fmtNaira(inv.total_amount)}</div>${UI.chip(paid ? 'ok' : 'warn', paid ? 'Paid' : partial ? 'Part-paid' : 'Due')}<button class="btn" onclick="event.stopPropagation();App.openInvoice('${UI.jsq(inv.invoice_id||'')}')">View invoice →</button></div>
         </div>`;
       }).join('')}</div>`;
     } else {
@@ -903,9 +808,10 @@ const Screens = (function () {
 
   // ---------------- ALERTS & INCIDENTS ----------------
   async function alerts(view) {
+    const document=UI.scopedDocument(view);
     const allProps = await getMyProperties();
     view.innerHTML = `
-      <div class="top"><div><h1>Flood &amp; sensor alerts</h1><div class="sub">Real-time drainage and flood-risk events detected across your properties</div></div></div>
+      <div class="top"><div><h1>What needs attention</h1><div class="sub">Check the issue, understand what it means and choose your next step.</div></div></div>
       ${demoBanner()}
       <div id="alert-kpis"></div>
       <div class="section-t">Active alerts</div>
@@ -926,7 +832,8 @@ const Screens = (function () {
       }
     }
 
-    const active = items.filter(a => a.status !== 'resolved');
+    const active = items.filter(a=>PortalModel.active(a)&&!['info','informational'].includes(a.severity)).sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at));
+    const informational=items.filter(a=>PortalModel.active(a)&&['info','informational'].includes(a.severity));
     const resolved = items.filter(a => a.status === 'resolved');
     const crit = active.filter(a => a.severity === 'critical').length;
     const warn = active.filter(a => a.severity === 'warning').length;
@@ -940,43 +847,52 @@ const Screens = (function () {
 
     const av = document.getElementById('alert-active');
     if (active.length) av.innerHTML = alertTable(active, true);
-    else { av.className = ''; av.innerHTML = UI.state('ok', 'No active alerts', "Everything's clear. We'll alert you the moment anything needs attention."); }
+    else { av.className = ''; av.innerHTML = UI.state('ok', 'No active alerts', "No active events recorded. This is not confirmation of monitoring coverage or absence of flood risk."); }
 
     const rv = document.getElementById('alert-resolved');
     if (resolved.length) rv.innerHTML = alertTable(resolved, false);
     else { rv.className = ''; rv.innerHTML = `<p class="muted">No resolved incidents yet.</p>`; }
+    if(informational.length)rv.insertAdjacentHTML('afterend','<section class="informational-events"><h3>Weather &amp; informational notices</h3><p class="muted">Context only · not counted as an actionable alert.</p>'+alertTable(informational,false,true)+'</section>');
   }
 
   // Alerts rendered as a table listview
-  function alertTable(items, isActive) {
-    return `<table class="tbl">
-      <thead><tr><th style="width:110px">Severity</th><th>Alert</th><th style="width:130px">${isActive ? 'Raised' : 'Resolved'}</th>${isActive ? '<th style="width:250px">Actions</th>' : ''}</tr></thead>
-      <tbody>${items.map(a => alertRow(a, isActive)).join('')}</tbody>
+  async function alertDetail(view,id) {
+    const props=await getMyProperties();
+    view.innerHTML='<div class="top"><div><a href="#alerts">← Alerts</a><h1>Alert record</h1></div></div><div id="alert-record">'+UI.loading(1)+'</div>';
+    const document=UI.scopedDocument(view);
+    try {
+      const result=Demo.isOn()?{data:Demo.data.alerts}:await apiRequest('/alerts');
+      const a=scopeToProperty(result.data||[],props).map(normalizeAlert).find(a=>String(a.id)===String(id));
+      if(!a){document.getElementById('alert-record').innerHTML=UI.state('awaiting','Alert unavailable','This record was not returned for the selected property.');return;}
+      document.getElementById('alert-record').innerHTML=`<section class="alert-record" data-severity="${UI.esc(a.severity)}"><div class="record-badges"><span class="record-badge severity">${UI.esc(cap(a.severity))}</span><span class="record-badge">${UI.esc(cap(a.status))}</span></div><h2>${UI.esc(a.title)}</h2><p>${UI.esc(a.description)}</p><p class="muted">Raised ${a.created_at?UI.esc(new Date(a.created_at).toLocaleString('en-GB',{timeZone:'Africa/Lagos',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}))+' WAT':'time unavailable'} · ${UI.esc(a.id)}</p>${a.sensor_id?`<a class="text-link" href="#sensor/${encodeURIComponent(a.sensor_id)}">View device ${UI.esc(a.sensor_id)} ↗</a>`:''}${a.service_request_id?`<a class="text-link" href="#service-request/${encodeURIComponent(a.service_request_id)}">Open related service request ↗</a>`:''}${PortalModel.active(a)&&!['info','informational'].includes(a.severity)?`<div class="record-actions"><button class="btn" data-service-title="${UI.esc('Review: '+a.title)}" data-service-type="${/water|flood/i.test(a.title)?'inspection':/silt|clearing|blockage/i.test(a.title)?'drain_cleaning':'sensor_maintenance'}" data-source-id="${UI.esc(a.id)}">Request provider ${/water|flood/i.test(a.title)?'inspection':'service'}</button></div>`:''}</section>`;
+    }catch(e){document.getElementById('alert-record').innerHTML=UI.state('error','Alert unavailable',e.message);}
+  }
+  function alertTable(items, isActive, informational=false) {
+    return `<table class="tbl compact-records alert-table">
+      <thead><tr><th style="width:110px">Severity</th><th>Alert</th><th style="width:130px">${isActive||informational ? 'Raised' : 'Resolved'}</th><th>Actions</th></tr></thead>
+      <tbody>${items.map(a => alertRow(a, isActive,informational)).join('')}</tbody>
     </table>`;
   }
-  function alertRow(a, isActive) {
+  function alertRow(a, isActive,informational=false) {
     const sevMap = { critical: ['alert', 'Critical'], warning: ['warn', 'Warning'], info: ['ok', 'Info'], success: ['ok', 'Resolved'] };
-    const [sk, sl] = sevMap[a.severity] || ['ok', 'Info'];
-    const subj = (a.title || 'Alert').replace(/'/g, '');
-    const actions = !isActive ? '' :
-      a.severity === 'critical'
-        ? `<button class="btn sm" onclick="App.openTicket('emergency','Emergency dispatch: ${UI.esc(subj)}','urgent')">Request dispatch</button>
-           <button class="btn ghost sm" onclick="App.openTicket('general','Escalation: ${UI.esc(subj)}','high')">Escalate</button>`
-      : a.severity === 'warning'
-        ? `<button class="btn ghost sm" onclick="App.openTicket('dispatch','Dispatch request: ${UI.esc(subj)}','high')">Request dispatch</button>`
-        : '';
+    const [sk, sl] = sevMap[a.severity] || ['progress', 'Unclassified'];
+    const subj = (a.title || 'Alert').replace(/['"<>\\\n]/g, ' ');
+    const sensorLink=a.sensor_id?'<a class="btn neutral" href="#sensor/'+encodeURIComponent(a.sensor_id)+'">View device</a>':'';
+    const requestLink=a.service_request_id?'<a class="portal-text-link" href="#service-request/'+encodeURIComponent(a.service_request_id)+'">Track request →</a>':'';
+    const serviceType=/water|flood/i.test(subj)?'inspection':/silt|clearing|blockage/i.test(subj)?'drain_cleaning':a.sensor_id?'sensor_maintenance':'inspection';
+    const actions = isActive ? '<button class="btn sm" data-service-title="'+UI.esc('Review: '+subj)+'" data-service-type="'+serviceType+'" data-source-id="'+UI.esc(a.id||'')+'">Request service</button>' : '';
     return `<tr>
       <td data-label="Severity">${UI.chip(sk, sl)}</td>
-      <td data-label="Alert"><b>${UI.esc(a.title)}</b><div class="muted" style="margin-top:2px">${UI.esc(a.description)}</div></td>
-      <td class="muted" data-label="${isActive ? 'Raised' : 'Resolved'}">${UI.esc(a.resolved_at && !isActive ? UI.fmtDate(a.resolved_at) : (a.created_at || ''))}</td>
-      ${isActive ? `<td data-label="Actions"><div style="display:flex;gap:8px;flex-wrap:wrap">${actions || '<span class="muted">—</span>'}</div></td>` : ''}
+      <td data-label="Alert"><b>${a.id?`<a class="portal-text-link ${isActive&&a.severity==='critical'?'critical-link':''}" href="#alert/${encodeURIComponent(a.id)}">${UI.esc(a.title)} ↗</a>`:UI.esc(a.title)}</b><div class="muted" style="margin-top:2px">${UI.esc(a.description)}</div></td>
+      <td class="muted" data-label="${isActive||informational ? 'Raised' : 'Resolved'}">${UI.esc(a.resolved_at && !isActive ? UI.fmtDate(a.resolved_at) : a.created_at?UI.fmtRelative(a.created_at):'Time unavailable')}</td>
+      <td data-label="Actions"><div class="table-actions">${sensorLink}${actions}${requestLink}${!sensorLink&&!actions&&!requestLink?'<span class="muted">—</span>':''}</div></td>
     </tr>`;
   }
 
   function normalizeAlert(a) {
     const sev = a.severity || (a.type === 'warning' ? 'warning' : a.type === 'critical' ? 'critical' : 'info');
     return {
-      title: a.title || 'Alert', description: a.description || a.message || '',
+      ...a, id:a.id||a.alert_id, title: a.title || 'Alert', description: a.description || a.message || '',
       severity: sev, status: a.status || (a.resolved_at ? 'resolved' : 'active'),
       created_at: a.created_at, resolved_at: a.resolved_at
     };
@@ -984,6 +900,7 @@ const Screens = (function () {
 
   // ---------------- ACCOUNT ----------------
   async function account(view) {
+    const document=UI.scopedDocument(view);
     const u = Auth.getUser() || {};
     view.innerHTML = `
       <div class="top"><div><h1>Account</h1><div class="sub">Your profile and preferences</div></div></div>
@@ -1077,9 +994,10 @@ const Screens = (function () {
   }
 
   async function propertyDetail(view, propertyId) {
+    const document=UI.scopedDocument(view);
     view.innerHTML = `
       <div class="top"><div>
-        <div class="crumb" onclick="App.go('properties')">← My properties</div>
+        <a class="portal-text-link crumb" href="#properties">← My properties</a>
         <h1 id="pd-name">Loading…</h1><div class="sub" id="pd-loc"></div>
       </div>
       <div id="pd-actions" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end"></div></div>
@@ -1088,7 +1006,7 @@ const Screens = (function () {
 
     let p;
     if (Demo.isOn()) {
-      p = Demo.data.properties.find(x => x.property_id === propertyId) || Demo.data.properties[0];
+      p = Demo.data.properties.find(x => x.property_id === propertyId);
     } else {
       try { const r = await apiRequest(`/properties/${propertyId}`); p = r && r.data; }
       catch (e) { document.getElementById('pd-body').innerHTML = UI.state('error', 'Could not load property', e.message || 'Please try again.', 'Back to properties', "onclick=\"App.go('properties')\""); return; }
@@ -1101,16 +1019,16 @@ const Screens = (function () {
     const curIdx = Math.max(0, STATUS_FLOW.indexOf(p.status === 'monitoring_active' ? 'active' : p.status));
     const steps = STATUS_FLOW.map((st, i) => ({
       status: i < curIdx ? 'done' : i === curIdx ? 'now' : 'pending',
-      title: STATUS_LABEL[st], when: i <= curIdx ? UI.fmtDate(p.created_at) : 'Upcoming'
+      title: STATUS_LABEL[st], when: p.stage_events?.find(e=>e.status===st)?.occurred_at ? UI.fmtDate(p.stage_events.find(e=>e.status===st).occurred_at) : (i===0?UI.fmtDate(p.created_at):i<=curIdx?'Date not recorded':'Not yet recorded')
     }));
 
     // pull per-property extras in parallel (honest fallback)
     let invoices = [], inspection = null, outcomes = null, healthHist = [];
     if (Demo.isOn()) {
-      invoices = Demo.data.invoices.slice(0, 2);
-      inspection = { status: 'scheduled', scheduled_date: '2026-07-18' };
-      outcomes = Demo.data.outcomes;
-      healthHist = Demo.data.healthHistory;
+      invoices = Demo.data.invoices.filter(x=>x.property_id===propertyId).slice(0,2);
+      inspection = null;
+      outcomes = null;
+      healthHist = Demo.data.healthHistory.filter(x=>x.property_id===propertyId);
     } else {
       try { const ri = await apiRequest(`/properties/${propertyId}/invoices`); invoices = (ri && ri.data) || []; } catch (_) {}
       try { const rn = await apiRequest(`/properties/${propertyId}/inspection`); inspection = rn && rn.data; } catch (_) {}
@@ -1161,15 +1079,13 @@ const Screens = (function () {
                    </div>
                  ` : ''}
                </div>` : ''}`
-            : (STATUS_FLOW.indexOf(p.status) >= STATUS_FLOW.indexOf('inspection_scheduled')
-                ? UI.state('awaiting', 'Inspection scheduled', 'Your inspection is being arranged. Team and timing details will appear here shortly.').replace('card', '')
-                : UI.state('awaiting', 'No inspection yet', 'An inspection will be scheduled after your property is reviewed.').replace('card', ''))}
+            : UI.state('awaiting', 'Inspection details not supplied', 'No appointment or inspector record was supplied for this property. The registration status alone does not confirm a visit.').replace('card', '')}
           <h3 style="margin-top:22px">Recent invoices</h3>
           ${invoices.length
             ? `<div class="rows">${invoices.map(inv => {
                 const ps = String(inv.payment_status || inv.status || '').toLowerCase();
                 const paid = ps === 'paid', partial = ps === 'partial';
-                return `<div class="row"><div class="rmain"><b>${UI.fmtNaira(inv.total_amount)}</b><small>${UI.fmtDate(inv.issue_date)}</small></div>
+                return `<div class="row clickable" onclick="App.openInvoice('${UI.jsq(inv.invoice_id)}')"><div class="rmain"><b>${UI.fmtNaira(inv.total_amount)}</b><small>${UI.fmtDate(inv.issue_date)}</small></div>
                   <div class="rright">${UI.chip(paid ? 'ok' : 'warn', paid ? 'Paid' : partial ? 'Part-paid' : 'Due')}</div></div>`;
               }).join('')}</div>`
             : `<p class="muted">No invoices yet.</p>`}
@@ -1187,16 +1103,16 @@ const Screens = (function () {
     const canProps = App.can('manage_properties');
     const canBilling = App.can('view_billing');
     if (s === 'report_ready' || s === 'quote_sent' || s === 'payment_pending') {
-      if (canProps) btns.push(`<button class="btn" onclick="App.selectServices('${UI.esc(p.property_id)}')">Choose service tier</button>`);
-      if (canBilling) btns.push(`<button class="btn ghost" onclick="App.go('billing')">View billing</button>`);
+      if (canProps) btns.push(`<button class="btn" onclick="App.selectServices('${UI.jsq(p.property_id)}')">Request a service</button>`);
+      if (canBilling) btns.push(`<button class="btn ghost" onclick="App.setActiveProperty('${UI.jsq(p.property_id)}');App.go('billing')">View billing</button>`);
     } else if (s === 'active' || s === 'monitoring_active') {
-      btns.push(`<button class="btn" onclick="App.go('monitoring')">View live monitoring</button>`);
-      if (canBilling) btns.push(`<button class="btn ghost" onclick="App.go('billing')">View billing</button>`);
+      btns.push(`<button class="btn" onclick="App.setActiveProperty('${UI.jsq(p.property_id)}');App.go('monitoring')">View live monitoring</button>`);
+      if (canBilling) btns.push(`<button class="btn ghost" onclick="App.setActiveProperty('${UI.jsq(p.property_id)}');App.go('billing')">View billing</button>`);
     } else if (s === 'submitted' || s === 'inspection_scheduled' || s === 'inspection_ongoing') {
       btns.push(`<button class="btn ghost" onclick="App.go('support')">Contact support</button>`);
     }
     // always available
-    if (canProps) btns.push(`<button class="btn ghost" onclick="App.openEditProperty('${UI.esc(p.property_id)}')">Edit details</button>`);
+    if (canProps) btns.push(`<button class="btn ghost" onclick="App.openEditProperty('${UI.jsq(p.property_id)}')">Edit details</button>`);
     if (canProps) btns.push(`<button class="btn ghost" onclick="App.openRegister()">Register another property</button>`);
     return btns.join('');
   }
@@ -1204,6 +1120,7 @@ const Screens = (function () {
   // ---------------- NOTIFICATIONS CENTER (filter / mark-read / delete) ----------------
   let _notifFilter = 'all';
   async function notifications(view) {
+    const document=UI.scopedDocument(view);
     view.innerHTML = `
       <div class="top"><div><h1>Notifications</h1><div class="sub">Account and service updates — submissions, inspections, reports, and billing</div></div>
         <button class="btn ghost" onclick="App.markAllRead()">Mark all read</button></div>
@@ -1216,7 +1133,7 @@ const Screens = (function () {
 
     let items;
     if (Demo.isOn()) {
-      items = Demo.data.alerts.map((a, i) => ({ id: 'D' + i, title: a.title, message: a.description, type: a.type, read: i > 0, created_at: a.created_at }));
+      items = Demo.data.notifications;
     } else {
       try { const r = await apiRequest('/notifications'); items = (r && r.data) || []; } catch (_) { items = null; }
     }
@@ -1239,12 +1156,12 @@ const Screens = (function () {
 
   function notifIcon(hint) {
     const t = String(hint || '').toLowerCase();
-    if (/inv|bill|payment|invoice/.test(t)) return { c: '#3b82f6', s: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/>' };
-    if (/support|ticket|message|reply|chat/.test(t)) return { c: '#22c3e6', s: '<path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>' };
-    if (/inspect/.test(t)) return { c: '#10b981', s: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 4H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1"/><path d="M9 13l2 2 4-4"/>' };
-    if (/report|document/.test(t)) return { c: '#0891b2', s: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/>' };
-    if (/alert|critical|warn|flood|risk|incident/.test(t)) return { c: '#f59e0b', s: '<path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/>' };
-    return { c: '#0891b2', s: '<path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/>' };
+    if (/inv|bill|payment|invoice/.test(t)) return { c: '#06bcd4', s: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/>' };
+    if (/support|ticket|message|reply|chat/.test(t)) return { c: '#06bcd4', s: '<path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>' };
+    if (/inspect/.test(t)) return { c: '#00e676', s: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 4H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1"/><path d="M9 13l2 2 4-4"/>' };
+    if (/report|document/.test(t)) return { c: '#06bcd4', s: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/>' };
+    if (/alert|critical|warn|flood|risk|incident/.test(t)) return { c: '#fe5252', s: '<path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/>' };
+    return { c: '#06bcd4', s: '<path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/>' };
   }
   function notifTime(t) {
     if (!t) return '';
@@ -1257,28 +1174,16 @@ const Screens = (function () {
     return UI.fmtDate(t);
   }
   function notifRow(n) {
-    const read = n.read || n.is_read;
-    const ic = notifIcon(n.type || n.link || n.title);
-    // '#tab' opens the list; '#tab/RECORD-ID' opens the specific record.
-    const raw = (n.link || '').replace(/^#/, '');
-    const slash = raw.indexOf('/');
-    let goCall = '';
-    if (slash > 0) {
-      const tab = raw.slice(0, slash), rid = raw.slice(slash + 1);
-      const detail = (tab === 'ticket' || tab === 'support') ? 'ticketDetail'
-                   : (tab === 'property' || tab === 'properties') ? 'propertyDetail' : null;
-      goCall = detail ? `App.go('${detail}','${UI.esc(rid)}')` : `App.go('${UI.esc(tab)}')`;
-    } else if (raw) { goCall = `App.go('${UI.esc(raw)}')`; }
-    const nav = goCall ? `onclick="${goCall}" style="cursor:pointer"` : '';
-    return `<div class="ntf-item ${read ? '' : 'unread'}" ${nav}>
-      ${read ? '' : '<span class="ntf-dot"></span>'}
-      <div class="ntf-ic" style="background:${ic.c}22;color:${ic.c};"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ic.s}</svg></div>
-      <div class="ntf-body"><div class="ntf-t">${UI.esc(n.title || 'Notification')}</div><div class="ntf-s">${UI.esc(n.message || n.description || '')}</div></div>
+    const read=n.read||n.is_read,ic=notifIcon(n.type||n.link||n.title);
+    const route=n.link||(n.target_tab?'#'+({reportDetail:'report',ticketDetail:'ticket',propertyDetail:'property'}[n.target_tab]||n.target_tab)+(n.target_id?'/'+encodeURIComponent(n.target_id):''):'');
+    const allowed=/^#(?:report|ticket|property|sensor|service-request|invoice)\/[^<>]+$|^#(?:billing|services|reports|support|properties|alerts|overview)$/;
+    const linked=allowed.test(route);
+    return `<div class="ntf-item ${read?'':'unread'}">
+      ${read?'':'<span class="ntf-dot"></span>'}
+      <div class="ntf-ic" style="background:${ic.c}22;color:${ic.c}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ic.s}</svg></div>
+      ${linked?'<a class="ntf-body" href="'+UI.esc(route)+'">':'<div class="ntf-body">'}<div class="ntf-t">${UI.esc(n.title||'Notification')}</div><div class="ntf-s">${UI.esc(n.message||n.description||'')}</div>${linked?'</a>':'</div>'}
       <span class="ntf-time">${notifTime(n.created_at)}</span>
-      <div class="ntf-acts" onclick="event.stopPropagation()">
-        ${!read ? `<button class="ntf-act" title="Mark read" onclick="App.markRead('${UI.esc(n.id)}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></button>` : ''}
-        <button class="ntf-act" title="Delete" onclick="App.deleteNotif('${UI.esc(n.id)}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m-9 0v14a2 2 0 002 2h8a2 2 0 002-2V6"/></svg></button>
-      </div>
+      <div class="ntf-acts">${!read?`<button class="btn neutral compact-action" onclick="App.markRead('${UI.jsq(n.id)}')">Mark read</button>`:''}<button class="btn neutral compact-action" aria-label="Remove notification" onclick="App.deleteNotif('${UI.jsq(n.id)}')">Remove</button></div>
     </div>`;
   }
   function setNotifFilter(f) { _notifFilter = f; }
@@ -1287,38 +1192,34 @@ const Screens = (function () {
   // Table row for the reports listview
   function reportRow(r) {
     const score = r.drainage_condition_score;
-    const scoreColor = score == null ? 'var(--ink-3)' : score >= 70 ? 'var(--ok)' : score >= 40 ? 'var(--warn)' : 'var(--alert)';
+    const scoreColor = score == null ? 'var(--ink-3)' : score >= 70 ? 'var(--ok)' : score >= 50 ? 'var(--warn)' : 'var(--alert)';
     const risk = r.flood_risk_level;
     const riskKind = risk === 'high' || risk === 'critical' ? 'alert' : risk === 'moderate' || risk === 'medium' ? 'warn' : 'ok';
     const isReady = (r.status === 'sent' || r.status === 'approved' || r.status === 'completed' || r.sent_to_client_at);
     const rid = r.report_id || r.id || '';
-    return `<tr style="cursor:pointer" onclick="App.openReport('${UI.esc(rid)}')">
+    return `<tr style="cursor:pointer" onclick="App.openReport('${UI.jsq(rid)}')">
       <td data-label="Report"><b>${UI.esc(r.title || 'Inspection report')}</b></td>
       <td class="muted" data-label="Property">${UI.esc(r.property_name || r.property_id || '—')}</td>
       <td class="muted" data-label="Date">${UI.fmtDate(r.sent_to_client_at || r.created_at)}</td>
-      <td data-label="Score"><b style="color:${scoreColor}">${score != null ? score + '/100' : '—'}</b></td>
-      <td data-label="Flood risk">${risk ? UI.chip(riskKind, cap(String(risk))) : '<span class="muted">—</span>'}</td>
+      <td data-label="Drainage score"><b style="color:${scoreColor}">${score != null ? score + '/100' : '—'}</b></td>
+      <td data-label="Assessed risk">${risk ? UI.chip(riskKind, cap(String(risk))) : '<span class="muted">—</span>'}</td>
       <td data-label="Status">${isReady ? UI.chip('ok', 'Ready') : UI.chip('warn', cap(r.status || 'In progress'))}</td>
-      <td data-label="Download">${isReady
-        ? `<button class="btn ghost sm" onclick="event.stopPropagation();App.downloadReport('${UI.esc(rid)}')">Download PDF</button>`
-        : '<span class="muted">Finalising</span>'}</td>
+      <td data-label="Actions"><div class="table-actions"><a class="btn neutral compact-action" href="#report/${encodeURIComponent(rid)}" onclick="event.stopPropagation()">View report →</a>${isReady
+        ? `<button class="btn ghost sm" onclick="event.stopPropagation();App.downloadReport('${UI.jsq(rid)}')">Download PDF</button>`
+        : '<span class="muted">Finalising</span>'}</div></td>
     </tr>`;
   }
 
 
-  // shared: fetch precipitation + compute daily flood chance from current health
+  // shared: fetch precipitation + compute daily risk index from current health
   async function computeForecastDays(horizon, allProps, vulnerability) {
     let days;
     if (Demo.isOn()) {
-      const d = i => new Date(Date.now() + i * 864e5);
-      const mm = [2.1, 9.4, 14.2, 4.0, 6.5, 24.5, 33.0, 12.4, 8.1, 3.0, 5.8, 27.6, 38.2, 11.0, 6.5, 2.0];
-      const wc = [2, 61, 63, 51, 3, 65, 95, 63, 3, 1, 51, 65, 95, 63, 3, 2]; // WMO codes matched to the demo rainfall
-      days = Array.from({ length: horizon }, (_, i) => ({ date: d(i), mm: mm[i % mm.length], prob: Math.min(95, Math.round(mm[i % mm.length] * 4 + 15)), code: wc[i % wc.length] }));
+      return PortalModel.sampleForecast(horizon,vulnerability).days;
     } else {
       const cur = resolveActive(allProps);
       const sel = (allProps || []).find(p => p.property_id === cur);
-      const p0 = sel && sel.latitude ? sel : ((allProps || []).find(x => x.latitude) || {});
-      const lat = p0.latitude || 6.4478, lon = p0.longitude || 3.5476;
+      const {lat,lon}=PortalModel.coordinates(allProps,cur);
       const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum,precipitation_probability_max,weather_code&timezone=Africa%2FLagos&forecast_days=${horizon}`);
       const j = await r.json();
       const wc = (j.daily && j.daily.weather_code) || [];
@@ -1331,8 +1232,8 @@ const Screens = (function () {
       return { ...d, chance, level };
     });
   }
-  const FC_COLOR = { low: 'var(--ok)', moderate: 'var(--warn)', high: 'var(--alert)' };
-  const FC_WORD = { low: 'Low', moderate: 'Medium', high: 'High' };
+  const FC_COLOR = { low: '#00e676', moderate: '#06bcd4', high: '#fe5252' };
+  const FC_WORD = { low: 'Low', moderate: 'Watch', high: 'High' };
   function fcCloud(level) {
     return `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="${FC_COLOR[level]}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16.2A4.5 4.5 0 0017.5 8h-1.8A7 7 0 104 14.9"/><path d="M8 18v2M12 19v2M16 18v2"/></svg>`;
   }
@@ -1346,42 +1247,45 @@ const Screens = (function () {
   }
   function fcDayCell(r, i) {
     const dn = i === 0 ? 'Today' : r.date.toLocaleDateString('en-GB', { weekday: 'short' });
-    return `<div class="fc-cell">
+    return `<div class="fc-cell risk-${r.level}">
       <b>${dn}</b>
       <span class="muted" style="font-size:12px">${r.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-      ${weatherGlyph(r.code, 68)}
-      <span style="font-weight:600;font-size:13px;color:${FC_COLOR[r.level]}">${FC_WORD[r.level]}</span>
-      <b style="font-size:14px">${r.chance}%</b>
+      ${weatherGlyph(r.code, 38)}
+      <span class="forecast-severity" data-level="${r.level}" style="font-weight:600;font-size:13px;color:${FC_COLOR[r.level]}">${FC_WORD[r.level]}</span>
+      <b style="font-size:14px">${r.chance}/100</b>
     </div>`;
   }
   // overview widget: 14-day risk calendar
   // overview sidebar widget: compact 7-day risk calendar
-  async function renderForecastWidget(allProps, health) {
+  async function renderForecastWidget(allProps, health,document=window.document) {
     const el = document.getElementById('ov-weather');
     if (!el) return;
+    if(!health){el.innerHTML='<div class="panel panel-pad"><h3>Risk forecast</h3><p>Insufficient site data for a property risk index. Monitoring coverage and a current assessment are required.</p><a href="#forecast">Review forecast inputs →</a></div>';return;}
     try {
-      const rows = await computeForecastDays(7, allProps, health ? (100 - health.score) : 45);
+      const rows = await computeForecastDays(7, allProps, 100 - health.score);
       const worst = rows.reduce((a, b) => b.chance > a.chance ? b : a, rows[0]);
+      const preparationDay = rows.find(r => r.level === 'high') || worst;
       el.innerHTML = `
         <div class="panel panel-pad">
           <div class="row-between" style="margin-bottom:12px">
-            <h3 style="margin:0">Risk forecast</h3>
+            <h3 style="margin:0">The week ahead</h3>
             <span class="muted" style="font-size:12px">7-day</span>
           </div>
+          <p class="weather-takeaway">${worst.level==='high'?'Prepare before '+UI.esc(preparationDay.date.toLocaleDateString('en-GB',{weekday:'long'}))+'.':'Keep an eye on the weather.'}</p><p class="forecast-caption">${worst.level==='high'?'Higher risk starts then. Arrange a drain check ahead of time.':'Check back for changes before making plans.'}</p>
           <div class="fc-mini">
             ${rows.map((r, i) => `<div class="fc-mini-cell" title="${(window.WeatherIcons && r.code != null ? WeatherIcons.label(r.code) + ' · ' : '')}${r.mm ? r.mm.toFixed(1) + 'mm rain' : 'No rain expected'}">
               <span class="fcd">${i === 0 ? 'Now' : r.date.toLocaleDateString('en-GB', { weekday: 'short' }).slice(0, 2)}</span>
               ${weatherGlyph(r.code, 40)}
-              <b style="font-size:12px;color:${FC_COLOR[r.level]}">${r.chance}%</b>
+              <b style="font-size:12px;color:${FC_COLOR[r.level]}">${r.level==='high'?'High':r.level==='moderate'?'Watch':'Low'}</b>
             </div>`).join('')}
           </div>
           <div class="row-between" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
-            <span class="muted" style="font-size:12px">Peak: ${UI.esc(worst.date.toLocaleDateString('en-GB', { weekday: 'short' }))} · ${worst.chance}%</span>
-            <a class="clickable" style="color:var(--brand);font-size:13px;font-weight:600" onclick="App.go('forecast')">Full forecast →</a>
+            <span class="muted" style="font-size:12px">Risk outlook, not a guarantee of flooding.</span>
+            <a class="portal-text-link" href="#forecast">Full forecast →</a>
           </div>
         </div>
       `;
-    } catch (_) { el.innerHTML = ''; }
+    } catch (e) { el.innerHTML = '<div class="panel panel-pad"><h3>Forecast unavailable</h3><p>'+UI.esc(e.message)+'</p></div>'; }
   }
 
   // ---------------- RISK FORECAST ----------------
@@ -1392,37 +1296,26 @@ const Screens = (function () {
   async function hourlyRiskChart(allProps, vulnerability) {
     let hours;
     if (Demo.isOn()) {
-      const now = new Date(); now.setMinutes(0, 0, 0);
-      hours = Array.from({ length: 48 }, (_, i) => {
-        const t = new Date(now.getTime() + i * 3600e3);
-        const hr = t.getHours();
-        const stormToday = i < 24 && hr >= 15 && hr <= 20;
-        const stormTomorrow = i >= 24 && hr >= 12 && hr <= 19;
-        const mm = stormTomorrow ? 3.5 + Math.sin((hr - 12) / 7 * Math.PI) * 3.2
-                 : stormToday ? 1.6 + Math.sin((hr - 15) / 5 * Math.PI) * 1.4
-                 : Math.max(0, Math.sin(i / 9) * 0.9);
-        return { t, mm: Math.round(mm * 10) / 10, prob: Math.min(96, Math.round(mm * 20 + 14)) };
-      });
+      hours = PortalModel.sampleForecast(3,vulnerability).hours;
     } else {
       const cur = resolveActive(allProps);
       const sel = (allProps || []).find(p => p.property_id === cur);
-      const p0 = sel && sel.latitude ? sel : ((allProps || []).find(x => x.latitude) || {});
-      const lat = p0.latitude || 6.4478, lon = p0.longitude || 3.5476;
+      const {lat,lon}=PortalModel.coordinates(allProps,cur);
       const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation,precipitation_probability&timezone=Africa%2FLagos&forecast_hours=48`);
       const j = await r.json();
       hours = j.hourly.time.map((t, i) => ({ t: new Date(t), mm: j.hourly.precipitation[i] || 0, prob: j.hourly.precipitation_probability[i] || 0 }));
     }
     const pts = hours.map(hh => {
+      if(Demo.isOn())return hh;
       const mmFactor = Math.min(100, hh.mm * 18);
       const chance = Math.round(Math.min(96, Math.max(2, vulnerability * 0.4 + mmFactor * 0.45 + hh.prob * 0.15)));
       return { ...hh, chance, level: chance >= 65 ? 'high' : chance >= 35 ? 'moderate' : 'low' };
     });
     const maxC = Math.max(...pts.map(p => p.chance));
     const peakThresh = Math.max(35, maxC - 10);
-    let ws = -1, we = -1;
-    pts.forEach((p, i) => { if (p.chance >= peakThresh) { if (ws < 0) ws = i; we = i; } });
+    const [ws,we]=PortalModel.peakWindow(pts,peakThresh);
 
-    const w = 720, h = 250, padL = 40, padR = 14, padT = 40, padB = 30;
+    const w = 960, h = 250, padL = 40, padR = 24, padT = 16, padB = 30;
     const x = i => padL + (i * (w - padL - padR)) / (pts.length - 1);
     const y = v => padT + (1 - v / 100) * (h - padT - padB);
     const seg = (a2, b2, color) => `<path d="${pts.slice(a2, b2 + 1).map((p, k) => `${k ? 'L' : 'M'}${x(a2 + k).toFixed(1)},${y(p.chance).toFixed(1)}`).join(' ')}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
@@ -1432,50 +1325,49 @@ const Screens = (function () {
     }
     const markers = pts.map((p, i) => i % 2 === 0 ? `<circle cx="${x(i).toFixed(1)}" cy="${y(p.chance).toFixed(1)}" r="2.6" fill="${FC_COLOR[p.level]}"/>` : '').join('');
     const area = `M${pts.map((p, i) => `${i ? 'L' : ''}${x(i).toFixed(1)},${y(p.chance).toFixed(1)}`).join(' ')} L${x(pts.length - 1)},${y(0)} L${x(0)},${y(0)} Z`;
-    const grid = [0, 25, 50, 75, 100].map(g => `<line x1="${padL}" y1="${y(g)}" x2="${w - padR}" y2="${y(g)}" stroke="var(--line)" stroke-width="1"/><text x="${padL - 7}" y="${y(g) + 3.5}" fill="var(--ink-3)" font-size="10.5" text-anchor="end">${g}%</text>`).join('');
+    const grid = [0, 25, 50, 75, 100].map(g => `<line x1="${padL}" y1="${y(g)}" x2="${w - padR}" y2="${y(g)}" stroke="var(--line)" stroke-width=".5" stroke-dasharray="2 6"/><text x="${padL - 7}" y="${y(g) + 3.5}" fill="var(--ink-3)" font-size="14" text-anchor="end">${g}</text>`).join('');
     const xlabels = pts.map((p, i) => {
       const hr = p.t.getHours();
       if (hr % 6 !== 0) return '';
       const lbl = hr === 0 ? p.t.toLocaleDateString('en-GB', { weekday: 'short' }) : `${hr}:00`;
-      return `<text x="${x(i).toFixed(1)}" y="${h - 8}" fill="var(--ink-3)" font-size="10.5" text-anchor="middle" ${hr === 0 ? 'font-weight="600"' : ''}>${lbl}</text>`;
+      return `<text x="${x(i).toFixed(1)}" y="${h - 8}" fill="var(--ink-3)" font-size="14" text-anchor="${i<3?'start':i>pts.length-4?'end':'middle'}" ${hr === 0 ? 'font-weight="600"' : ''}>${lbl}</text>`;
     }).join('');
-    const windowLbl = ws >= 0 ? `${pts[ws].t.getHours()}:00 – ${pts[Math.min(we + 1, pts.length - 1)].t.getHours()}:00` : '';
+    const windowTime=t=>t.toLocaleString('en-GB',{timeZone:'Africa/Lagos',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+    const windowLbl = ws >= 0 ? windowTime(pts[ws].t)+' – '+windowTime(new Date(pts[we].t.getTime()+3600e3))+' WAT' : '';
     const windowBand = ws >= 0 && we > ws ? `
-      <rect x="${x(ws)}" y="${y(100)}" width="${(x(we) - x(ws)).toFixed(1)}" height="${(y(0) - y(100)).toFixed(1)}" fill="var(--alert)" fill-opacity=".06"/>
-      <line x1="${x(ws)}" y1="${y(100)}" x2="${x(ws)}" y2="${y(0)}" stroke="var(--alert)" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>
-      <line x1="${x(we)}" y1="${y(100)}" x2="${x(we)}" y2="${y(0)}" stroke="var(--alert)" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>
-      <text x="${(x(ws) + x(we)) / 2}" y="${padT - 24}" fill="var(--alert)" font-size="12.5" font-weight="700" text-anchor="middle">Peak risk window</text>
-      <text x="${(x(ws) + x(we)) / 2}" y="${padT - 10}" fill="var(--alert)" font-size="11" text-anchor="middle">${windowLbl}</text>` : '';
+      <rect x="${x(ws)}" y="${y(100)}" width="${(x(we) - x(ws)).toFixed(1)}" height="${(y(0) - y(100)).toFixed(1)}" fill="var(--alert)" fill-opacity="0"/>
+      <line x1="${x(ws)}" y1="${y(100)}" x2="${x(ws)}" y2="${y(0)}" stroke="${FC_COLOR[maxC>=65?'high':'moderate']}" stroke-width="1" stroke-dasharray="4 3"/>
+      <line x1="${x(we)}" y1="${y(100)}" x2="${x(we)}" y2="${y(0)}" stroke="${FC_COLOR[maxC>=65?'high':'moderate']}" stroke-width="1" stroke-dasharray="4 3"/>` : '';
     const peakDayLbl = ws >= 0 ? pts[ws].t.toLocaleDateString('en-GB', { weekday: 'long' }) : '';
     const totRain = ws >= 0 ? Math.round(pts.slice(ws, we + 1).reduce((sm, p) => sm + p.mm, 0)) : 0;
     const insight = maxC >= 35
-      ? `Risk peaks <b>${peakDayLbl} ${windowLbl}</b> (${maxC}%) — ~${totRain}mm expected in that window against your current drainage health.`
-      : `No significant risk build-up in the next 48 hours — rainfall stays light against your current drainage health.`;
-    const legend = ['low', 'moderate', 'high'].map(l => `<span><i style="display:inline-block;width:14px;height:3px;background:${FC_COLOR[l]};border-radius:2px;vertical-align:middle;margin-right:5px"></i>${FC_WORD[l]} ${l === 'low' ? '(0–34%)' : l === 'moderate' ? '(35–64%)' : '(65%+)'}</span>`).join('');
+      ? `Highest hourly index: <b>${maxC}/100</b>, ${peakDayLbl} ${windowLbl}. Estimated rain in this window: ~${totRain}mm. This is a shorter horizon than the daily outlook above.`
+      : `Hourly index remains below 35 in the next 48 hours. This does not cancel current sensor alerts.`;
+    const legend = ['low', 'moderate', 'high'].map(l => `<span><i style="display:inline-block;width:14px;height:3px;background:${FC_COLOR[l]};border-radius:2px;vertical-align:middle;margin-right:5px"></i>${FC_WORD[l]} ${l === 'low' ? '(0–34)' : l === 'moderate' ? '(35–64)' : '(65+)'}</span>`).join('');
     return `
-      <div class="panel panel-pad mb-20">
-        <div class="row-between mb-10"><h3 style="margin:0">Next 48 hours</h3><span class="muted" style="font-size:12px">Hourly flood chance</span></div>
-        <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto" role="img" aria-label="Hourly flood risk, next 48 hours">
+      <div class="panel panel-pad mb-20 hourly-panel">
+        <div class="row-between mb-10"><h3 style="margin:0">Next 48 hours</h3><span class="muted" style="font-size:12px">Hourly risk index</span></div>
+        ${ws>=0?`<div class="peak-window" data-level="${maxC>=65?'high':'moderate'}"><strong>Highest hourly window</strong><span>${UI.esc(windowLbl)}</span><b>${maxC}/100</b></div>`:''}
+        <div class="chart-scroll" tabindex="0" role="region" aria-label="Hourly risk chart; scroll horizontally on small screens"><svg class="hourly-chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="Hourly flood risk, next 48 hours">
           ${grid}${windowBand}
-          <defs><linearGradient id="fcarea" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="var(--warn)" stop-opacity=".14"/><stop offset="1" stop-color="var(--ok)" stop-opacity=".04"/>
-          </linearGradient></defs>
-          <path d="${area}" fill="url(#fcarea)"/>
+          <path d="${area}" fill="none"/>
           ${segs}${markers}${xlabels}
-        </svg>
+        </svg></div><p class="chart-scroll-hint">Swipe the chart to see the full time range.</p>
         <div style="display:flex;gap:16px;margin-top:6px;font-size:11px;color:var(--ink-3);flex-wrap:wrap">${legend}</div>
         <div style="margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--surface-2);font-size:13px;color:var(--ink-2);line-height:1.5">${insight}</div>
       </div>`;
   }
 
   async function forecast(view) {
+    const document=UI.scopedDocument(view);
     const allProps = await getMyProperties();
     view.innerHTML = `
-      <div class="top"><div><h1>Risk forecast</h1><div class="sub">Prediction of flooding risk across your property</div></div>
+      <div class="top"><div><h1>Your weather outlook</h1><div class="sub">Know when to prepare. This is a risk outlook, not a prediction that flooding will happen.</div></div>
       <span class="seg">
-        ${[7, 14, 30].map(d => `<button class="${_fcRange === d ? 'on' : ''}" onclick="App.setFcRange(${d})">${d}d</button>`).join('')}
+        ${[7, 14, 16].map(d => `<button class="${_fcRange === d ? 'on' : ''}" onclick="App.setFcRange(${d})">${d}d</button>`).join('')}
       </span></div>
       ${demoBanner()}
+      <section class="forecast-intro"><p class="eyebrow">WEATHER & SITE INTELLIGENCE</p><h2>Your outlook. Before the rain.</h2><p>${UI.esc(allProps.find(p=>p.property_id===resolveActive(allProps))?.property_name||"Selected property")} · ${_fcRange}-day outlook</p></section>
       <div id="fc-body">${UI.loading(2)}</div>`;
 
     // inputs under the current property scope
@@ -1486,12 +1378,14 @@ const Screens = (function () {
       reports = scopeToProperty(Demo.data.reports, allProps);
       sensors = scopeToProperty(Demo.data.sensors, allProps);
     } else {
-      try { const r = await apiRequest('/monitoring/flood-risk'); risk = r && r.data; } catch (_) { risk = null; }
-      try { const r = await apiRequest('/alerts'); alerts = scopeToProperty((r && r.data) || [], allProps); } catch (_) { alerts = []; }
-      try { const r = await apiRequest('/field-reports?limit=20'); reports = scopeToProperty((r && r.data) || [], allProps); } catch (_) { reports = []; }
-      try { const r = await apiRequest('/monitoring/sensors'); sensors = scopeToProperty((r && r.data) || [], allProps); } catch (_) { sensors = []; }
+      try { const r = await apiRequest('/monitoring/flood-risk?property_id='+encodeURIComponent(resolveActive(allProps))); risk = r && r.data; } catch (_) { risk = null; }
+      try { const r = await apiRequest('/alerts'); alerts = scopeToProperty((r && r.data) || [], allProps); } catch(e) { throw new Error('Alerts unavailable: '+e.message); }
+      try { const r = await apiRequest('/field-reports?limit=20'); reports = scopeToProperty((r && r.data) || [], allProps); } catch(e) { throw new Error('Reports unavailable: '+e.message); }
+      try { const r = await apiRequest('/monitoring/sensors'); sensors = scopeToProperty((r && r.data) || [], allProps); } catch(e) { throw new Error('Sensors unavailable: '+e.message); }
     }
+    risk = PortalModel.riskFor(risk,sensors,resolveActive(allProps));
     const health = computeHealth(reports, risk, alerts);
+    if(!health){document.getElementById('fc-body').innerHTML=UI.state('awaiting','Insufficient site data','A condition assessment and reporting sensors are required before displaying a site risk estimate.');return;}
     const vulnerability = health ? (100 - health.score) : 45;
     const horizon = Math.min(_fcRange, 16);
 
@@ -1512,7 +1406,7 @@ const Screens = (function () {
     const maxSilt = withSilt.length ? Math.max(...withSilt.map(x => x.silt_level)) : null;
     const online = (sensors || []).filter(x => x.status === 'active').length;
     const total = (sensors || []).length;
-    const openAlerts = (alerts || []).filter(a => a.status === 'active').length;
+    const openAlerts = (alerts || []).filter(a=>PortalModel.active(a)&&!['info','informational'].includes(a.severity||a.type)).length;
     const factorChip = (v, warnAt, alertAt, invert) => {
       if (v == null) return UI.chip('ok', '—');
       const bad = invert ? v <= alertAt : v >= alertAt;
@@ -1520,36 +1414,35 @@ const Screens = (function () {
       return UI.chip(bad ? 'alert' : mid ? 'warn' : 'ok', bad ? 'High' : mid ? 'Medium' : 'Low');
     };
     const factors = [
-      ['Rainfall intensity', `${Math.round(today.mm)}mm next 24h`, factorChip(today.mm, 5, 20)],
-      ['Drainage capacity', repScore != null ? `Condition ${repScore}/100` : 'No report yet', repScore == null ? UI.chip('ok', '—') : UI.chip(repScore >= 70 ? 'ok' : repScore >= 50 ? 'warn' : 'alert', repScore >= 70 ? 'Good' : repScore >= 50 ? 'Medium' : 'Poor')],
-      ['Silt level', maxSilt != null ? `Peak ${maxSilt}% across nodes` : 'No node data', factorChip(maxSilt, 40, 70)],
-      ['Node network', total ? `${online} of ${total} reporting` : 'No nodes yet', total ? UI.chip(online === total ? 'ok' : online / total >= .75 ? 'warn' : 'alert', online === total ? 'Healthy' : 'Degraded') : UI.chip('ok', '—')],
+      ['Rainfall intensity', `${Math.round(today.mm)}mm today`, factorChip(today.mm, 5, 20)],
+      ['Drainage condition', repScore != null ? `Condition ${repScore}/100` : 'No report yet', repScore == null ? UI.chip('ok', '—') : UI.chip(repScore >= 70 ? 'ok' : repScore >= 50 ? 'warn' : 'alert', repScore >= 70 ? 'Good' : repScore >= 50 ? 'Medium' : 'Poor')],
+      ['Silt level', maxSilt != null ? `Highest reported build-up: ${maxSilt}%` : 'No node data', factorChip(maxSilt, 40, 70)],
+      ['Device connection', total ? `${online} of ${total} reporting` : 'No devices yet', total ? UI.chip(online === total ? 'ok' : online / total >= .75 ? 'warn' : 'alert', online === total ? 'Healthy' : 'Degraded') : UI.chip('ok', '—')],
       ['Open alerts', `${openAlerts} active`, factorChip(openAlerts, 2, 4)],
     ];
 
     // rule-based recommendations from the same signals
     const recs = [];
-    if (maxSilt != null && maxSilt >= 70) recs.push({ t: 'Schedule silt clearing', d: `Peak silt at ${maxSilt}% — clearing before the next heavy rain directly lowers your risk curve.`, cta: ['Request dispatch', `App.openTicket('dispatch','Silt clearing request','high')`] });
-    if (total && online < total) recs.push({ t: 'Restore offline node', d: `${total - online} node${total - online > 1 ? 's' : ''} not reporting — blind spots reduce forecast accuracy.`, cta: ['Contact support', `App.openTicket('sensor','Offline node — field visit request','high')`] });
-    const lowEnzyme = (sensors || []).find(x => x.enzyme && x.enzyme.level_percent != null && x.enzyme.level_percent <= 15);
-    if (lowEnzyme) recs.push({ t: 'Refill bio-enzyme cartridge', d: `${lowEnzyme.name} is at ${lowEnzyme.enzyme.level_percent}% — treatment lapses raise blockage risk.`, cta: ['Request refill', `App.openTicket('dispatch','Bio-enzyme cartridge refill request','normal')`] });
-    if (worst.level === 'high') recs.push({ t: `Prepare for ${dayLbl(worst.date)}`, d: `Peak risk ${worst.chance}% with ~${Math.round(worst.mm)}mm expected. Clear surface drains of debris and keep access routes open.`, cta: null });
-    if (!recs.length) recs.push({ t: 'No action needed', d: 'Your drainage is in good shape for the forecast window. We\'ll flag anything that changes.', cta: null });
+    if (maxSilt != null && maxSilt >= 70) recs.push({ t: 'Schedule silt clearing', d: `Peak silt at ${maxSilt}% — request an inspection to confirm the condition and appropriate work.`, cta: ['Request service', `App.openTicket('dispatch','Silt clearing request','high')`] });
+    if (total && online < total) recs.push({ t: 'Check devices that stopped reporting', d: `${total - online} node${total - online > 1 ? 's' : ''} not reporting — current conditions at these locations are unknown.`, cta: ['Request device service', `App.openTicket('sensor','Offline node — field visit request','high')`] });
+    if (worst.level === 'high') recs.push({ t: `Prepare for ${dayLbl(worst.date)}`, d: `Peak risk ${worst.chance}/100 with ~${Math.round(worst.mm)}mm expected. Ask your facility manager to have a provider check drains before rain. Stay away from moving water and open drains.`, cta: null });
+    if (!recs.length) recs.push({ t: 'No additional recommendations from available data', d: 'This estimate does not rule out flooding. Review coverage and local conditions.', cta: null });
 
     const kpi = (label, valueHtml, sub) => `<div class="card statcard"><div class="lbl">${label}</div><div style="font-family:var(--ff-d);font-size:22px;font-weight:600;margin:6px 0 2px">${valueHtml}</div><div class="sub">${sub}</div></div>`;
 
     document.getElementById('fc-body').innerHTML = `
+      ${sensors.some(s=>PortalModel.waterState(s)==='high')?`<div class="attention-notice water-alert" role="status"><strong>Current high water</strong><p>${sensors.filter(s=>PortalModel.waterState(s)==='high').map(s=>`<a href="#sensor/${encodeURIComponent(s.sensor_id)}">${UI.esc(s.name||s.sensor_id)} · ${PortalModel.levelText(s)} ↗</a>`).join(' · ')} — this reported condition needs review regardless of today's forecast score.</p></div>`:''}
       <div class="kpi-row">
-        ${kpi('Overall risk today', `<span style="color:${FC_COLOR[today.level]}">${FC_WORD[today.level]}</span>`, `${today.chance}% flood chance`)}
-        ${kpi('Rainfall forecast (24h)', `<span style="display:inline-flex;align-items:center;gap:9px">${weatherGlyph(today.code, 56)}<span>${Math.round(today.mm)}<span style="font-size:14px;color:var(--ink-3);margin-left:3px">mm</span></span></span>`, `${(window.WeatherIcons && today.code != null ? WeatherIcons.label(today.code) + ' · ' : '')}${today.prob}% chance of rain`)}
-        ${kpi('Peak risk window', dayLbl(worst.date), `<span style="color:${FC_COLOR[worst.level]};font-weight:600">${worst.chance}% · ${FC_WORD[worst.level]} risk</span>`)}
-        ${kpi('Drainage health', health ? `${health.score}<span style="font-size:14px;color:var(--ink-3);margin-left:3px">/100</span>` : '—', health ? 'Powers this forecast' : 'Assuming mid vulnerability')}
+        ${kpi('Forecast risk today', `<span class="forecast-severity" data-level="${today.level}" style="color:${FC_COLOR[today.level]}">${FC_WORD[today.level]}</span>`, `${today.chance}/100 · does not override current alerts`)}
+        ${kpi('Rainfall today', `<span class="rainfall-reading">${weatherGlyph(today.code, 32)}<span>${Math.round(today.mm)}<span class="rainfall-unit">mm</span></span></span>`, `${(window.WeatherIcons && today.code != null ? WeatherIcons.label(today.code) + ' · ' : '')}${today.prob}% chance of rain · calendar day`)}
+        ${kpi('Highest daily index · '+horizon+' days', dayLbl(worst.date), `<span style="color:${FC_COLOR[worst.level]};font-weight:600">${worst.chance}/100 · ${FC_WORD[worst.level]} risk</span>`)}
+        ${kpi('Site status index', health ? `${health.score}<span style="font-size:14px;color:var(--ink-3);margin-left:3px">/100</span>` : '—', health ? 'Condition, coverage and alerts' : 'Assuming mid vulnerability')}
       </div>
 
       <div id="fc-nearterm"></div>
 
       <div class="panel panel-pad mb-20">
-        <div class="row-between mb-10"><h3 style="margin:0">${horizon}-day risk outlook</h3><span class="muted">${_fcRange > 16 ? '16-day forecast horizon (max reliable)' : 'Daily flood chance'}</span></div>
+        <div class="row-between mb-10"><h3 style="margin:0">${horizon}-day risk outlook</h3><span class="muted">${_fcRange > 16 ? 'Weather outlook up to 16 days · estimates can change' : 'Daily risk index'}</span></div>
         <div class="fc-grid">${rows.map(fcDayCell).join('')}</div>
       </div>
 
@@ -1565,9 +1458,9 @@ const Screens = (function () {
           ${recs.map(r => `<div style="padding:11px 0;border-bottom:1px solid var(--line)"><b style="font-size:13px">${r.t}</b><div class="muted" style="margin:3px 0 8px;line-height:1.5">${r.d}</div>${r.cta ? `<button class="btn sm" onclick="${r.cta[1]}">${r.cta[0]}</button>` : ''}</div>`).join('')}
         </div>
       </div>
-      <p class="muted" style="margin-top:14px">How this works: each day blends your drainage health (40%), forecast rainfall volume (45%), and rain probability (15%). Forecast data: Open-Meteo, updated hourly. Improving your drainage score lowers every day's risk.</p>`;
-    try { document.getElementById('fc-hourly').innerHTML = await hourlyRiskChart(allProps, vulnerability); } catch (_) {}
-    if (!Demo.isOn()) renderNearTerm();
+      <p class="muted" style="margin-top:14px">How this works: each day blends your drainage health (40%), forecast rainfall volume (45%), and rain probability (15%). ${Demo.isOn()?'Forecast data: illustrative local sample.':'Weather source: Open-Meteo; check supplied forecast timestamps.'} This is not a calibrated flood probability; weather and site data may be incomplete.</p>`;
+    try { document.getElementById('fc-hourly').innerHTML = await hourlyRiskChart(allProps, vulnerability); } catch (e) { document.getElementById('fc-hourly').innerHTML='<p class="record-context">Hourly forecast unavailable: '+UI.esc(e.message)+'</p>'; }
+    if (!Demo.isOn()) renderNearTerm(document,resolveActive(allProps));
   }
 
   // ── Sensor-driven near-term risk (our engine, not the weather outlook) ──────
@@ -1601,28 +1494,30 @@ const Screens = (function () {
         ${ntHorizonStrip(e)}
       </div>
       <div style="margin-top:10px">
-        <button class="btn sm ghost" onclick="Screens.explainClientRisk('${UI.esc(e.property_id)}', this)">Explain this</button>
+        <button class="btn sm ghost" onclick="Screens.explainClientRisk('${UI.jsq(e.property_id)}', this)">Explain this</button>
         <div id="${briefDomId(e.property_id)}"></div>
       </div>
     </div>`;
   }
 
-  async function renderNearTerm() {
+  async function renderNearTerm(document=window.document,propertyId=App.activeProperty()) {
     const el = document.getElementById('fc-nearterm');
     if (!el) return;
     el.innerHTML = `<div class="panel panel-pad mb-20">${UI.loading(2)}</div>`;
     let data;
     try { const r = await apiRequest('/client-forecast/horizons'); data = r && r.data; }
-    catch (_) { el.innerHTML = ''; return; }              // no access / error → hide
+    catch (e) { el.innerHTML='<p class="record-context">Near-term projection unavailable: '+UI.esc(e.message)+'</p>'; return; }
     if (!data || !Array.isArray(data.estates) || !data.estates.length) { el.innerHTML = ''; return; }
 
-    const p = data.portfolio || {};
+    data.estates=data.estates.filter(e=>String(e.property_id||e.id)===String(propertyId));
+    if(!data.estates.length){el.innerHTML='<p class="record-context">No near-term projection supplied for this property.</p>';return;}
+    const p = {critical_now:data.estates.filter(e=>e.current_risk>=80).length,anomalies:data.estates.filter(e=>e.anomaly).length};
     const chips = [];
     if (p.critical_now) chips.push(UI.chip('alert', `${p.critical_now} critical now`));
     if (p.entering_high_3h) chips.push(UI.chip('warn', `${p.entering_high_3h} entering high (3h)`));
     if (p.preventive_recommended) chips.push(UI.chip('warn', `${p.preventive_recommended} preventive due`));
     if (p.anomalies) chips.push(UI.chip('alert', `${p.anomalies} anomaly`));
-    if (!chips.length) chips.push(UI.chip('ok', 'All estates stable'));
+    if (!chips.length) chips.push(UI.chip('progress', 'Selected-property projection'));
     const rain = data.rain_next_3h_mm != null ? `<span class="muted" style="font-size:12px">~${data.rain_next_3h_mm}mm rain next 3h</span>` : '';
 
     const shown = data.estates.slice(0, 6);
@@ -1631,10 +1526,10 @@ const Screens = (function () {
     el.innerHTML = `<div class="panel panel-pad mb-20">
       <div class="row-between mb-10" style="flex-wrap:wrap;gap:8px">
         <div><h3 style="margin:0">Live risk — next 6 hours</h3><div class="muted" style="font-size:12px;margin-top:2px">Sensor-driven projection from your nodes · water-level momentum + silt + forecast rainfall</div></div>
-        <button class="btn sm" onclick="Screens.explainClientRisk('portfolio', this)">Brief me</button>
+        <button class="btn sm" onclick="Screens.explainClientRisk('${UI.jsq(propertyId)}', this)">Brief me</button>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">${chips.join(' ')} ${rain}</div>
-      <div id="${briefDomId('portfolio')}"></div>
+      <div id="${briefDomId(propertyId)}"></div>
       ${shown.map(ntEstateCard).join('')}
       ${more}
       <p class="muted" style="margin-top:12px;font-size:11.5px">Rule-based projection (not a trained model): current risk blended with forecast rainfall and live water-level momentum. AI briefings phrase these figures in plain language.</p>
@@ -1671,6 +1566,7 @@ const Screens = (function () {
 
   // ---------------- REPORTS & DOCUMENTS ----------------
   async function reports(view) {
+    const document=UI.scopedDocument(view);
     const allProps = await getMyProperties();
     view.innerHTML = `
       <div class="top"><div><h1>Reports &amp; documents</h1><div class="sub">Your inspection reports and drainage assessments — findings, scores, and recommendations</div></div></div>
@@ -1685,8 +1581,8 @@ const Screens = (function () {
     } else if (items && items.length) {
       el.innerHTML = `
         <div class="card tbl-wrap">
-          <table class="tbl">
-            <thead><tr><th>Report</th><th>Property</th><th>Date</th><th>Score</th><th>Flood risk</th><th>Status</th><th style="width:150px"></th></tr></thead>
+          <table class="tbl compact-records reports-table">
+            <thead><tr><th>Report</th><th>Property</th><th>Date</th><th>Drainage score</th><th>Assessed risk</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>${items.map(reportRow).join('')}</tbody>
           </table>
         </div>`;
@@ -1699,25 +1595,26 @@ const Screens = (function () {
 
   // ---------------- REPORT DETAIL ----------------
   async function reportDetail(view, id) {
+    const document=UI.scopedDocument(view);
     view.innerHTML = `
       <div class="top"><div>
-        <div class="crumb" onclick="App.go('reports')">← Reports &amp; documents</div>
+        <a class="portal-text-link crumb" href="#reports">← Reports &amp; documents</a>
         <h1 id="rd-title">Loading…</h1><div class="sub" id="rd-sub"></div>
       </div><div id="rd-actions"></div></div>
       ${demoBanner()}
       <div id="rd-body">${UI.loading(3)}</div>`;
     let d;
     if (Demo.isOn()) {
-      d = (Demo.data.reports || []).find(r => (r.report_id || r.id) === id) || (Demo.data.reports || [])[0];
+      d = (Demo.data.reports || []).find(r => (r.report_id || r.id) === id);
     } else {
       try { const r = await apiRequest('/field-reports/' + encodeURIComponent(id)); d = r && r.data; }
-      catch (e) { document.getElementById('rd-body').innerHTML = UI.state('error', "Couldn't load the report", e.message || 'Please try again.', 'Retry', `onclick=\"App.openReport('${UI.esc(id)}')\"`); return; }
+      catch (e) { document.getElementById('rd-body').innerHTML = UI.state('error', "Couldn't load the report", e.message || 'Please try again.', 'Retry', `onclick=\"App.openReport('${UI.jsq(id)}')\"`); return; }
     }
     if (!d) { document.getElementById('rd-body').innerHTML = UI.state('empty', 'Report not found', 'It may have been removed or is not yet shared with you.'); return; }
 
     const rid = d.report_id || d.id || id;
     const score = d.drainage_condition_score;
-    const scoreColor = score == null ? 'var(--ink-3)' : score >= 70 ? 'var(--ok)' : score >= 40 ? 'var(--warn)' : 'var(--alert)';
+    const scoreColor = score == null ? 'var(--ink-3)' : score >= 70 ? 'var(--ok)' : score >= 50 ? 'var(--warn)' : 'var(--alert)';
     const risk = d.flood_risk_level;
     const riskKind = risk === 'high' || risk === 'critical' ? 'alert' : risk === 'moderate' || risk === 'medium' ? 'warn' : 'ok';
     const isReady = (d.status === 'sent' || d.status === 'approved' || d.status === 'completed' || d.sent_to_client_at);
@@ -1726,14 +1623,14 @@ const Screens = (function () {
     document.getElementById('rd-title').textContent = d.title || 'Inspection report';
     document.getElementById('rd-sub').textContent = `${d.property_name || d.property_id || ''}${loc ? ' · ' + loc : ''} · ${UI.fmtDate(d.sent_to_client_at || d.created_at)}`;
     document.getElementById('rd-actions').innerHTML = isReady
-      ? `<div style="display:flex;gap:8px"><button class="btn ghost" onclick="App.viewReport('${UI.esc(rid)}')">View PDF</button><button class="btn" onclick="App.downloadReport('${UI.esc(rid)}')">Download PDF</button></div>`
+      ? `<div style="display:flex;gap:8px"><button class="btn ghost" onclick="App.viewReport('${UI.jsq(rid)}')">View PDF</button><button class="btn" onclick="App.downloadReport('${UI.jsq(rid)}')">Download PDF</button></div>`
       : `<span class="chip warn">${cap(d.status || 'In progress')}</span>`;
 
     const block = (title, body) => body ? `<div class="panel panel-pad mb-20"><h3 style="margin:0 0 10px">${title}</h3><div style="font-size:14px;color:var(--ink-2);line-height:1.7;white-space:pre-wrap">${UI.esc(body)}</div></div>` : '';
     const kpi = (label, valueHtml, sub) => `<div class="card statcard"><div class="lbl">${label}</div><div style="font-family:var(--ff-d);font-size:22px;font-weight:600;margin:6px 0 2px">${valueHtml}</div><div class="sub">${sub}</div></div>`;
     document.getElementById('rd-body').innerHTML = `
       <div class="kpi-row" style="margin-bottom:20px">
-        ${kpi('Drainage condition', `<span style="color:${scoreColor}">${score != null ? score + '<span style="font-size:14px;color:var(--ink-3)">/100</span>' : '—'}</span>`, score == null ? 'Not scored' : score >= 70 ? 'Good' : score >= 40 ? 'Fair' : 'Poor')}
+        ${kpi('Drainage condition', `<span style="color:${scoreColor}">${score != null ? score + '<span style="font-size:14px;color:var(--ink-3)">/100</span>' : '—'}</span>`, score == null ? 'Not scored' : score >= 70 ? 'Good' : score >= 50 ? 'Fair' : 'Poor')}
         ${kpi('Flood risk', risk ? `<span style="color:${riskKind === 'alert' ? 'var(--alert)' : riskKind === 'warn' ? 'var(--warn)' : 'var(--ok)'}">${cap(String(risk))}</span>` : '—', 'Assessed at inspection')}
         ${kpi('Status', isReady ? 'Ready' : cap(d.status || 'In progress'), UI.fmtDate(d.sent_to_client_at || d.created_at))}
       </div>
@@ -1746,27 +1643,23 @@ const Screens = (function () {
   // ---------------- SENSOR DETAIL (drill-down + time range) ----------------
   let _sensorRange = 24;
   async function sensorDetail(view, sensorId) {
+    const document=UI.scopedDocument(view);
     view.innerHTML = `
       <div class="top"><div>
-        <div class="crumb" onclick="App.go('monitoring')">← Monitoring</div>
+        <a class="portal-text-link crumb" href="#monitoring">← Water &amp; devices</a>
         <h1 id="sd-name">Loading…</h1><div class="sub" id="sd-sub"></div>
       </div>
       <div class="seg">
         ${[['24h', 24], ['7d', 168], ['30d', 720]].map(([lbl, h]) =>
-          `<button class="${_sensorRange === h ? 'on' : ''}" onclick="App.setSensorRange(${h},'${UI.esc(sensorId)}')">${lbl}</button>`).join('')}
+          `<button class="${_sensorRange === h ? 'on' : ''}" onclick="App.setSensorRange(${h},'${UI.jsq(sensorId)}')">${lbl}</button>`).join('')}
       </div></div>
       ${demoBanner()}
       <div id="sd-body">${UI.loading(3)}</div>`;
 
     let d;
     if (Demo.isOn()) {
-      const s = Demo.data.sensors.find(x => x.sensor_id === sensorId) || Demo.data.sensors[0];
-      const pts = _sensorRange <= 24 ? 24 : _sensorRange <= 168 ? 28 : 30;
-      const now = Date.now(), span = _sensorRange * 3600e3;
-      d = { ...s, series: Array.from({ length: pts }, (_, i) => {
-        const base = (s.level || 30) + Math.sin(i / 3) * 12;
-        return { t: new Date(now - (pts - 1 - i) * (span / pts)).toISOString(), avg: Math.max(5, Math.round(base)), peak: Math.round(base + 8), flow: +(8 + Math.random() * 10).toFixed(1) };
-      }) };
+      const s = Demo.data.sensors.find(x => x.sensor_id === sensorId);
+      d=s?{...s,series:PortalModel.sensorSeries(s,_sensorRange)}:null;
     } else {
       try { const r = await apiRequest(`/monitoring/sensor/${sensorId}?hours=${_sensorRange}`); d = r && r.data; }
       catch (e) { document.getElementById('sd-body').innerHTML = UI.state('error', 'Could not load sensor', e.message || 'Please try again.'); return; }
@@ -1774,7 +1667,9 @@ const Screens = (function () {
     if (!d) { document.getElementById('sd-body').innerHTML = UI.state('error', 'Sensor not found', ''); return; }
 
     document.getElementById('sd-name').textContent = d.name || d.sensor_id;
-    document.getElementById('sd-sub').textContent = `${d.zone ? cap(d.zone) + ' zone' : ''}${d.device_variant === 'bio_dispenser' ? ' · Bio-enzyme dispenser' : ' · Standard sensor'} · ${d.status === 'active' ? 'Live' : 'Offline'}`;
+    document.getElementById('sd-sub').textContent = `${d.zone ? cap(d.zone) + ' zone' : ''} · Monitoring device · ${d.sensor_id} · ${d.last_ping?'Last reported '+UI.fmtRelative(d.last_ping):'No report timestamp'}`;
+    let linkedAlerts=[],alertsUnavailable=false;
+    try{const r=Demo.isOn()?{data:Demo.data.alerts}:await apiRequest('/alerts');linkedAlerts=scopeToProperty(r.data||[],await getMyProperties()).map(normalizeAlert).filter(a=>a.sensor_id===d.sensor_id&&PortalModel.active(a)).sort((a,b)=>Date.parse(b.created_at)-Date.parse(a.created_at));}catch(_){alertsUnavailable=true;}
 
     const rangeLabel = _sensorRange === 24 ? 'last 24 hours' : _sensorRange === 168 ? 'last 7 days' : 'last 30 days';
     const battPct = d.battery_percent != null ? d.battery_percent : (d.battery_voltage != null ? Math.round((d.battery_voltage / 4.2) * 100) : null);
@@ -1784,7 +1679,7 @@ const Screens = (function () {
     const silt = d.silt_level;
     const siltLabel = silt == null ? '—' : silt >= 70 ? 'High' : silt >= 40 ? 'Moderate' : 'Low';
     const siltColor = silt == null ? 'var(--ink-3)' : silt >= 70 ? 'var(--alert)' : silt >= 40 ? 'var(--warn)' : 'var(--ok)';
-    const q = str => String(str == null ? '' : str).replace(/['"\\\n]/g, ' ').replace(/\s+/g, ' ').trim();
+    const q = UI.jsq;
     const reportDesc = `Regarding ${d.name || d.sensor_id} (${d.sensor_id}) — status ${d.status}, level ${d.level != null ? Math.round(d.level) + '%' : 'n/a'}, battery ${battPct != null ? battPct + '%' : 'n/a'}. Please advise.`;
     const healthRows = [
       ['Battery', battPct != null ? `${battPct}%${d.battery_voltage ? ` (${d.battery_voltage}V)` : ''}` : '—', battColor],
@@ -1796,49 +1691,41 @@ const Screens = (function () {
     ];
 
     document.getElementById('sd-body').innerHTML = `
+      ${PortalModel.waterState(d)==='high'?`<section class="device-attention" role="status"><strong>High water · review now</strong><p>Latest reported level <b> ${PortalModel.levelText(d)}</b> is at or above the 70% alert threshold. An online device does not mean safe drainage.</p><button class="btn" data-service-property="${UI.esc(d.property_id)}" data-service-title="${UI.esc('High water review: '+(d.name||d.sensor_id))}" data-service-type="inspection" data-source-id="${UI.esc(linkedAlerts.find(a=>/water/i.test(a.title))?.id||d.sensor_id)}">Request provider inspection</button></section>`:d.status==='offline'?'<section class="device-attention" role="status"><strong>Monitoring coverage interrupted</strong><p>No current water reading is available. Last reported device diagnostics may be stale.</p></section>':''}
       <div class="grid-3 mb-20">
-        ${UI.stat('Current level', `<span style="color:${d.level == null ? 'var(--ink)' : d.level >= 70 ? 'var(--alert)' : d.level >= 50 ? 'var(--warn)' : 'var(--ink)'}">${d.level != null ? Math.round(d.level) : '—'}<span style="font-size:16px;margin-left:3px">%</span></span>`, 'Water level · alert at 70%')}
+        ${UI.stat('Current level', `<span class="water-value" data-water-state="${PortalModel.waterState(d)}">${PortalModel.levelText(d)}</span>`, PortalModel.waterState(d)==='high'?'High water level · alert at 70%':PortalModel.waterState(d)==='unavailable'?'Current reading unavailable':'Water level · alert at 70%')}
         ${UI.stat('Flow rate', d.flow_rate != null ? d.flow_rate + ' L/s' : '—', 'Current')}
-        ${UI.stat('Status', `<span style="font-size:18px;color:${d.status === 'active' ? 'var(--ok)' : d.status === 'offline' ? 'var(--alert)' : 'var(--ink)'}">${d.status === 'active' ? 'Online' : d.status === 'offline' ? 'Offline' : 'Idle'}</span>`, d.device_variant === 'bio_dispenser' ? 'Bio-dispenser' : 'Standard')}
+        ${UI.stat('Device connectivity', `<span style="font-size:18px;color:${d.status === 'active' ? 'var(--ok)' : d.status === 'offline' ? 'var(--alert)' : 'var(--ink)'}">${d.status === 'active' ? 'Reporting' : d.status === 'offline' ? 'Offline' : 'Idle'}</span>`, 'Connection status only · not drainage safety')}
       </div>
+      <section class="related-alerts"><h3>Related active alerts</h3>${linkedAlerts.length?linkedAlerts.map(a=>`<a class="related-alert" data-severity="${UI.esc(a.severity)}" href="#alert/${encodeURIComponent(a.id)}"><span><b>${UI.esc(a.title)}</b><small>${UI.esc(cap(a.severity))} · ${UI.fmtRelative(a.created_at)}</small></span><span aria-hidden="true">↗</span></a>`).join(''):`<p>${alertsUnavailable?'Related alerts could not be loaded.':'No active alert records returned for this sensor.'}</p>`}</section>
 
       <div class="panel panel-pad mb-20">
         <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 12px;gap:10px">
           <h3 style="font-family:var(--ff-d);font-size:16px;margin:0">Device health</h3>
           <button class="btn ghost sm" onclick="App.openTicket('sensor','${q('Issue with ' + (d.name || d.sensor_id))}','${d.status === 'offline' || (d.level != null && d.level >= 70) ? 'high' : 'normal'}','${q(reportDesc)}')">Report an issue</button>
         </div>
-        <div class="profile-grid">
+        <div class="device-health-layout"><img class="device-health-image" src="assets/flowguard-device.png" width="887" height="1000" alt="FlowGuard solar-powered monitoring device"><div class="profile-grid">
           ${healthRows.map(([k, v, c]) => `<div class="pf-row"><div class="pf-k">${k}</div><div class="pf-v" style="color:${c}">${v}</div></div>`).join('')}
-        </div>
+        </div></div>
       </div>
-      ${d.enzyme ? `<div class="panel panel-pad mb-20">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-          <h3 style="font-family:var(--ff-d);font-size:16px;margin:0">Bio-enzyme cartridge</h3>
-          ${['due_replacement', 'depleted', 'low'].includes(d.enzyme.status)
-            ? `<button class="btn" onclick="App.openTicket('dispatch','${q('Cartridge refill: ' + (d.name || d.sensor_id))}','normal','${q('The bio-enzyme cartridge on ' + (d.name || d.sensor_id) + ' (' + d.sensor_id + ') needs replacement. Please schedule a refill.')}')">Request refill</button>` : ''}
-        </div>
-        ${UI.enzymeDetail(d.enzyme)}
-      </div>` : ''}
-      <div class="panel panel-pad">
-        <h3 style="font-family:var(--ff-d);font-size:16px;margin-bottom:4px">Water level trend</h3>
-        <p style="color:var(--ink-3);font-size:12px;margin-bottom:16px">${rangeLabel}</p>
-        ${UI.lineChart(d.series || [], { threshold: { v: 70, label: 'Alert' } })}
-      </div>`;
+      <section class="device-trends"><h2 style="font-size:20px;margin-top:24px">Device trends</h2><p class="muted">${rangeLabel} · ${Demo.isOn()?'Demo history':'Recorded readings'}</p>${metricCharts(d.series||[])}</section>`;
   }
   function setSensorRange(h, sensorId) { _sensorRange = h; }
 
   // ---------------- SUPPORT / TICKETS ----------------
   const TICKET_CATS = {
-    sensor: 'Sentinel Network', treatment: 'Bio-Treatment', dispatch: 'Heavy-Plant Dispatch',
+    sensor: 'Device monitoring', dispatch: 'Drain cleaning or inspection',
     emergency: 'Emergency', billing: 'Billing & Contract', general: 'General enquiry'
   };
   let _ticketFilter = 'all';
 
   async function support(view) {
+    const document=UI.scopedDocument(view);
     view.innerHTML = `
-      <div class="top"><div><h1>Support</h1><div class="sub">Raise a request or track your existing tickets</div></div>
-        <button class="btn" onclick="App.openTicket()">+ New ticket</button></div>
+      <div class="top"><div><h1>How can we help?</h1><div class="sub">Understand an update, arrange a visit or talk to the FlowGuard team.</div></div>
+        ${App.can('submit_support')?'<button class="btn" onclick="App.openTicket()">Message FlowGuard</button>':''}</div>
       ${demoBanner()}
+      <section class="help-choices" aria-label="Choose the help you need"><div class="help-choice"><h2>Not sure what a reading means?</h2><p>Your property guide explains what is happening and what to do next, without the technical language.</p><a class="btn" href="#overview">Explain my property →</a></div><div class="help-choice"><h2>Need a visit, cleaning or repair?</h2><p>Request a service. FlowGuard can coordinate with a provider, or keep a record when you use your own provider.</p><a class="btn" href="#services">Request or track a service →</a></div></section>
       <div class="seg" style="margin-bottom:16px">
         <button class="${_ticketFilter === 'all' ? 'on' : ''}" onclick="App.setTicketFilter('all')">All</button>
         <button class="${_ticketFilter === 'open' ? 'on' : ''}" onclick="App.setTicketFilter('open')">Open</button>
@@ -1857,6 +1744,10 @@ const Screens = (function () {
       }
     }
 
+    // Keep account questions visible; property-linked conversations follow the selected property.
+    const supportProps=await getMyProperties();
+    const selectedSupport=resolveActive(supportProps);
+    items=items.filter(t=>!t.property_id||t.property_id===selectedSupport);
     if (_ticketFilter === 'open') items = items.filter(t => !['resolved', 'closed'].includes(t.status));
     if (_ticketFilter === 'resolved') items = items.filter(t => ['resolved', 'closed'].includes(t.status));
 
@@ -1866,7 +1757,7 @@ const Screens = (function () {
     } else {
       el.className = '';
       el.innerHTML = UI.state('ok', _ticketFilter === 'all' ? 'No tickets yet' : `No ${_ticketFilter} tickets`,
-        'Need help or want to request a service visit? Raise a ticket and our team will respond.',
+        'Need technical or account help? Raise a support ticket. Use Services for provider service requests.',
         'Raise a ticket', 'onclick="App.openTicket()"');
     }
   }
@@ -1875,18 +1766,18 @@ const Screens = (function () {
     const s = `${t.subject || t.title || ''} ${t.category || ''}`.toLowerCase();
     // returns { c: accent color, p: svg path markup }
     if (/calibrat|tune|adjust|threshold/.test(s))
-      return { c: '#a78bfa', p: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>' };
+      return { c: '#06bcd4', p: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>' };
     if (/rain|forecast|weather|precip|flood|storm/.test(s))
-      return { c: '#38bdf8', p: '<line x1="8" y1="19" x2="8" y2="21"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="16" y1="19" x2="16" y2="21"/><line x1="16" y1="13" x2="16" y2="15"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="12" y1="15" x2="12" y2="17"/><path d="M20 16.58A5 5 0 0018 7h-1.26A8 8 0 104 15.25"/>' };
+      return { c: '#06bcd4', p: '<line x1="8" y1="19" x2="8" y2="21"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="16" y1="19" x2="16" y2="21"/><line x1="16" y1="13" x2="16" y2="15"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="12" y1="15" x2="12" y2="17"/><path d="M20 16.58A5 5 0 0018 7h-1.26A8 8 0 104 15.25"/>' };
     if (/offline|sensor|node|device|telemetry|signal|connect/.test(s))
-      return { c: '#22c3e6', p: '<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>' };
+      return { c: '#06bcd4', p: '<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>' };
     if (/bill|invoice|payment|charge|dispute|contract|refund/.test(s))
-      return { c: '#2dd4bf', p: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>' };
+      return { c: '#00e676', p: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>' };
     if (/dispatch|crew|visit|plant|truck|vehicle|clean/.test(s))
-      return { c: '#f0a92a', p: '<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>' };
+      return { c: '#fe5252', p: '<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>' };
     if (/emergency|urgent|critical/.test(s))
-      return { c: '#f87171', p: '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>' };
-    return { c: '#22c3e6', p: '<path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>' };
+      return { c: '#fe5252', p: '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>' };
+    return { c: '#06bcd4', p: '<path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>' };
   }
 
   function ticketRow(t) {
@@ -1902,7 +1793,7 @@ const Screens = (function () {
     const desc = t.description || t.last_message || t.body || '';
     const meta = `${UI.esc(t.ticket_id || '')} · ${UI.esc(TICKET_CATS[t.category] || t.category || 'General')} · ${UI.fmtDate(t.created_at)}`;
     const dot = (!done && t.needs_response) ? '<span class="ntf-dot"></span>' : '';
-    return `<div class="tkt-item${done ? ' done' : ''}" onclick="App.openTicketDetail('${UI.esc(t.ticket_id)}')">
+    return `<div class="tkt-item${done ? ' done' : ''}" onclick="App.openTicketDetail('${UI.jsq(t.ticket_id)}')">
       ${dot}
       <div class="ntf-ic" style="background:${ic.c}1f;color:${ic.c}">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic.p}</svg>
@@ -1915,7 +1806,7 @@ const Screens = (function () {
       <div class="tkt-right">
         <span class="tkt-pill ${pr.c}">${pr.l}</span>
         <span class="tkt-pill ${st.c}">${st.l}</span>
-        <button class="tkt-view" onclick="event.stopPropagation();App.openTicketDetail('${UI.esc(t.ticket_id)}')">View</button>
+        <button class="tkt-view" onclick="event.stopPropagation();App.openTicketDetail('${UI.jsq(t.ticket_id)}')">View</button>
       </div>
     </div>`;
   }
@@ -1923,9 +1814,10 @@ const Screens = (function () {
 
   // ---------------- TICKET DETAIL ----------------
   async function ticketDetail(view, ticketId) {
+    const document=UI.scopedDocument(view);
     view.innerHTML = `
       <div class="top"><div>
-        <div class="crumb" onclick="App.go('support')">← Back to tickets</div>
+        <a class="portal-text-link crumb" href="#support">← All conversations</a>
         <h1 id="td-subj">Loading…</h1><div class="sub" id="td-meta"></div>
       </div></div>
       ${demoBanner()}
@@ -1933,7 +1825,8 @@ const Screens = (function () {
 
     let t;
     if (Demo.isOn()) {
-      t = Demo.data.tickets.find(x => x.ticket_id === ticketId) || Demo.data.tickets[0];
+      t = Demo.data.tickets.find(x => x.ticket_id === ticketId);
+      if(!t){document.getElementById('td-body').innerHTML=UI.state('error','Ticket not found','No matching record.');return;}
       t = { ...t, messages: t.messages || [
         { author_type: 'client', author_name: 'You', message: t.description || 'Initial request.', created_at: t.created_at },
         { author_type: 'support', author_name: 'FlowGuard Support', message: 'Thanks for reaching out — our team is reviewing this and will update you shortly.', created_at: t.created_at }
@@ -1946,11 +1839,11 @@ const Screens = (function () {
 
     const done = ['resolved', 'closed'].includes(t.status);
     const stStatus = done
-      ? { dot: '#34d399', l: t.status === 'closed' ? 'Closed' : 'Resolved' }
-      : t.status === 'in_progress' ? { dot: '#f0a92a', l: 'In progress' }
-        : { dot: '#22c3e6', l: t.status === 'new' ? 'New' : 'Open' };
+      ? { dot: '#00e676', l: t.status === 'closed' ? 'Closed' : 'Resolved' }
+      : t.status === 'in_progress' ? { dot: '#06bcd4', l: 'In progress' }
+        : { dot: '#06bcd4', l: t.status === 'new' ? 'New' : 'Open' };
     const prio = String(t.priority || '').toLowerCase();
-    const prDot = (prio === 'high' || prio === 'urgent') ? '#f87171' : prio === 'medium' ? '#f0a92a' : '#8b96a5';
+    const prDot = (prio === 'high' || prio === 'urgent') ? '#fe5252' : prio === 'medium' ? '#06bcd4' : 'var(--ink)';
     const prLabel = prio ? cap(prio) : 'Normal';
     const category = t.category_label || t.subcategory || TICKET_CATS[t.category] || t.category || 'General';
     document.getElementById('td-subj').textContent = t.subject || t.title || 'Support request';
@@ -1972,36 +1865,44 @@ const Screens = (function () {
       }, ...msgs];
     }
     document.getElementById('td-body').innerHTML = `
-      <div class="td-cards">
+      <div class="conversation-layout"><aside class="conversation-summary"><h2>Your request</h2><p>${done?'This conversation is closed.':t.needs_response?'We are waiting for your reply.':'Your request is open. Check the latest reply below.'}</p><div class="td-cards">
         <div class="td-card"><div class="td-card-l">STATUS</div><div class="td-card-v"><span class="td-dot" style="background:${stStatus.dot}"></span>${stStatus.l}</div></div>
         <div class="td-card"><div class="td-card-l">PRIORITY</div><div class="td-card-v"><span class="td-dot" style="background:${prDot}"></span>${prLabel}</div></div>
         <div class="td-card"><div class="td-card-l">CATEGORY</div><div class="td-card-v">${UI.esc(category)}</div></div>
-      </div>
+      </div><p>Need someone to visit? A support message does not book a provider. Use the service option below.</p></aside>
       <div class="panel panel-pad td-convo">
-        <h3 class="td-convo-t">Conversation</h3>
+        <h3 class="td-convo-t">Chat with FlowGuard <span class="conversation-human">Support team · not AI</span></h3>
         <div class="thread" id="td-thread">
           ${msgs.length ? msgs.map(threadMsg).join('') : `<p class="muted">No messages yet.</p>`}
         </div>
         <div class="reply-box">
-          <textarea id="td-reply" rows="2" placeholder="Type your message here…"></textarea>
+          <label for="td-reply">Your reply</label>
+          <textarea id="td-reply" rows="3" placeholder="Tell us what you noticed, or ask a question…"></textarea>
           <div class="reply-bar">
-            <label class="reply-attach">
-              <input type="file" hidden onchange="var s=document.getElementById('td-attach-name');if(s)s.textContent=this.files&&this.files[0]?this.files[0].name:''">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-              <span>Attach document or file</span>
-            </label>
-            <span id="td-attach-name" class="reply-attach-name"></span>
-            <button class="btn" onclick="App.sendReply('${UI.esc(t.ticket_id)}', this)">Send message</button>
+            <span class="reply-attachment-note">Text messages only · file attachments are not available yet.</span>
+            <button class="btn" onclick="App.sendReply('${UI.jsq(t.ticket_id)}', this)">Send message</button>
           </div>
         </div>
-      </div>`;
+      </div></div>`;
+    const related=document.createElement('section');related.className='ticket-related';
+    const sensorId=t.sensor_id;
+    related.innerHTML=`<h3>${sensorId?'Device & next step':'More help'}</h3>${sensorId?`<a class="text-link" href="#sensor/${encodeURIComponent(sensorId)}">See the device: ${UI.esc(sensorId)} ↗</a>`:''}${t.alert_id?`<a class="text-link" href="#alert/${encodeURIComponent(t.alert_id)}">See the related alert ↗</a>`:''}${t.service_request_id?`<a class="text-link" href="#service-request/${encodeURIComponent(t.service_request_id)}">Track the service request ↗</a>`:sensorId?`<p>If the device needs a visit, request a provider check. We will record the request here; the provider still needs to confirm the visit.</p><button class="btn" data-service-property="${UI.esc(t.property_id||'')}" data-service-title="${UI.esc('Check device: '+(t.subject||t.title||t.ticket_id))}" data-service-type="sensor_maintenance" data-source-id="${UI.esc(t.ticket_id)}">Request a device check</button>`:'<p>Reply in this conversation for help with your account or payment. You do not need to create another request for the same question.</p>'}`;
+    if(!App.can('submit_support')){view.querySelector('.reply-box').innerHTML='<p>Your access is read-only. Ask your account administrator if you need to send a message.</p>';}
+    else if(done){const reply=view.querySelector('.reply-box');reply.innerHTML='<p>This conversation is closed. <button class="btn neutral" onclick="App.openTicket()">Start a new conversation</button></p>';}
+    if(!done&&App.can('submit_support')){
+      const replies=document.createElement('div');replies.className='reply-suggestions';replies.setAttribute('aria-label','Help writing your reply');
+      replies.innerHTML='<span>Need help writing?</span><button class="btn neutral" data-reply-prompt="Please update me on this request.">Ask for an update</button><button class="btn neutral" data-reply-prompt="What should I do next? Please explain in simple terms.">Ask what to do next</button>';
+      view.querySelector('.reply-box label').before(replies);
+      replies.querySelectorAll('button').forEach(button=>button.addEventListener('click',()=>{const input=view.querySelector('#td-reply');if(input.value.trim()&&!confirm('Replace your unsent reply with this suggestion?'))return;input.value=button.dataset.replyPrompt;input.dispatchEvent(new Event('input',{bubbles:true}));input.focus();}));
+    }
+    const summary=view.querySelector('.conversation-summary');if(summary){summary.appendChild(related);if(!sensorId&&!t.service_request_id)summary.querySelector(':scope > p:last-of-type')?.remove();}
   }
 
   function threadMsg(m) {
     const mine = m.author_type === 'client';
     const sys = m.author_type === 'system';
     if (sys) return `<div class="thread-sys">${UI.esc(m.message)} · ${UI.fmtDate(m.created_at)}</div>`;
-    const name = m.author_email || m.author_name || (mine ? 'You' : 'Support');
+    const name = mine ? 'You' : (m.author_name || 'FlowGuard Support');
     const initials = (name.replace(/[^a-zA-Z ]/g, ' ').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('') || (mine ? 'U' : 'S')).toUpperCase();
     const av = m.avatar_url
       ? `<img src="${UI.esc(m.avatar_url)}" alt="">`
@@ -2010,7 +1911,7 @@ const Screens = (function () {
       <div class="thread-h">
         <span class="thread-av">${av}</span>
         <b>${UI.esc(name)}</b>
-        <span class="thread-time">${UI.fmtTime(m.created_at)}</span>
+        <span class="thread-time">${UI.fmtTime(m.created_at)} WAT</span>
       </div>
       <div class="thread-b">${UI.esc(m.message)}</div>
     </div>`;
@@ -2018,14 +1919,15 @@ const Screens = (function () {
 
   // ---------------- SETTINGS (platform) ----------------
   async function settings(view) {
+    const document=UI.scopedDocument(view);
     const dark = (document.documentElement.getAttribute('data-theme') || 'light') === 'dark';
     let prefs = {};
-    if (!Demo.isOn()) { try { const r = await apiRequest('/preferences'); prefs = (r && r.data) || {}; } catch (_) {} }
+    if (!Demo.isOn()||window.PortalPreview) { const r = await apiRequest('/preferences'); if(!r?.data)throw new Error('Preferences unavailable');prefs=r.data; }
     const on = v => v ? 'checked' : '';
     view.innerHTML = `
       <div class="top"><div><h1>Settings</h1><div class="sub">Manage how the portal works for you</div></div></div>
-      <div class="cols">
-        <div class="panel panel-pad">
+      <div class="detail-tabs" role="tablist" aria-label="Settings sections"><button id="settings-notifications-tab" role="tab" aria-selected="true" aria-controls="settings-notifications">Notifications</button><button id="settings-appearance-tab" role="tab" aria-selected="false" aria-controls="settings-appearance" tabindex="-1">Appearance & data</button><button id="settings-account-tab" role="tab" aria-selected="false" aria-controls="settings-account" tabindex="-1">Account</button></div>
+        <section id="settings-notifications" class="settings-section" role="tabpanel" aria-labelledby="settings-notifications-tab">
           <h3>Notifications</h3>
           <div class="set-row"><div><b>Email alerts</b><small>Flood-risk and incident emails</small></div>
             <label class="switch"><input type="checkbox" id="set-email" ${on(prefs.email_alerts !== false)}><span class="slider"></span></label></div>
@@ -2034,37 +1936,38 @@ const Screens = (function () {
           <div class="set-row"><div><b>Weekly summary</b><small>A digest of your network each week</small></div>
             <label class="switch"><input type="checkbox" id="set-digest" ${on(prefs.weekly_digest !== false)}><span class="slider"></span></label></div>
           <button class="btn" style="margin-top:16px" onclick="App.saveSettings()">Save preferences</button>
-        </div>
-        <div class="panel panel-pad">
+        </section>
+        <section id="settings-appearance" class="settings-section" role="tabpanel" aria-labelledby="settings-appearance-tab" hidden>
           <h3>Appearance & data</h3>
           <div class="set-row"><div><b>Dark mode</b><small>Easier on the eyes at night</small></div>
             <label class="switch"><input type="checkbox" id="set-theme" ${on(dark)} onchange="App.toggleTheme()"><span class="slider"></span></label></div>
           <div class="set-row"><div><b>Demo mode</b><small>Show sample data to explore the portal</small></div>
             <label class="switch"><input type="checkbox" id="set-demo" ${on(Demo.isOn())} onchange="App.toggleDemo(this.checked)"><span class="slider"></span></label></div>
-          <hr style="border:none;border-top:1px solid var(--line);margin:18px 0">
+        </section><section id="settings-account" class="settings-section" role="tabpanel" aria-labelledby="settings-account-tab" hidden>
           <h3>Account</h3>
-          ${(() => { const u = Auth.getUser() || {}; const rl = u.client_role_label; return rl ? `<div class="set-row" style="border:none;padding:0 0 10px"><div><b>Your role</b><small>What you can do in this account</small></div>${UI.chip('ok', rl)}</div>` : ''; })()}
+          ${(() => { const u = Auth.getUser() || {}; const rl = u.client_role_label; return rl ? `<div class="set-row"><div><b>Your role</b><small>What you can do in this account</small></div><span class="record-badge">${UI.esc(rl)}</span></div>` : ''; })()}
           <button class="btn ghost" style="width:100%;margin-bottom:8px;justify-content:flex-start" onclick="App.go('account')">Profile & password →</button>
-          ${App.can('manage_team') ? `<button class="btn ghost" style="width:100%;margin-bottom:8px;justify-content:flex-start" onclick="App.go('team')">Team & roles →</button>` : ''}
-          <button class="btn ghost" style="width:100%;margin-bottom:8px;justify-content:flex-start" onclick="Auth.logout()">Sign out</button>
-          ${App.can('manage_account') ? `<button class="btn ghost" style="width:100%;justify-content:flex-start;color:var(--alert)" onclick="App.deactivateAccount()">Deactivate account</button>` : ''}
-        </div>
-      </div>`;
+          ${App.can('manage_team') ? `<button class="btn ghost" style="width:100%;margin-bottom:8px;justify-content:flex-start" onclick="App.go('team')">People & access →</button>` : ''}
+          <button class="btn neutral sign-out" onclick="Auth.logout()">Sign out</button>
+          ${App.can('manage_account') ? `<details class="danger-zone account-close"><summary>Stop using this account</summary><p>Deactivation pauses your account and monitoring notifications. It does not cancel active service contracts. If you only want to leave this browser session, use Sign out instead.</p><button class="btn danger" onclick="App.deactivateAccount()">Review account deactivation</button></details>` : ''}
+        </section>`;
   }
 
   // ---- TEAM & ROLES (client organisation RBAC) ----
   // Plain-language capability lists per role (presentation only — perms live server-side)
   const ROLE_CAPS = {
-    platform_admin: ['Manage properties & nodes', 'Invite and edit team roles', 'View/pay invoices', 'Access audit logs'],
-    facility_manager: ['Acknowledge live warnings', 'Request diagnostics checks', 'Draft site inspection reports'],
-    finance: ['Download monthly invoices', 'Update payment methods', 'View cost forecasting charts'],
-    member: ['Monitor real-time water metrics', 'Export historical reports', 'Submit hardware requests'],
+    platform_admin: ['Manage customer properties', 'Manage account members', 'View billing records'],
+    facility_manager: ['Review monitoring and alerts', 'Request provider services'],
+    finance: ['View invoices and contract records'],
+    member: ['Review shared monitoring and reports', 'Ask Support questions'],
+    viewer: ['Read permitted customer records', 'No service submissions or account changes'],
   };
   const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
 
   async function team(view) {
+    const document=UI.scopedDocument(view);
     view.innerHTML = `
-      <div class="top"><div><h1>Team &amp; roles</h1><div class="sub">Invite teammates and control what operations they can access.</div></div></div>
+      <div class="top"><div><h1>People &amp; access</h1><div class="sub">Choose who can see your properties and what they can do.</div></div></div>
       <div id="team-body"><div class="card"><p class="muted">Loading team…</p></div></div>`;
     let members = [], roles = [];
     try {
@@ -2085,7 +1988,7 @@ const Screens = (function () {
       const ownerTag = m.is_account_owner ? '<span class="tm-owner">Owner</span>' : (m.is_you ? '<span class="tm-owner">You</span>' : '');
       const roleCell = canEdit
         ? `<select class="tm-role-sel" onchange="App.setMemberRole(${m.id}, this.value)">${roleOpts(m.client_role)}</select>`
-        : `<span class="tm-role-pill ${isAdmin ? 'admin' : 'neutral'}">${UI.esc(m.client_role_label || '—')}</span>`;
+        : `<span class="tm-role-pill ${isAdmin ? 'admin' : 'neutral'}">${UI.esc(roles.find(r=>r.key===m.client_role)?.label || m.client_role_label || '—')}</span>`;
       const status = !m.is_active ? { c: 'off', l: 'Deactivated' }
         : m.invited_pending ? { c: 'pending', l: 'Pending Invite' }
           : { c: 'active', l: 'Active' };
@@ -2118,14 +2021,14 @@ const Screens = (function () {
 
     document.getElementById('team-body').innerHTML = `
       <div class="card panel-pad">
-        <div class="section-t" style="margin-top:0">Invite a teammate</div>
+        <div class="section-t" style="margin-top:0">Give someone access</div>
         <div class="tm-invite-grid">
           <div class="tm-field"><label>Full name</label><input id="tm-name" placeholder="e.g. Jane Doe"></div>
           <div class="tm-field"><label>Email address</label><input id="tm-email" type="email" placeholder="jane@company.com"></div>
           <div class="tm-field"><label>Role</label><select id="tm-role">${roleOpts('member')}</select></div>
           <button class="btn tm-invite-btn" onclick="App.inviteTeammate()">Send Invite</button>
         </div>
-        <p class="tm-hint">They'll receive an email to set a password and join your corporate account.</p>
+        <p class="tm-hint">We will email them an invitation. They can join your account after setting a password.</p>
       </div>
       <div class="card panel-pad" style="margin-top:16px">
         <div class="section-t" style="margin-top:0">Team members</div>
@@ -2136,6 +2039,6 @@ const Screens = (function () {
       <div class="tm-roles-grid">${roleCards}</div>`;
   }
 
-  return { overview, monitoring, forecast, explainClientRisk, getMyProperties, propertySelector, sensorDetail, properties, propertyDetail, billing, alerts, notifications, reports, reportDetail, support, ticketDetail, settings, account, team, setNotifFilter, setTicketFilter, setFcRange, setSensorRange, monSearch, monFilter, monMetric, TICKET_CATS };
+  return { overview, monitoring, forecast, explainClientRisk, getMyProperties, propertySelector, sensorDetail, properties, propertyDetail, billing, alerts, alertDetail, notifications, reports, reportDetail, support, ticketDetail, settings, account, team, setNotifFilter, setTicketFilter, setFcRange, setSensorRange, monSearch, monFilter, monMetric, TICKET_CATS };
 })();
 window.Screens = Screens;

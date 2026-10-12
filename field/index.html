@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
+<script src="service-requests.js?v=local1"></script>
 <script>
   /* no-flash theme: apply saved/system theme before first paint */
   (function(){try{var t=localStorage.getItem('fg_field_theme')||'system';
@@ -223,10 +224,11 @@
 
 <script>
   var API='https://api.flowguard.ng/api/v1';
+  var LOCAL_WORKFLOW=false;
   var $=function(id){return document.getElementById(id);};
-  function tok(){try{return localStorage.getItem('token');}catch(_){return null;}}
+  function tok(){if(LOCAL_WORKFLOW)return 'synthetic-local-provider';try{return localStorage.getItem('token');}catch(_){return null;}}
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-  function api(path,method,body){return fetch(API+path,{method:method||'GET',headers:{'Authorization':'Bearer '+tok(),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined}).then(function(r){
+  function api(path,method,body){return fetch(API+path,{method:method||'GET',headers:LOCAL_WORKFLOW?{'X-FlowGuard-Local-Role':'provider','Content-Type':'application/json'}:{'Authorization':'Bearer '+tok(),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined}).then(function(r){
     if(r.status===401){ try{localStorage.removeItem('token');localStorage.removeItem('user');}catch(_){}
       window.location.href='../login.html'; return {ok:false,status:401,j:{}}; }
     return r.json().then(function(j){return {ok:r.ok,status:r.status,j:j};},function(){return {ok:r.ok,status:r.status,j:{}};});
@@ -263,7 +265,8 @@
   matchMedia('(prefers-color-scheme:dark)').addEventListener('change',function(){if(curTheme()==='system')applyTheme();});
 
   /* ── nav ── */
-  var NAV_WORK=[['dashboard','Dashboard',false],['jobs','Jobs',false],['properties','Properties',false]];
+  var NAV_WORK=[['dashboard','Dashboard',false],['jobs','Jobs',false],['requests','Direct requests',false],['properties','Properties',false]];
+  IC.requests=IC.jobs;
   var NAV_ACCT=[['team','Team',false],['notifications','Notifications',false],['profile','Profile',true],['support','Support',true]];
   var STATE={locked:true,org:null,user:null,tab:'dashboard'};
 
@@ -320,6 +323,7 @@
     STATE.tab=tab; renderRail(tab);
     if(tab==='dashboard')return renderDashboard();
     if(tab==='jobs')return renderJobs();
+    if(tab==='requests')return ProviderServiceRequests.render();
     if(tab==='properties')return renderProperties();
     if(tab==='profile')return renderProfile();
     if(tab==='support')return renderSupport();
@@ -820,8 +824,9 @@
       $('meAv').textContent=(nm.split(' ').map(function(x){return x[0];}).join('').toUpperCase().slice(0,2))||'FG';
       $('meOrg').textContent=(STATE.org&&STATE.org.name)||'Sign out';
       applyTheme();
-      go(STATE.locked?'profile':'dashboard');
+      go(STATE.locked?'profile':LOCAL_WORKFLOW?'requests':'dashboard');
       $('app').style.visibility='visible';
+      if(LOCAL_WORKFLOW){var localBanner=document.createElement('p');localBanner.textContent='DISPOSABLE LOCAL WORKFLOW · Synthetic provider · Data resets on restart';localBanner.style.cssText='position:fixed;bottom:8px;left:8px;z-index:2000;padding:8px;background:var(--brand-deep);color:white;font-size:12px';document.body.appendChild(localBanner);}
       if(!STATE.locked){ updateNotifBadge(); setInterval(updateNotifBadge,60000); }
     }).catch(function(){window.location.href='../login.html';});
   })();

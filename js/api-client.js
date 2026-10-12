@@ -6,6 +6,7 @@
  * All portal API calls should go through apiRequest().
  * ============================================================ */
 (function () {
+  // Production release: use the established FlowGuard API.
   const API_BASE = 'https://api.flowguard.ng/api/v1';
 
   /**
@@ -66,5 +67,5 @@
 
   // Expose globally + keep API_BASE available for any legacy references
   window.apiRequest = apiRequest;
-  window.API_BASE = window.API_BASE || API_BASE;
+  window.API_BASE = API_BASE;
 })();

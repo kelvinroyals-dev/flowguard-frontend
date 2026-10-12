@@ -1,0 +1,84 @@
+/* Restrained customer workspace: exact logo palette, no coloured panel fills. */
+:root{--line:#15191b;--line-2:#15191b}
+[data-theme=dark]{--line:#ffffff;--line-2:#ffffff}
+.rail{border:0}.rail-foot{border:0}.rail-brand{padding-bottom:24px}
+.preview-status{font-size:10px;border:0;padding:9px 0}
+.top{border:0;padding-block:12px 16px;margin-bottom:18px}.top h1{font-size:22px;letter-spacing:-.025em}
+.btn{min-height:38px}.icon-btn .badge{background:#fe5252;border:0;color:#ffffff}
+.property-heading{padding:0;border:0;margin-bottom:20px}.property-heading h2{font-size:28px}
+#ov-kpis .kpi-row{max-width:480px;gap:32px;margin-bottom:20px}
+#ov-kpis .kpi-c{background:none;color:var(--ink);border:0;border-radius:0;padding:0;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+#ov-kpis .kpi-top{margin:0;gap:9px}.kpi-top .kl{font-size:10px;letter-spacing:.08em}
+#ov-kpis .kpi-c .kn{font-size:32px;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+#ov-kpis .kpi-c[data-tone=attention] .kn{color:#fe5252}
+.kpi-ic{color:var(--ink)!important;width:17px;height:17px}
+.attention-notice{border:0;border-left:3px solid #fe5252;border-radius:0;padding:8px 14px;margin-bottom:24px;display:flex;align-items:center;gap:16px}
+.attention-notice strong{white-space:nowrap}.attention-notice p{margin:0}
+.ov-cols{gap:26px;grid-template-columns:minmax(0,1.35fr) minmax(320px,1fr)}
+.overview-conditions,#ov-weather,#ov-activity,.overview-services,#ov-bottom{border:0;border-radius:0;padding:0;min-width:0}
+.overview-conditions{border:1px solid var(--ink);border-radius:8px;padding:20px}
+.ov-cols .section-t,.ov-cols .panel>.row-between:first-child{margin:0 0 18px;padding:0;border:0}
+.ov-cols .section-t,.ov-cols h3{font-size:17px}
+#ov-weather,#ov-activity,.overview-services,#ov-bottom{border-top:1px solid var(--ink);padding-top:18px}
+#ov-mon .mon-wrap{grid-template-columns:140px minmax(0,1fr);gap:20px}
+#ov-mon .gauge{margin-top:10px;width:140px;height:190px}#ov-mon .gauge svg{width:140px;height:140px}
+#ov-mon .gauge-center{top:70px;left:70px;width:130px}#ov-mon .gauge-sub{max-width:140px;margin-top:12px}
+.health-chip{background:none!important;border:0!important;padding:0;color:var(--ink)!important;font-size:12px}
+.health-comparison{font-size:11px;margin-bottom:2px}
+.reading-row{padding:11px 0;border:0;gap:14px}.reading-row>b{color:var(--ink);font-variant-numeric:tabular-nums}
+.record-context{border:0;padding:13px 0;gap:6px}.record-context:last-child{padding-bottom:0}
+.fc-mini{gap:6px}.fc-mini-cell{border:0;padding:7px 2px 12px;border-radius:0}
+#ov-activity .evt{padding:12px 0;border:0;grid-template-columns:20px minmax(0,1fr)}
+#ov-activity .evt .ic{border:0;padding:0;width:18px;height:18px;border-radius:0}
+#ov-activity .evt small{line-height:1.55}#ov-activity .evt>.muted{margin-top:-5px}
+#ov-bottom .doc{border:0;padding:14px 0}.doc .dic{color:var(--ink)!important;border:0;background:none}
+.detail-tabs{border-bottom:1px solid var(--ink);padding-bottom:10px;margin-bottom:20px;gap:6px}
+.detail-tabs button{padding:9px 15px;font-weight:600}.seg{gap:4px;padding:0;border:0;background:none}
+.mon-controls{padding:10px 0;margin-bottom:12px;gap:16px}
+.refill-banner{border:0;border-left:3px solid #fe5252;border-radius:0;padding:10px 16px;margin-bottom:12px}
+.sensor-directory{border:1px solid var(--ink);border-radius:8px;overflow:hidden;gap:0}
+.sensor-directory-row{grid-template-columns:minmax(180px,1.2fr) minmax(120px,.6fr) minmax(180px,1.2fr) 24px;gap:24px;padding:16px 20px;border:0;min-height:88px}
+.sensor-directory-row:hover{outline:1px solid #06bcd4;outline-offset:-1px}
+.sensor-identity{display:flex;gap:12px;align-items:center}
+.sensor-node{display:grid;place-items:center;flex:none;width:30px;height:30px;border:1px solid var(--ink);color:var(--ink);border-radius:5px;font-style:normal;font-size:11px;font-weight:700}
+.sensor-directory-row strong{font-size:15px}.sensor-directory-row small{font-size:11px;line-height:1.45}
+.sensor-reading b{font-size:24px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.level-meter{display:block;border:0;border-bottom:1px solid var(--ink);height:4px;max-width:96px;margin-top:8px}
+.level-meter i{display:block;height:3px;background:#06bcd4}
+.sensor-status{display:inline-flex;align-items:baseline;gap:6px;border:0;background:none;color:var(--ink);font-size:11px;line-height:1.5;font-weight:600;padding:0}
+.sensor-status:before{content:'';height:5px;width:5px;background:#00e676;border-radius:50%;flex:none}
+.needs-attention .sensor-status:before{background:#fe5252}
+.record-arrow{display:grid;place-items:center;color:var(--ink);border:0;width:24px;height:24px;font-size:17px}
+.forecast-intro{border:0;padding:0;margin:0 0 22px}.forecast-intro .eyebrow{margin-bottom:8px;font-size:9px}
+.forecast-intro h2{font-size:28px;margin-bottom:7px}.forecast-intro>p:last-child{font-size:12px}
+#fc-body>.kpi-row{border:0;border-block:1px solid var(--ink);border-radius:0;overflow:hidden;margin-bottom:24px}
+#fc-body>.kpi-row>.statcard{padding:16px 18px;border:0;display:flex;flex-direction:column;justify-content:space-between;gap:6px}
+.statcard .lbl{font-size:10px;font-weight:700;letter-spacing:.07em}.statcard .sub{font-size:12px;line-height:1.5}
+#fc-body>.panel,#fc-body>.cols>.panel,#fc-hourly>.panel{border:0;border-radius:0;padding:0;margin-bottom:24px}
+#fc-body .row-between>h3{font-size:17px}
+.fc-grid{gap:8px;grid-template-columns:repeat(7,minmax(0,1fr))}.fc-cell{border:0!important;border-radius:0;padding:12px 6px;gap:6px;min-height:145px}
+.hourly-chart{display:block;width:100%;height:auto;max-height:280px;margin-top:12px}
+.peak-window{display:flex;align-items:center;gap:16px;border:0;padding:6px 0;margin:10px 0;flex-wrap:wrap;font-size:12px;color:var(--ink)}
+.peak-window b{margin-left:auto;color:#fe5252}
+.panel-pad,.prop-card,.service-composer,.settings-section{border:0;border-radius:0;padding:20px 0}
+.settings-section{max-width:900px}.settings-section h3{padding-bottom:8px}.set-row{padding:16px 0;border:0}
+.billing-ledger,.service-tracking{border:0;border-block:1px solid var(--ink);border-radius:0;padding:8px 0}
+.billing-ledger .row{border:0;padding:18px 0;margin:0}.svc-list a{padding:18px 38px 18px 0;border:0}.svc-list a strong{font-size:16px}
+.ntf-item{border:0;border-radius:0;padding:16px 8px}.tbl th{border-bottom:1px solid var(--ink)}.tbl td{border:0;padding-block:17px}
+.chip{padding:3px 7px;font-size:11px;font-weight:600;background:none!important;border:0}.chip.ok,.chip.warn{color:var(--ink)}.chip.alert{color:#fe5252}
+/* Severity belongs to the reading, not to a decorative panel fill. */
+.reading-row[data-water-state=high]>b,.sensor-directory-row[data-water-state=high] .sensor-reading b,.water-value[data-water-state=high]{color:#fe5252}
+.reading-row[data-water-state=high] .reading-state,.sensor-directory-row[data-water-state=high] .sensor-reading small{color:#fe5252;font-weight:700}
+.reading-row[data-water-state=elevated]>b,.sensor-directory-row[data-water-state=elevated] .sensor-reading b,.water-value[data-water-state=elevated]{color:#06bcd4}
+.reading-row[data-water-state=low]>b,.sensor-directory-row[data-water-state=low] .sensor-reading b,.water-value[data-water-state=low]{color:#00e676}
+.reading-row[data-water-state=unavailable] .reading-state{color:#fe5252}
+.sensor-directory-row[data-water-state=high] .level-meter i{background:#fe5252}
+.sensor-directory-row[data-water-state=low] .level-meter i{background:#00e676}
+.sensor-directory-row.needs-attention .sensor-status{color:#fe5252}
+.water-alert{border:1px solid #fe5252;border-left-width:4px;border-radius:5px;padding:12px 16px;margin-bottom:12px}
+.water-alert strong{color:#fe5252}.water-alert a{font-weight:700}
+#ov-activity .evt[data-severity=critical] b,#ov-activity .evt[data-severity=high] b{color:#fe5252}
+.chip.warn{color:#06bcd4}.chip.ok{color:#00e676}
+@media(max-width:1200px){.ov-cols{grid-template-columns:minmax(0,1fr)}.fc-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.sensor-directory-row{gap:16px}.ov-cols .panel{padding:0}}
+@media(max-width:900px){.sensor-directory-row{grid-template-columns:minmax(150px,1fr) 100px minmax(150px,1fr) 24px}.attention-notice{align-items:flex-start;flex-direction:column;gap:5px}.hourly-chart{min-height:170px}}
+@media(max-width:600px){#ov-kpis .kpi-row{gap:20px}#ov-kpis .kpi-c{padding:0}#ov-kpis .kpi-c .kn{font-size:28px}.overview-conditions{padding:14px}#ov-mon .mon-wrap{grid-template-columns:1fr;gap:12px}#ov-mon .gauge{margin:auto}.ov-cols{gap:24px}.sensor-directory-row{grid-template-columns:minmax(0,1fr) 78px 24px;padding:14px;gap:12px}.sensor-identity{gap:8px}.sensor-node{display:none}.sensor-condition{grid-column:1/3;grid-row:2}.sensor-status{font-size:10px}.record-arrow{grid-column:3;grid-row:1}.sensor-reading b{font-size:22px}.forecast-intro h2{font-size:25px}.fc-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#fc-body>.kpi-row{grid-template-columns:repeat(2,minmax(0,1fr))}#fc-body>.kpi-row>.statcard{padding:14px}.peak-window{gap:8px}.peak-window span{flex-basis:100%;order:3}.peak-window b{margin-left:0}.hourly-chart{min-height:0}.panel-pad,.settings-section{padding:16px 0}.tbl{font-size:12px}}

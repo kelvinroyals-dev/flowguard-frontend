@@ -9,6 +9,8 @@ const UI = (function () {
       { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
     ));
   }
+  // A JavaScript string inside an HTML attribute needs both boundaries protected.
+  function jsq(value){return String(value??'').replace(/[^a-zA-Z0-9 _.-]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));}
 
   const TOAST_ICONS = {
     ok:   '<circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/>',
@@ -74,25 +76,21 @@ const UI = (function () {
     return `
       <div class="gauge">
         <svg width="220" height="220" viewBox="0 0 220 220">
-          <circle cx="110" cy="110" r="${r}" fill="none" stroke="var(--line)" stroke-width="14"/>
-          ${has ? `<circle cx="110" cy="110" r="${r}" fill="none" stroke="url(#gg)" stroke-width="14" stroke-linecap="round"
+          <circle class="gauge-track" cx="110" cy="110" r="${r}" fill="none" stroke="var(--ink)" stroke-width="14"/>
+          ${has ? `<circle cx="110" cy="110" r="${r}" fill="none" stroke="${levelColor}" stroke-width="14" stroke-linecap="round"
              stroke-dasharray="${filled.toFixed(1)} ${gap.toFixed(1)}"
              transform="rotate(-90 110 110)"/>` : ''}
-          <defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="var(--ok)"/><stop offset="1" stop-color="var(--brand-2)"/>
-          </linearGradient></defs>
         </svg>
         <div class="gauge-center">
           <b>${has ? pct : '—'}</b>
-          <small>Risk index</small>
+          <small>Current risk</small>
           <div class="lvl" style="color:${levelColor}">${has ? '<span class="lvl-dot" style="background:' + levelColor + '"></span>' : ''}${levelText}</div>
         </div>
-        <div class="gauge-sub">Index of 100 · we respond above 60</div>
+        <div class="gauge-sub">Rule-based index /100 · not a flood probability</div>
       </div>`;
   }
 
   // A live sensor card showing ALL metrics the Sentinel device captures.
-  // Bio-dispenser variants also show the enzyme cartridge status.
   function sensorCard(s) {
     const spark = (s.trend && s.trend.length)
       ? s.trend.map(v => `<i style="height:${Math.max(8, Math.min(100, v))}%"></i>`).join('')
@@ -103,7 +101,6 @@ const UI = (function () {
     const siltPct = s.silt_level != null ? s.silt_level : null;
     const siltLabel = siltPct == null ? '—' : siltPct >= 70 ? 'High' : siltPct >= 40 ? 'Moderate' : 'Low';
     const siltColor = siltPct == null ? 'var(--ink-3)' : siltPct >= 70 ? 'var(--alert)' : siltPct >= 40 ? 'var(--warn)' : 'var(--ok)';
-    const isBio = s.device_variant === 'bio_dispenser';
     // device health signals
     const batt = s.battery_percent != null ? s.battery_percent : (s.battery_voltage != null ? Math.round((s.battery_voltage / 4.2) * 100) : null);
     const battColor = batt == null ? 'var(--ink-3)' : batt >= 40 ? 'var(--ok)' : batt >= 20 ? 'var(--warn)' : 'var(--alert)';
@@ -112,25 +109,24 @@ const UI = (function () {
     const lastPing = s.last_ping ? fmtRelative(s.last_ping) : '—';
 
     // Surface a contextual "Request support" CTA whenever a sensor needs
-    // attention — offline, cartridge depleted, low battery, high silt/level,
+    // attention — offline, low battery, high silt/level,
     // or weak signal. The ticket opens pre-filled with the sensor + issue.
     const nm = s.name || s.sensor_id;
-    const q = str => String(str == null ? '' : str).replace(/['"\\\n]/g, ' ').replace(/\s+/g, ' ').trim();
+    const q = jsq;
     let issue = null;
     if (offline) issue = { cat: 'sensor', prio: 'high', subj: `Offline sensor: ${nm}`, desc: `${nm} (${s.sensor_id}) is offline — last seen ${lastPing}. Please arrange a field visit to restore monitoring.` };
-    else if (isBio && s.enzyme && ['depleted', 'due_replacement'].includes(s.enzyme.status)) issue = { cat: 'dispatch', prio: 'normal', subj: `Cartridge refill: ${nm}`, desc: `The bio-enzyme cartridge on ${nm} (${s.sensor_id}) needs replacement (${s.enzyme.status.replace('_', ' ')}). Please schedule a refill.` };
     else if (s.level != null && s.level >= 70) issue = { cat: 'emergency', prio: 'urgent', subj: `High water level: ${nm}`, desc: `Water level is ${Math.round(s.level)}% on ${nm} (${s.sensor_id}) — at or above the alert threshold. Please advise or dispatch.` };
     else if (batt != null && batt <= 20) issue = { cat: 'sensor', prio: 'normal', subj: `Low battery: ${nm}`, desc: `${nm} (${s.sensor_id}) battery is at ${batt}%. Please service it before it drops offline.` };
     else if (siltPct != null && siltPct >= 70) issue = { cat: 'dispatch', prio: 'high', subj: `Silt clearing: ${nm}`, desc: `Silt is high on ${nm} (${s.sensor_id}). Please schedule clearing before the next heavy rain.` };
     else if (signal != null && signal < 40) issue = { cat: 'sensor', prio: 'low', subj: `Weak signal: ${nm}`, desc: `${nm} (${s.sensor_id}) has a weak signal — readings may be intermittent. Please check the device.` };
     const issueBtn = issue
-      ? `<button class="btn sm ghost sensor-report" style="width:100%;margin-top:10px" onclick="event.stopPropagation();App.openTicket('${issue.cat}','${q(issue.subj)}','${issue.prio}','${q(issue.desc)}')">Request support</button>`
+      ? `<button class="btn sm ghost sensor-report" style="width:100%;margin-top:10px" onclick="event.stopPropagation();App.openTicket('${issue.cat}','${q(issue.subj)}','${issue.prio}','${q(issue.desc)}')">${issue.cat==='sensor'&&signal!=null&&signal<40?'Request support':'Request service'}</button>`
       : '';
 
     return `
-      <div class="sensor sensor-clickable${offline ? ' sensor-offline' : ''}" onclick="App.openSensor('${esc(s.sensor_id)}')">
+      <div class="sensor sensor-clickable${offline ? ' sensor-offline' : ''}" onclick="App.openSensor('${jsq(s.sensor_id)}')">
         <div class="sh">
-          <span class="nm">${esc(s.name || s.sensor_id)}${isBio ? '<span class="bio-badge">Bio</span>' : ''}</span>
+          <span class="nm">${esc(s.name || s.sensor_id)}</span>
           ${live ? '<span class="live"><span class="d"></span>Live</span>'
                  : offline ? '<span class="live off-red"><span class="d"></span>Offline</span>'
                  : '<span class="live off">Idle</span>'}
@@ -152,9 +148,24 @@ const UI = (function () {
                <div class="sm"><span class="sm-l">Signal</span><span class="sm-v">${sigLabel}</span></div>
              </div>
              <div class="sensor-ping">Last ping ${lastPing}</div>
-             ${isBio ? enzymeBlock(s.enzyme) : '<div class="enzyme-none">Standard sensor</div>'}`}
+             `}
         ${issueBtn}
       </div>`;
+  }
+
+  // Compact directory: detailed channels and service actions live on the exact sensor record.
+  function sensorRow(s) {
+    const offline=s.status==='offline';
+    const issues=[];
+    if(offline)issues.push('Offline');
+    else if(s.has_data===false||PortalModel.levelText(s)==='—')issues.push('Reading unavailable');
+    else if(Number(s.level)>=70)issues.push('High water level');
+    if(!offline&&s.silt_level!=null&&Number(s.silt_level)>=70)issues.push('High silt');
+    const observation=PortalModel.observationState(s);
+    if(!offline&&['stale','time_unknown'].includes(observation))issues.push(observation==='stale'?'Old reading':'Report time unknown');
+    const available=PortalModel.levelText(s)!=='—';
+    const level=available?Math.max(0,Math.min(100,Number(s.level))):0;
+    return `<a class="sensor-directory-row ${issues.length?'needs-attention':''}" data-connectivity="${esc(s.status)}" data-water-state="${PortalModel.waterState(s)}" href="#sensor/${encodeURIComponent(s.sensor_id||s.id)}"><span class="sensor-identity"><span><strong>${esc(s.name||s.sensor_id)}</strong><small>${esc(s.sensor_id)} · Monitoring device</small></span></span><span class="sensor-reading"><b>${PortalModel.levelText(s)}</b><small>${offline?'Not reporting':PortalModel.waterState(s)==='high'?'High water · alert at 70%':PortalModel.waterState(s)==='elevated'?'Raised water · below alert':PortalModel.waterState(s)==='unavailable'?'Reading unavailable':'Low water · below alert'}</small>${available?`<span class="level-meter" aria-hidden="true"><i style="width:${level}%"></i></span>`:''}</span><span class="sensor-condition"><span class="sensor-status">${issues.length?issues.map(issue=>`<span class="condition-tag ${/High water|High silt|Offline|unavailable|Old reading|unknown/.test(issue)?'urgent':'maintenance'}">${esc(issue)}</span>`).join(' '):esc(s.status==='active'?'Reporting':'Idle')}</span><small>${offline?'Last seen':'Observed'} ${s.last_ping?esc(fmtRelative(s.last_ping)):'time unavailable'}</small></span><span class="record-arrow row-open">View →</span></a>`;
   }
 
   // Relative time helper for pings ("2 min ago", "3 hrs ago")
@@ -170,27 +181,6 @@ const UI = (function () {
       const days = Math.floor(hrs / 24);
       return `${days} day${days > 1 ? 's' : ''} ago`;
     } catch (_) { return '—'; }
-  }
-
-  // Bio-enzyme cartridge status block
-  function enzymeBlock(e) {
-    if (!e) return '';
-    const lvl = e.level_percent != null ? Math.round(e.level_percent) : null;
-    const statusMap = {
-      loaded: ['ok', 'Loaded'], dispensing: ['ok', 'Dispensing'], low: ['warn', 'Low'],
-      depleted: ['alert', 'Depleted'], due_replacement: ['alert', 'Refill due']
-    };
-    const [sk, sl] = statusMap[e.status] || ['ok', 'Loaded'];
-    const barColor = lvl == null ? 'var(--ink-3)' : lvl < 15 ? 'var(--alert)' : lvl < 30 ? 'var(--warn)' : 'var(--ok)';
-    const daysNote = e.days_left != null
-      ? (e.days_left <= 0 ? 'Overdue' : `~${e.days_left}d left`)
-      : '';
-    return `
-      <div class="enzyme">
-        <div class="enzyme-h"><span class="enzyme-t">Bio-enzyme</span>${chip(sk, sl)}</div>
-        <div class="enzyme-bar"><span style="width:${lvl != null ? lvl : 0}%;background:${barColor}"></span></div>
-        <div class="enzyme-f"><span>${lvl != null ? lvl + '% left' : 'No reading'}</span><span style="color:${e.days_left != null && e.days_left <= 7 ? 'var(--alert)' : 'var(--ink-3)'}">${daysNote}</span></div>
-      </div>`;
   }
 
   // KPI stat tile
@@ -218,75 +208,64 @@ const UI = (function () {
   function lineChart(series, opts = {}) {
     if (!series || series.length < 2) return '<div style="color:var(--ink-3);font-size:13px;padding:20px 0">Not enough data to chart yet.</div>';
     const metric = opts.metric || 'level';
-    const w = 640, h = 200, padL = 34, padR = 10, padT = 12, padB = 26;
-    const key = metric === 'flow' ? 'flow' : 'avg';
-    const vals = series.map(d => d[key] != null ? Number(d[key]) : null);
-    if (vals.every(v => v == null || v === 0)) return '<div style="color:var(--ink-3);font-size:13px;padding:20px 0">No ' + (metric === 'flow' ? 'flow' : 'level') + ' readings in this window yet.</div>';
-    const nums = vals.map(v => v || 0);
-    const peaks = metric === 'flow' ? nums : series.map(d => d.peak != null ? Number(d.peak) : Number(d.avg) || 0);
+    const w = opts.compact?520:760, h = opts.compact?230:260, padL = 48, padR = 24, padT = 24, padB = 44;
+    const key = opts.key || (metric === 'flow' ? 'flow' : 'avg');
+    const label=opts.label||(metric==='flow'?'Flow rate':'Water level');
+    const unit=opts.unit!==undefined?opts.unit:metric==='flow'?' L/s':'%';
+    const vals = series.map(d => d[key] != null && Number.isFinite(Number(d[key])) ? Number(d[key]) : null);
+    if (vals.every(v => v == null)) return '<div style="color:var(--ink-3);font-size:13px;padding:20px 0">No ' + (metric === 'flow' ? 'flow' : 'level') + ' readings in this window yet.</div>';
+    const nums = vals;
+    const showPeak = key==='avg';
+    const peaks = showPeak?series.map(d => d.peak != null && Number.isFinite(Number(d.peak))?Number(d.peak):d.avg!=null?Number(d.avg):null):nums;
     const thr = opts.threshold; // {v, label}
-    const hi = Math.max(...peaks, thr ? thr.v : 0, metric === 'flow' ? 20 : 50);
-    const max = Math.ceil(hi / 10) * 10, min = 0;
+    const hi = Math.max(...peaks.filter(v=>v!=null), thr ? thr.v : 0, metric === 'flow' ? 20 : 50);
+    const max = Math.ceil(hi / 10) * 10, min = Math.min(0,Math.floor(Math.min(...nums.filter(v=>v!=null))/10)*10);
     const x = i => padL + (i * (w - padL - padR)) / (series.length - 1);
     const y = v => padT + (1 - (v - min) / (max - min)) * (h - padT - padB);
-    const path = arr => arr.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+    const path = arr => arr.map((v, i) => v==null?'':`${i&&arr[i-1]!=null ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
     const line = path(nums);
     const area = `${line} L${x(series.length - 1).toFixed(1)} ${y(0)} L${x(0).toFixed(1)} ${y(0)} Z`;
-    const showPeak = metric !== 'flow';
-    const unit = metric === 'flow' ? ' L/s' : '%';
     // y gridlines at quarters
-    const steps = [0, .25, .5, .75, 1].map(f => Math.round(max * f));
-    const grid = [...new Set(steps)].map(g => `<line x1="${padL}" y1="${y(g)}" x2="${w - padR}" y2="${y(g)}" stroke="var(--line)" stroke-width="1"/><text x="${padL - 6}" y="${y(g) + 3}" fill="var(--ink-3)" font-size="10" text-anchor="end">${g}</text>`).join('');
+    const steps = [0, .25, .5, .75, 1].map(f => Math.round(min+(max-min) * f));
+    const grid = [...new Set(steps)].map(g => `<line x1="${padL}" y1="${y(g)}" x2="${w - padR}" y2="${y(g)}" stroke="var(--line)" stroke-width=".5" stroke-dasharray="2 6"/><text x="${padL - 8}" y="${y(g) + 4}" fill="var(--ink-3)" font-size="12" text-anchor="end">${g}${unit.trim()==='%'?'%':''}</text>`).join('');
     // x time labels (5 ticks) from series[i].t
     let xlabels = '';
     if (series[0] && series[0].t) {
       const ticks = [0, .25, .5, .75, 1].map(f => Math.round((series.length - 1) * f));
       xlabels = [...new Set(ticks)].map(i => {
         const d = new Date(series[i].t);
-        const lbl = isNaN(d) ? '' : d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-        return `<text x="${x(i)}" y="${h - 8}" fill="var(--ink-3)" font-size="10" text-anchor="middle">${lbl}</text>`;
+        const lbl = isNaN(d) ? '' : d.toLocaleTimeString('en-GB', { timeZone:'Africa/Lagos',hour: '2-digit', minute: '2-digit' });
+        const date = isNaN(d) ? '' : d.toLocaleDateString('en-GB',{timeZone:'Africa/Lagos',day:'numeric',month:'short'});
+        return `<text x="${x(i)}" y="${h - 23}" fill="var(--ink-3)" font-size="12" text-anchor="${i===0?'start':i===series.length-1?'end':'middle'}">${lbl}<tspan x="${x(i)}" dy="16">${date}</tspan></text>`;
       }).join('');
     }
     const thrLine = thr ? `<line x1="${padL}" y1="${y(thr.v)}" x2="${w - padR}" y2="${y(thr.v)}" stroke="var(--alert)" stroke-width="1.5" stroke-dasharray="2 4" opacity=".8"/><text x="${w - padR}" y="${y(thr.v) - 4}" fill="var(--alert)" font-size="10" text-anchor="end">${thr.label || 'Alert'} ${thr.v}${unit}</text>` : '';
     const last = nums[nums.length - 1];
-    const dot = `<circle cx="${x(nums.length - 1)}" cy="${y(last)}" r="4" fill="var(--brand)" stroke="var(--surface)" stroke-width="2"/>`;
-    const legend = `<div style="display:flex;gap:16px;margin-top:6px;font-size:11px;color:var(--ink-3);flex-wrap:wrap">
-      <span><i style="display:inline-block;width:14px;height:3px;background:var(--brand);border-radius:2px;vertical-align:middle;margin-right:5px"></i>${metric === 'flow' ? 'Flow rate (L/s)' : 'Average level'}</span>
+    const dot = last==null?'':`<circle cx="${x(nums.length - 1)}" cy="${y(last)}" r="4" fill="var(--brand)" stroke="var(--surface)" stroke-width="2"/>`;
+    const exceedances = thr ? peaks.map((v,i)=>v>=thr.v?`<circle cx="${x(i)}" cy="${y(v)}" r="3" fill="#fe5252"/>`:'').join('') : '';
+    const legend = `<div class="chart-legend" style="display:flex;gap:16px;margin-top:12px;font-size:14px;color:var(--ink-3);flex-wrap:wrap">
+      <span><i style="display:inline-block;width:14px;height:3px;background:var(--brand);border-radius:2px;vertical-align:middle;margin-right:5px"></i>${esc(opts.label|| (metric === 'flow' ? 'Flow rate (L/s)' : 'Average level'))}</span>
       ${showPeak ? '<span><i style="display:inline-block;width:14px;border-top:2px dashed var(--warn);vertical-align:middle;margin-right:5px"></i>Peak level</span>' : ''}
       ${thr ? `<span><i style="display:inline-block;width:14px;border-top:2px dotted var(--alert);vertical-align:middle;margin-right:5px"></i>${thr.label || 'Alert'} threshold</span>` : ''}
-      <span style="margin-left:auto;color:var(--ink)">Now: <b>${last}${unit}</b></span>
+      <span style="margin-left:auto;color:var(--ink)">${opts.aggregate?'Latest network average':'Latest reading'}: <b>${last==null?'Unavailable':last+unit}</b> · WAT</span>
     </div>`;
-    return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto">
+    return `<div class="chart-scroll" tabindex="0" role="region" aria-label="${esc(label)} chart; scroll horizontally on small screens"><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto">
       <defs><linearGradient id="ch" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="var(--brand)" stop-opacity="0.22"/><stop offset="1" stop-color="var(--brand)" stop-opacity="0"/>
       </linearGradient></defs>
       ${grid}${xlabels}
-      <path d="${area}" fill="url(#ch)"/>
+      <path d="${area}" fill="none"/>
       ${showPeak ? `<path d="${path(peaks)}" fill="none" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.75"/>` : ''}
+      ${exceedances}
       ${thrLine}
       <path d="${line}" fill="none" stroke="var(--brand)" stroke-width="2.5" stroke-linejoin="round"/>
       ${dot}
-    </svg>${legend}`;
+    </svg></div><p class="chart-scroll-hint">Swipe the chart to see the full time range.</p>${legend}${thr&&peaks.some(v=>v>=thr.v)?'<p class="chart-warning">Red markers show recorded peaks at or above the alert threshold. The network average does not override individual sensor alerts.</p>':''}`;
   }
 
   function fmtTime(d) {
-    try { return new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+    try { return new Date(d).toLocaleString('en-GB', { timeZone:'Africa/Lagos',day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
     catch (_) { return d; }
-  }
-
-  // Larger bio-enzyme block for the sensor detail page
-  function enzymeDetail(e) {
-    if (!e) return '';
-    const lvl = e.level_percent != null ? Math.round(e.level_percent) : null;
-    const barColor = lvl == null ? 'var(--ink-3)' : lvl < 15 ? 'var(--alert)' : lvl < 30 ? 'var(--warn)' : 'var(--ok)';
-    const statusMap = { loaded: ['ok', 'Loaded'], dispensing: ['ok', 'Dispensing'], low: ['warn', 'Running low'], depleted: ['alert', 'Depleted'], due_replacement: ['alert', 'Due for refill'] };
-    const [sk, sl] = statusMap[e.status] || ['ok', 'Loaded'];
-    return `
-      <div class="row-between mb-10">
-        <span style="font-family:var(--ff-d);font-size:24px;font-weight:700">${lvl != null ? lvl + '%' : '—'}</span>${chip(sk, sl)}
-      </div>
-      <div class="enzyme-bar" style="height:10px"><span style="width:${lvl != null ? lvl : 0}%;background:${barColor}"></span></div>
-      ${e.depletion_date ? `<p style="color:var(--ink-3);font-size:12px;margin-top:10px">Estimated depletion: ${fmtDate(e.depletion_date)}</p>` : ''}`;
   }
 
   // Turn "residential_estate" / "RESIDENTIAL_ESTATE" into "Residential Estate"
@@ -296,6 +275,8 @@ const UI = (function () {
       .replace(/\b\w/g, c => c.toUpperCase());
   }
 
-  return { esc, toast, loading, state, chip, gauge, sensorCard, enzymeDetail, stat, fmtNaira, fmtDate, lineChart, fmtTime, prettyType, fmtRelative };
+  function scopedDocument(view){return new Proxy(document,{get(target,key){if(key==='getElementById')return id=>view.querySelector('[id="'+CSS.escape(id)+'"]')||target.createElement('div');if(key==='querySelector')return selector=>view.querySelector(selector);if(key==='querySelectorAll')return selector=>view.querySelectorAll(selector);const v=Reflect.get(target,key);return typeof v==='function'?v.bind(target):v;}});}
+
+  return { scopedDocument, esc, jsq, toast, loading, state, chip, gauge, sensorCard, sensorRow, stat, fmtNaira, fmtDate, lineChart, fmtTime, prettyType, fmtRelative };
 })();
 window.UI = UI;

@@ -4,13 +4,32 @@
 const App = (function () {
   let current = 'overview';
   let _suppressHashChange = false;
+  let ticketPrefill={};
+  let documentPreview=null,documentReturn='reports';
+  function openDocumentPage(page,returnTo='reports'){documentPreview=page;documentReturn=returnTo;go('documentPreview');}
+
+  // The greeting belongs to the portal shell, including direct detail links and errors.
+  function refreshPlatformHeader() {
+    const header=document.querySelector('.platform-bar');
+    const heading=header?.querySelector('.platform-heading');
+    if(!heading)return;
+    const user=Auth.getUser()||{};
+    const name=(user.fullName||user.full_name||'').trim().split(/\s+/)[0]||'there';
+    const now=new Date();
+    const hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Lagos',hour:'numeric',hourCycle:'h23'}).format(now));
+    const greeting=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
+    const date=now.toLocaleDateString('en-GB',{timeZone:'Africa/Lagos',weekday:'long',day:'numeric',month:'long'});
+    header.classList.add('home-header');
+    heading.innerHTML='<div class="top"><div class="greeting"><p class="portal-greeting">'+greeting+', '+UI.esc(name)+'.</p><div class="sub"><span>'+date+'</span><span class="home-subtitle">Your property. Your next steps. All in one place.</span></div></div></div>';
+  }
 
   // ---- global active-property scope (persists across sessions) ----
   function activeProperty() { return localStorage.getItem('fg_active_property') || 'all'; }
   function setActiveProperty(id) {
     localStorage.setItem('fg_active_property', id || '');
     refreshRailSelector();
-    go(current); // re-render the current screen under the new scope
+    const parent={sensorDetail:'monitoring',propertyDetail:'properties',propertyEdit:'properties',propertyNew:'properties',supportNew:'support',invoiceDetail:'billing',documentPreview:documentReturn,reportDetail:'reports',ticketDetail:'support',alertDetail:'alerts'};
+    go(parent[current]||current); // Do not retain a different property's record after changing scope.
   }
   // property dropdown at the top of the sidebar
   async function refreshRailSelector() {
@@ -27,40 +46,71 @@ const App = (function () {
     const routePerm = {
       team: 'manage_team', billing: 'view_billing',
       monitoring: 'view_monitoring', forecast: 'view_monitoring',
-      alerts: 'view_alerts', reports: 'view_reports', reportDetail: 'view_reports',
-      properties: 'manage_properties',
+      alerts: 'view_alerts', alertDetail:'view_alerts', reports: 'view_reports', reportDetail: 'view_reports',
+      properties: 'manage_properties', propertyDetail:'manage_properties', sensorDetail:'view_monitoring',
+      propertyNew:'manage_properties',propertyEdit:'manage_properties',supportNew:'submit_support',invoiceDetail:'view_billing',
     };
     if (routePerm[tab] && !can(routePerm[tab])) tab = 'overview';
+    if(current==='documentPreview'&&tab!=='documentPreview')documentPreview=null;
     current = tab;
+    refreshPlatformHeader();
     window.scrollTo(0, 0);
     // persist active screen in the URL hash so a refresh restores it
     // and so emails can deep-link (e.g. #property/PROP-123)
-    const hashMap = { propertyDetail: 'property', sensorDetail: 'sensor', ticketDetail: 'ticket', reportDetail: 'report' };
-    const newHash = hashMap[tab] ? `#${hashMap[tab]}/${arg}` : `#${tab}`;
+    const hashMap = { propertyEdit:'property-edit',invoiceDetail:'invoice',alertDetail:'alert', propertyDetail: 'property', sensorDetail: 'sensor', ticketDetail: 'ticket', reportDetail: 'report' };
+    const newHash = tab==='services'&&arg ? '#service-request/'+encodeURIComponent(arg) : hashMap[tab] ? `#${hashMap[tab]}/${arg}` : `#${tab}`;
     if (location.hash !== newHash) {
       _suppressHashChange = true;
       location.hash = newHash;
     }
     const railEl = document.getElementById('rail');
-    if (railEl) railEl.classList.remove('open');
+    if (railEl) {railEl.classList.remove('open');railEl.scrollTop=0;}
     // nav active state. Detail views map to their parent nav item. Notifications
     // is a global, platform-wide view — NOT part of Alerts (alerts are threshold/
     // incident events), so it highlights no module rather than lighting up Alerts.
-    const navTab = tab === 'propertyDetail' ? 'properties' : tab === 'sensorDetail' ? 'monitoring' : tab === 'ticketDetail' ? 'support' : tab === 'reportDetail' ? 'reports' : tab;
+    const navTab = ['propertyNew','propertyEdit'].includes(tab)?'properties':tab==='supportNew'?'support':tab==='invoiceDetail'?'billing':tab === 'alertDetail' ? 'alerts' : tab === 'propertyDetail' ? 'properties' : tab === 'sensorDetail' ? 'monitoring' : tab === 'ticketDetail' ? 'support' : tab === 'reportDetail' ? 'reports' : tab;
     document.querySelectorAll('.rail .navbtn').forEach(b =>
       b.classList.toggle('on', b.dataset.tab === navTab));
-    // the bell is re-rendered per screen — re-apply the unread badge, and if the
-    // user just opened notifications, the count will have cleared on next poll.
+    // The notification bell stays in the shell; refresh its unread count.
     setTimeout(updateNotifBadge, 0);
     if (tab === 'notifications') setTimeout(pollNotifs, 800);
-    const view = document.getElementById('view');
-    view.scrollTop = 0;
-    if (tab === 'propertyDetail') { Screens.propertyDetail(view, arg); return; }
-    if (tab === 'sensorDetail') { Screens.sensorDetail(view, arg); return; }
-    if (tab === 'ticketDetail') { Screens.ticketDetail(view, arg); return; }
-    if (tab === 'reportDetail') { Screens.reportDetail(view, arg); return; }
+    const previous=document.getElementById('view');
+    const view=previous.cloneNode(false);
+    view.dataset.screen=tab;
+    previous.replaceWith(view);
+    view.scrollTop=0;
+    const render=(fn,...args)=>Promise.resolve().then(()=>fn(view,...args)).then(async()=>{
+      if(!view.isConnected)return;
+      const props=await Screens.getMyProperties().catch(()=>null);
+      if(!view.isConnected)return;
+      const top=view.querySelector('.top');
+      if(top&&props&&!view.querySelector('.workspace-context')){
+        const context=document.createElement('div');context.className='workspace-context';
+        const accountWide=['settings','account','team','properties','notifications','support'].includes(tab);
+        context.innerHTML=accountWide?'<span>Account-wide workspace · all properties</span>':'<span>Selected property</span>'+Screens.propertySelector(props);
+        top.after(context);
+      }
+      if(window.ClientGuide){try{await ClientGuide.attach(view,tab);}catch(_){/* Optional guidance must not replace successfully loaded records. */}}
+      if(tab==='team'){
+        const roles=view.querySelector('.tm-roles-grid');
+        if(roles){const details=document.createElement('details');details.className='role-help';const summary=document.createElement('summary');summary.textContent='Help me choose the right access';details.appendChild(summary);roles.before(details);details.appendChild(roles);}
+      }
+      // Home's temporary loading heading is not a second greeting/header.
+      if(view.isConnected&&tab==='overview')top?.remove();
+    }).catch(e=>{if(view.isConnected)view.innerHTML=UI.state('error','Data unavailable',e.message,'Retry','onclick="location.reload()"');});
+    if(tab==='services'){render(ClientServices.render,arg);return;}
+    if(tab==='propertyNew'){render(renderPropertyForm);return;}
+    if(tab==='propertyEdit'){render(renderPropertyEditor,arg);return;}
+    if(tab==='supportNew'){render(renderTicketForm,ticketPrefill);return;}
+    if(tab==='invoiceDetail'){render(renderInvoice,arg);return;}
+    if(tab==='documentPreview'){render(view=>{if(documentPreview)mountPage(view,documentPreview);else view.innerHTML='<div class="top"><h1>Document preview</h1></div><p>Open the document again from its record.</p><button class="btn neutral" onclick="App.go(\'reports\')">Back to reports</button>';});return;}
+    if (tab === 'propertyDetail') { render(Screens.propertyDetail,arg); return; }
+    if (tab === 'sensorDetail') { render(Screens.sensorDetail,arg); return; }
+    if (tab === 'alertDetail') { render(Screens.alertDetail,arg); return; }
+    if (tab === 'ticketDetail') { render(Screens.ticketDetail,arg); return; }
+    if (tab === 'reportDetail') { render(Screens.reportDetail,arg); return; }
     const fn = Screens[tab];
-    if (fn) fn(view);
+    if (fn) render(fn);
   }
 
   function openProperty(id) { go('propertyDetail', id); }
@@ -70,21 +120,23 @@ const App = (function () {
   function monSearch(v) { Screens.monSearch(v); }
   function monFilter(f) { Screens.monFilter(f); }
   // ---- Invoice detail + pay ----
-  async function openInvoice(id) {
+  function openInvoice(id){go('invoiceDetail',id);}
+  async function renderInvoice(view,id) {
+    if(!can('view_billing')){UI.toast('Billing access is not available for your role.','error');return;}
     let inv;
     if (Demo.isOn()) {
-      inv = Demo.data.invoices.find(x => x.invoice_id === id) || Demo.data.invoices[0];
+      inv = Demo.data.invoices.find(x => x.invoice_id === id);
     } else {
       try { const r = await apiRequest(`/billing/invoices/${id}`); inv = r && r.data; }
-      catch (e) { UI.toast(e.message || 'Could not load invoice', 'error'); return; }
+      catch (e) { throw new Error(e.message || 'Could not load invoice'); }
     }
-    if (!inv) { UI.toast('Invoice not found', 'error'); return; }
+    if (!inv) throw new Error('Invoice not found');
     const paid = (inv.payment_status || inv.status) === 'paid';
     const bg = document.createElement('div');
-    bg.className = 'modal-bg';
+    bg.className = 'form-page';
     bg.innerHTML = `
       <div class="modal">
-        <div class="modal-h"><h2>Invoice ${UI.esc(inv.invoice_id || '')}</h2><button onclick="this.closest('.modal-bg').remove()" aria-label="Close">×</button></div>
+        <div class="modal-h"><h1>Invoice ${UI.esc(inv.invoice_id || '')}</h1></div>
         <div class="modal-b">
           <div style="display:flex;justify-content:space-between;margin-bottom:20px">
             <div><div class="hint">Amount due</div><div style="font-family:var(--ff-d);font-size:30px;font-weight:700">${UI.fmtNaira(inv.total_amount)}</div></div>
@@ -101,19 +153,19 @@ const App = (function () {
           ${inv.description ? `<div class="inv-line"><span>Notes</span><b>${UI.esc(inv.description)}</b></div>` : ''}
         </div>
         <div class="modal-f">
-          <button class="btn ghost" onclick="this.closest('.modal-bg').remove()">Close</button>
-          <button class="btn ghost" onclick="App.downloadInvoicePdf('${UI.esc(inv.invoice_id)}', this)">Download PDF</button>
-          ${(paid || !can('manage_billing')) ? '' : `<button class="btn" onclick="App.notifyPayment('${UI.esc(inv.invoice_id)}', this)">I've paid — notify us</button>`}
+          <button class="btn ghost" onclick="App.go('billing')">Back to payments</button>
+          <button class="btn ghost" onclick="App.downloadInvoicePdf('${UI.jsq(inv.invoice_id)}', this)">Download PDF</button>
+          ${(paid || !can('manage_billing')) ? '' : `<button class="btn" onclick="App.notifyPayment('${UI.jsq(inv.invoice_id)}', this)">I've paid — notify us</button>`}
         </div>
       </div>`;
-    document.body.appendChild(bg);
-    bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
+    mountPage(view,bg);
   }
 
   // No payment gateway is wired yet, so a client can't self-mark an invoice paid
   // (that's a finance action). Instead we notify finance to confirm receipt —
   // this raises a ticket that lands in the ops Support inbox.
   async function notifyPayment(id, btn) {
+    if(window.PortalPreview || Demo.isOn()){UI.toast('Sample mode — no payment notification was sent.','info');return;}
     btn.disabled = true; btn.textContent = 'Sending…';
     try {
       if (!Demo.isOn()) await apiRequest(`/billing/invoices/${id}/notify-payment`, { method: 'POST', body: {} });
@@ -128,10 +180,11 @@ const App = (function () {
 
   // Download the invoice PDF (authenticated blob — same as ops).
   async function downloadInvoicePdf(id, btn) {
+    if(window.PortalPreview){PortalPreview.document('invoice',id,true);return;}
     const label = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = 'Preparing…'; }
     try {
-      const base = window.API_BASE || 'https://api.flowguard.ng/api/v1';
+      const base = window.API_BASE;
       const token = localStorage.getItem('token') || '';
       const r = await fetch(`${base}/billing/invoices/${id}/pdf`, { headers: { Authorization: 'Bearer ' + token } });
       if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -150,34 +203,8 @@ const App = (function () {
 
   // ---- Service tier selection ----
   async function selectServices(propertyId) {
-    const tiers = [
-      { key: 'sentinel', name: 'Sentinel', desc: 'IoT monitoring only — sensors + alerts', price: '₦85,000/mo' },
-      { key: 'flowguard', name: 'FlowGuard', desc: 'Monitoring + bio-treatment + scheduled clearing', price: '₦185,000/mo' },
-      { key: 'flood_zero', name: 'Flood-Zero', desc: 'Full service + priority dispatch + SLA guarantee', price: '₦320,000/mo' }
-    ];
-    const bg = document.createElement('div');
-    bg.className = 'modal-bg';
-    bg.innerHTML = `
-      <div class="modal">
-        <div class="modal-h"><h2>Choose a service tier</h2><button onclick="this.closest('.modal-bg').remove()" aria-label="Close">×</button></div>
-        <div class="modal-b">
-          <p style="color:var(--ink-2);font-size:13px;margin-bottom:16px">Select the level of drainage service for this property.</p>
-          <div class="tier-list">
-            ${tiers.map(t => `<label class="tier-opt">
-              <input type="radio" name="tier" value="${t.key}">
-              <div class="tier-info"><b>${t.name}</b><small>${t.desc}</small></div>
-              <div class="tier-price">${t.price}</div>
-            </label>`).join('')}
-          </div>
-          <div id="tier-err" class="hint hidden" style="color:var(--alert);margin-top:10px"></div>
-        </div>
-        <div class="modal-f">
-          <button class="btn ghost" onclick="this.closest('.modal-bg').remove()">Cancel</button>
-          <button class="btn" onclick="App.confirmServices('${propertyId}', this)">Confirm selection</button>
-        </div>
-      </div>`;
-    document.body.appendChild(bg);
-    bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
+    if(propertyId) setActiveProperty(propertyId);
+    go('services');
   }
 
   async function confirmServices(propertyId, btn) {
@@ -186,8 +213,9 @@ const App = (function () {
     if (!sel) { err.textContent = 'Please choose a tier.'; err.classList.remove('hidden'); return; }
     btn.disabled = true; btn.textContent = 'Saving…';
     try {
-      if (!Demo.isOn()) await apiRequest(`/properties/${propertyId}/select-services`, { method: 'POST', body: { tier: sel.value } });
-      document.querySelector('.modal-bg').remove();
+      if(Demo.isOn()){UI.toast('Sample mode — no service selection was submitted.','info');btn.disabled=false;btn.textContent='Confirm selection';return;}
+      await apiRequest(`/properties/${propertyId}/select-services`, { method: 'POST', body: { tier: sel.value } });
+      document.querySelector('.modal-bg')?.remove();
       UI.toast('Service tier updated', 'success');
       go('propertyDetail', propertyId);
     } catch (e) {
@@ -234,11 +262,15 @@ const App = (function () {
     const ta = document.getElementById('td-reply');
     const msg = ta.value.trim();
     if (!msg) { ta.focus(); return; }
+    if(window.PortalPreview||Demo.isOn()){UI.toast('Sample mode — your message was not sent.','info');return;}
     btn.disabled = true; btn.textContent = 'Sending…';
     try {
       await apiRequest(`/tickets/${ticketId}/reply`, { method: 'POST', body: { message: msg } });
+      // Clear the matching local draft only after the server accepts the reply.
+      ta.value = '';
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
       UI.toast('Reply sent', 'success');
-      go('ticketDetail', ticketId);
+      if(ta.isConnected)go('ticketDetail', ticketId);
     } catch (e) {
       UI.toast(e.message || 'Could not send reply', 'error');
       btn.disabled = false; btn.textContent = 'Send reply';
@@ -246,6 +278,7 @@ const App = (function () {
   }
 
   async function viewReport(id) {
+    if(window.PortalPreview){PortalPreview.document('report',id,false);return;}
     // Open the approved report PDF inline in a new tab (same source as download).
     if (!id) return;
     try {
@@ -263,6 +296,7 @@ const App = (function () {
     }
   }
   async function downloadReport(id) {
+    if(window.PortalPreview){PortalPreview.document('report',id,true);return;}
     if (!id) return;
     try {
       UI.toast('Preparing your report…', 'info');
@@ -317,30 +351,38 @@ const App = (function () {
   }
 
   function openTicket(presetCat, subj, prio, desc) {
+    if(!can('submit_support')){UI.toast('Your account has read-only access. Ask your account administrator for help.','info');return;}
+    if(['dispatch','emergency','inspection'].includes(presetCat)||/inspection|field visit|battery|schedule clearing/i.test((subj||'')+' '+(desc||''))){
+      if(!can('manage_properties')){UI.toast('Ask your account administrator or facility manager to request this service.','info');return;}
+      ClientServices.prefill({title:subj||'Service review',description:desc||'Please review the condition and advise on the appropriate service.',job_type:/battery|offline sensor/i.test((subj||'')+' '+(desc||''))?'sensor_maintenance':presetCat==='dispatch'?'drain_cleaning':presetCat==='sensor'?'sensor_maintenance':'inspection'});
+      go('services');return;
+    }
+    ticketPrefill={presetCat,subj,prio,desc};go('supportNew');
+  }
+  function renderTicketForm(view,{presetCat,subj,prio,desc}={}){
     const cats = Screens.TICKET_CATS;
     const opts = Object.keys(cats).map(k => `<option value="${k}" ${k === presetCat ? 'selected' : ''}>${cats[k]}</option>`).join('');
-    const presetSubj = subj || (presetCat === 'dispatch' ? 'Bio-enzyme cartridge refill request' : '');
+    const presetSubj = subj || (presetCat === 'dispatch' ? 'Drain inspection request' : '');
     const presetDesc = desc || '';
     const bg = document.createElement('div');
-    bg.className = 'modal-bg';
+    bg.className = 'form-page';
     bg.innerHTML = `
       <div class="modal">
-        <div class="modal-h"><h2>New support ticket</h2><button onclick="this.closest('.modal-bg').remove()" aria-label="Close">×</button></div>
+        <div class="modal-h"><h1>Message FlowGuard</h1></div>
         <div class="modal-b">
-          <div class="field"><label>Subject</label><input id="tk-subj" value="${presetSubj}" placeholder="Brief summary of your request"></div>
+          <div class="field"><label>Subject</label><input id="tk-subj" value="${UI.esc(presetSubj)}" placeholder="Brief summary of your request"></div>
           <div class="field"><label>Category</label><select id="tk-cat">${opts}</select></div>
           <div class="field"><label>Priority</label>
-            <select id="tk-prio"><option value="low" ${prio==='low'?'selected':''}>Low</option><option value="normal" ${!prio||prio==='normal'?'selected':''}>Normal</option><option value="high" ${prio==='high'?'selected':''}>High</option><option value="urgent" ${prio==='urgent'?'selected':''}>Urgent — flooding now</option></select></div>
-          <div class="field"><label>Details</label><textarea id="tk-desc" rows="4" placeholder="Describe the issue or request…">${presetDesc}</textarea></div>
+            <select id="tk-prio"><option value="low" ${prio==='low'?'selected':''}>Low</option><option value="normal" ${!prio||prio==='normal'?'selected':''}>Normal</option><option value="high" ${prio==='high'?'selected':''}>High</option><option value="urgent" ${prio==='urgent'?'selected':''}>Urgent — immediate review requested</option></select></div>
+          <div class="field"><label>Details</label><textarea id="tk-desc" rows="4" placeholder="Describe the issue or request…">${UI.esc(presetDesc)}</textarea></div>
           <div id="tk-err" class="hint hidden c-alert"></div>
         </div>
         <div class="modal-f">
-          <button class="btn ghost" onclick="this.closest('.modal-bg').remove()">Cancel</button>
+          <button class="btn ghost" onclick="App.go('support')">Cancel</button>
           <button class="btn" onclick="App.submitTicket(this)">Submit ticket</button>
         </div>
       </div>`;
-    document.body.appendChild(bg);
-    bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
+    mountPage(view,bg);
   }
   async function submitTicket(btn) {
     const g = id => document.getElementById(id);
@@ -355,7 +397,7 @@ const App = (function () {
       await apiRequest('/tickets', { method: 'POST', body: {
         subject, description, category: g('tk-cat').value, priority: g('tk-prio').value
       }});
-      document.querySelector('.modal-bg').remove();
+      ticketPrefill={};
       UI.toast('Ticket submitted — our team will respond soon', 'success');
       go('support');
     } catch (e) {
@@ -395,18 +437,35 @@ const App = (function () {
 
   // ---- Demo toggle (reuses existing mechanism) ----
   async function toggleDemo(on) {
+    if(window.PortalPreview){UI.toast('Local design review uses sample data; no live mode is available here.','info');go(current);return;}
     await Demo.set(on);
     UI.toast(on ? 'Demo mode on — showing sample data' : 'Demo mode off', 'info');
     go(current); // re-render current screen with new data source
   }
 
-  // ---- Register property modal ----
+  // Forms are full workspace pages; only confirmations use overlays.
+  function mountPage(view,page){
+    page.querySelector('.modal').className='form-page-panel';
+    page.querySelector('.modal-h').className='top form-page-heading';
+    page.querySelector('.modal-b').className='form-page-body';
+    page.querySelector('.modal-f').className='form-page-actions';
+    if(!view.isConnected)return;
+    view.replaceChildren(page);
+  }
   function openRegister(edit) {
+    go(edit?'propertyEdit':'propertyNew',edit?.property_id);
+  }
+  async function renderPropertyEditor(view,propertyId){
+    const property=Demo.isOn()?Demo.data.properties.find(p=>p.property_id===propertyId):(await apiRequest('/properties/'+encodeURIComponent(propertyId))).data;
+    if(!property)throw new Error('Property not found');
+    renderPropertyForm(view,property);
+  }
+  function renderPropertyForm(view,edit) {
     const bg = document.createElement('div');
-    bg.className = 'modal-bg';
+    bg.className = 'form-page';
     bg.innerHTML = `
       <div class="modal modal-wide">
-        <div class="modal-h"><h2>${edit ? 'Edit property details' : 'Register a property'}</h2><button onclick="this.closest('.modal-bg').remove()" aria-label="Close">×</button></div>
+        <div class="modal-h"><h1>${edit ? 'Edit property details' : 'Register a property'}</h1></div>
         <div class="modal-b">
 
           <div class="form-section-t">Property details</div>
@@ -461,12 +520,11 @@ const App = (function () {
           <div id="rg-err" class="hint hidden c-alert"></div>
         </div>
         <div class="modal-f">
-          <button class="btn ghost" onclick="this.closest('.modal-bg').remove()">Cancel</button>
+          <button class="btn ghost" onclick="App.go('${edit?'propertyDetail':'properties'}'${edit?",'"+UI.jsq(edit.property_id)+"'":''})">Cancel</button>
           <button class="btn" id="rg-submit" ${edit ? `data-edit="${edit.property_id}"` : ''} onclick="App.submitRegister(this)">${edit ? 'Save changes' : 'Submit property'}</button>
         </div>
       </div>`;
-    document.body.appendChild(bg);
-    bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
+    mountPage(view,bg);
     if (edit) {
       const set = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
       set('rg-name', edit.property_name);
@@ -489,18 +547,7 @@ const App = (function () {
   }
 
   // Edit an existing property — loads current values then opens the form prefilled
-  async function openEditProperty(propertyId) {
-    if (Demo.isOn()) {
-      const p = Demo.data.properties.find(x => x.property_id === propertyId);
-      if (p) openRegister(p);
-      return;
-    }
-    try {
-      const r = await apiRequest(`/properties/${propertyId}`);
-      if (r && r.data) openRegister(r.data);
-      else UI.toast("Couldn't load property details", 'error');
-    } catch (_) { UI.toast("Couldn't load property details", 'error'); }
-  }
+  function openEditProperty(propertyId) { go('propertyEdit',propertyId); }
 
   async function submitRegister(btn) {
     const g = id => document.getElementById(id);
@@ -549,14 +596,12 @@ const App = (function () {
           contact_phone: body.contactPhone,
           preferred_inspection_date: body.preferredInspectionDate, preferred_inspection_time: body.preferredInspectionTime,
         });
-        document.querySelector('.modal-bg').remove();
         UI.toast('Property updated (demo)', 'success');
         openProperty(editId);
         return;
       }
       if (editId) {
         await apiRequest(`/properties/${editId}`, { method: 'PUT', body });
-        document.querySelector('.modal-bg').remove();
         UI.toast('Property updated', 'success');
         openProperty(editId);
         return;
@@ -565,7 +610,6 @@ const App = (function () {
       // They now have a real property — step out of the sample data we turned on
       // at signup so the dashboard reflects their actual state.
       if (Demo.isOn() && Demo.isAuto()) await Demo.setAuto(false);
-      document.querySelector('.modal-bg').remove();
       UI.toast('Property registered', 'success');
       go('properties');
     } catch (e) {
@@ -631,14 +675,13 @@ const App = (function () {
   // ---- Save platform settings (end) ----
   // ---- Client-portal RBAC (mirrors backend utils/clientPermissions.js) ----
   // Permissions come from /profile (merged into the cached user by refreshUser).
-  // Fail OPEN only for legacy sessions that predate roles (no permissions array at
-  // all) so existing single-seat owners aren't locked out before they re-auth.
+  // Missing permission lists grant access only to explicitly identified account owners.
   function can(perm) {
     const u = Auth.getUser() || {};
-    if (!Array.isArray(u.permissions)) return true;   // legacy session — treat as owner
+    if (!Array.isArray(u.permissions)) return u.is_account_owner === true;   // explicit owner fallback
     return u.permissions.includes(perm);
   }
-  function myRoleLabel() { const u = Auth.getUser() || {}; return u.client_role_label || (u.is_account_owner ? 'Platform admin' : null); }
+  function myRoleLabel() { const u = Auth.getUser() || {}; return u.client_role_label || (u.is_account_owner ? 'Account owner' : null); }
 
   // Show/hide nav + elements by permission. Elements can declare data-perm="key".
   function applyPermissions() {
@@ -647,7 +690,7 @@ const App = (function () {
       billing: 'view_billing', team: 'manage_team',
       monitoring: 'view_monitoring', forecast: 'view_monitoring',
       alerts: 'view_alerts', reports: 'view_reports',
-      properties: 'manage_properties',
+      properties: 'manage_properties', propertyDetail:'manage_properties', sensorDetail:'view_monitoring',
     };
     document.querySelectorAll('.rail .navbtn[data-tab]').forEach(b => {
       const need = navPerm[b.dataset.tab];
@@ -666,6 +709,7 @@ const App = (function () {
     const name = document.getElementById('meName');
     if (av) av.textContent = initials;
     if (name) name.textContent = (u.fullName || u.full_name || 'Account').split(' ')[0];
+    refreshPlatformHeader();
     applyPermissions();
   }
 
@@ -676,7 +720,7 @@ const App = (function () {
       window.location.href = 'login.html'; return;
     }
     // theme: remember last
-    applyTheme(localStorage.getItem('flowguard_theme') || 'light');
+    applyTheme(localStorage.getItem('flowguard_theme') || 'dark');
     setMe();
 
     // nav wiring (labeled sidebar buttons + any [data-tab] elsewhere)
@@ -729,7 +773,12 @@ const App = (function () {
     const raw = (location.hash || '').replace(/^#/, '');
     if (!raw) { go('overview'); return; }
     const [seg, id] = raw.split('/');
-    const detailMap = { property: 'propertyDetail', sensor: 'sensorDetail', ticket: 'ticketDetail', report: 'reportDetail' };
+    if(seg==='service-request'&&id){go('services',decodeURIComponent(id));return;}
+    if(seg==='services'){go('services');return;}
+    if(seg==='invoice'&&id){go('invoiceDetail',decodeURIComponent(id));return;}
+    if(seg==='property-edit'&&id){go('propertyEdit',decodeURIComponent(id));return;}
+    if(['propertyNew','supportNew','documentPreview'].includes(seg)){go(seg);return;}
+    const detailMap = { alert:'alertDetail', property: 'propertyDetail', sensor: 'sensorDetail', ticket: 'ticketDetail', report: 'reportDetail' };
     if (detailMap[seg] && id) { go(detailMap[seg], decodeURIComponent(id)); return; }
     // plain screens — only if the screen actually exists, else overview
     if (Screens[seg]) { go(seg); return; }
@@ -771,7 +820,7 @@ const App = (function () {
     } catch (_) { /* keep cached */ }
   }
 
-  return { go, openProperty, openReport, openEditProperty, activeProperty, setActiveProperty, setFcRange, openSensor, setSensorRange, monSearch, monFilter, monMetric, viewReport, downloadReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings, changePassword,
+  return { go, openDocumentPage,openProperty, openReport, openEditProperty, activeProperty, setActiveProperty, setFcRange, openSensor, setSensorRange, monSearch, monFilter, monMetric, viewReport, downloadReport, toggleTheme, toggleDemo, openRegister, submitRegister, saveProfile, saveSettings, changePassword,
            openTicketDetail, sendReply, openInvoice, notifyPayment, downloadInvoicePdf, selectServices, confirmServices, deactivateAccount, confirmDeactivate,
            setNotifFilter, markRead, markAllRead, deleteNotif, setTicketFilter, openTicket, submitTicket,
            can, inviteTeammate, setMemberRole, toggleMember, init };
