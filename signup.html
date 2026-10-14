@@ -8,8 +8,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script>try{document.documentElement.dataset.theme=localStorage.getItem('flowguard_theme')==='light'?'light':'dark';}catch{}</script>
 <link rel="stylesheet" href="login.css?v=2">
-<link rel="stylesheet" href="signup.css?v=1">
+<link rel="stylesheet" href="signup.css?v=geo2">
 <link rel="stylesheet" href="auth-density.css?v=1">
+<script src="js/nigeria-states.js?v=geo1"></script>
 </head>
 <body>
 
@@ -185,10 +186,14 @@
         </div>
 
         <div class="ff">
-          <label>Location</label>
+          <label for="su-state">State</label>
+          <div class="wrap-in"><select id="su-state" autocomplete="address-level1" required aria-label="Property state"><option value="">Select state</option></select></div>
+        </div>
+        <div class="ff">
+          <label for="su-location">Street address / city or locality</label>
           <div class="wrap-in">
             <svg class="lead" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
-            <input type="text" id="su-location" placeholder="e.g. Lekki, Lagos">
+            <input type="text" id="su-location" autocomplete="street-address" placeholder="e.g. 12 Example Road, Ologolo" maxlength="500">
           </div>
         </div>
 
@@ -424,6 +429,7 @@
   const S = { name:'', email:'', password:'', phone:'', emailToken:'', verifyToken:'', org:'', title:'', property:'', location:'', ptype:'', psize:'', concern:'', source:'', consent:false, consentAt:'' };
 
   const $ = id => document.getElementById(id);
+  FGStates.populate($('su-state'));
   function showErr(n, msg){ const e=$('err'+n); if(!e) return; e.innerHTML='<svg class="fe-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>'; e.appendChild(document.createTextNode(msg==null?'':String(msg))); e.classList.add('show'); }
   function clearErr(n){ const e=$('err'+n); if(e) e.classList.remove('show'); }
   const emailOk = v => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v);
@@ -538,9 +544,11 @@
     clearErr('Prop');
     const pn = $('su-propname').value.trim();
     const loc = $('su-location').value.trim();
+    const state = FGStates.canonical($('su-state').value);
     if (pn.length < 2) return showErr('Prop', 'Please enter your property or estate name.');
     if (loc.length < 2) return showErr('Prop', 'Please enter the property location.');
-    S.property = pn; S.location = loc;
+    if (!state) return showErr('Prop', 'Please select the property state.');
+    S.property = pn; S.location = loc; S.state = state;
     S.ptype = $('su-ptype').value; S.psize = $('su-psize').value.trim(); S.concern = $('su-concern').value.trim();
     $('rv-name').textContent = S.name;
     $('rv-email').textContent = S.email;
@@ -548,7 +556,7 @@
     $('rv-org').textContent = S.org;
     $('rv-title').textContent = S.title || '—';
     $('rv-property').textContent = S.property;
-    $('rv-location').textContent = S.location;
+    $('rv-location').textContent = S.location + ', ' + S.state;
     $('rv-ptype').textContent = S.ptype || '—';
     goTo(6);
   }
@@ -567,7 +575,8 @@
           fullName: S.name, email: S.email, phone: S.phone, password: S.password,
           company: S.org, jobTitle: S.title, emailVerifyToken: S.verifyToken,
           source: S.source, consent: S.consent, consentAt: S.consentAt,
-          property: { name: S.property, location: S.location, type: S.ptype, size: S.psize, primaryConcern: S.concern }
+          locationSchema: 'ng-states-v1',
+          property: { name: S.property, location: S.location, state: S.state, type: S.ptype, size: S.psize, primaryConcern: S.concern }
         })
       });
       const d = await r.json();

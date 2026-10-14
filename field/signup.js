@@ -1,6 +1,9 @@
 var API='https://api.flowguard.ng/api/v1';
   var S={email:'',token:'',verifyToken:''};
   var $=function(id){return document.getElementById(id);};
+  $('coverage-options').innerHTML=FGStates.names.map(function(state){return '<label><input type="checkbox" name="coverageStates" value="'+state+'"><span>'+state+'</span></label>';}).join('');
+  function selectedCoverage(){return Array.from(document.querySelectorAll('input[name="coverageStates"]:checked')).map(function(input){return input.value;});}
+  $('coverage-options').addEventListener('change',function(){var states=selectedCoverage();$('coverage-summary').textContent=states.length?states.join(', '):'Select states you serve';});
   function msg(id,txt,type){var e=$(id);e.className='msg '+(type||'error')+' show';e.innerHTML=(type==='ok'?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>')+'<span></span>';e.querySelector('span').textContent=txt;}
   function clr(id){$(id).className='msg';}
   function show(step){['s1','s2','s3'].forEach(function(s){$(s).classList.toggle('on',s===step);var progress=$('progress-'+s);if(s===step)progress.setAttribute('aria-current','step');else progress.removeAttribute('aria-current');});window.scrollTo(0,0);$(step).querySelector('h1').focus();if(step==='s2')otp[0].focus();}
@@ -10,17 +13,17 @@ var API='https://api.flowguard.ng/api/v1';
     event.preventDefault();if($('b1').disabled)return;
     clr('m1');
     var company=$('f-company').value.trim(),name=$('f-name').value.trim(),email=$('f-email').value.trim().toLowerCase(),
-        phone=$('f-phone').value.trim(),coverage=$('f-coverage').value.trim(),pass=$('f-pass').value,
+        phone=$('f-phone').value.trim(),coverageStates=selectedCoverage(),coverage=coverageStates.join(', '),pass=$('f-pass').value,
         services=Array.from(document.querySelectorAll('input[name="services"]:checked')).map(function(o){return o.value;});
     if(company.length<2) return msg('m1','Enter your company name.');
     if(name.length<2) return msg('m1','Enter a contact person.');
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return msg('m1','Enter a valid work email.');
     if(phone.replace(/\D/g,'').length<7) return msg('m1','Enter a valid phone number.');
-    if(!coverage) return msg('m1','Enter your coverage area.');
+    if(!coverageStates.length||coverageStates.some(function(state){return !FGStates.canonical(state);})) return msg('m1','Select at least one coverage state.');
     if(!services.length) return msg('m1','Select at least one service.');
     if(pass.length<8||!/\d/.test(pass)) return msg('m1','Password needs 8+ characters and a number.');
     if(!$('f-consent').checked) return msg('m1','Please accept the Terms and Privacy Policy.');
-    S={email:email,company:company,name:name,phone:phone,coverage:coverage,services:services,pass:pass};
+    S={email:email,company:company,name:name,phone:phone,coverage:coverage,coverageStates:coverageStates,services:services,pass:pass};
     load($('b1'),true,'Sending verification code…');
     try{
       var r=await fetch(API+'/auth/send-email-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})});
@@ -51,7 +54,7 @@ var API='https://api.flowguard.ng/api/v1';
       S.verifyToken=vd.data.verifyToken;
       var r=await fetch(API+'/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
         accountType:'service_provider', company:S.company, fullName:S.name, contactPerson:S.name,
-        email:S.email, phone:S.phone, coverageArea:S.coverage, serviceTypes:S.services,
+        email:S.email, phone:S.phone, coverageArea:S.coverage, coverageStates:S.coverageStates, locationSchema:'ng-states-v1', serviceTypes:S.services,
         password:S.pass, emailVerifyToken:S.verifyToken
       })});
       var d=await r.json();

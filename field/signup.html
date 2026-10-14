@@ -11,9 +11,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script>try{document.documentElement.dataset.theme=localStorage.getItem('flowguard_theme')==='light'?'light':'dark';}catch{}</script>
 <link rel="stylesheet" href="../login.css?v=2">
-<link rel="stylesheet" href="signup.css?v=1">
+<link rel="stylesheet" href="signup.css?v=geo2">
 <link rel="stylesheet" href="../auth-density.css?v=1">
-<script src="signup.js?v=1" defer></script>
+<script src="../js/nigeria-states.js?v=geo1" defer></script>
+<script src="signup.js?v=geo1" defer></script>
 </head>
 <body>
 <header class="util-bar">
@@ -44,7 +45,7 @@
 <div class="row"><div class="ff"><label for="f-name">Contact person</label><input id="f-name" name="name" type="text" placeholder="Your full name" autocomplete="name" required></div><div class="ff"><label for="f-phone">Phone number</label><input id="f-phone" name="phone" type="tel" placeholder="0803 000 0000" autocomplete="tel" required></div></div>
 <div class="ff"><label for="f-email">Work email</label><input id="f-email" name="email" type="email" placeholder="you@company.com" autocomplete="email" required></div>
 <h2 class="section-title">Where you work &amp; what you do</h2>
-<div class="ff"><label for="f-coverage">Service coverage area</label><input id="f-coverage" name="coverage" type="text" placeholder="e.g. Lekki, Ajah, Victoria Island" autocomplete="off" required aria-describedby="coverage-hint"><p class="hint" id="coverage-hint">Add the areas or LGAs where your team operates.</p></div>
+<div class="ff"><label id="coverage-label">Service coverage states</label><details id="f-coverage" class="coverage-dropdown" aria-labelledby="coverage-label"><summary id="coverage-summary">Select states you serve</summary><div id="coverage-options" class="coverage-options"></div></details><p class="hint" id="coverage-hint">Select one or more states. State coverage does not assign your team to any estate.</p></div>
 <fieldset id="f-services" aria-describedby="services-hint"><legend>Services offered</legend><p class="hint" id="services-hint">Select all that apply.</p><div class="service-options"><label class="service-option" for="service-0"><input id="service-0" type="checkbox" name="services" value="Inspection"><span>Inspection</span></label>
 <label class="service-option" for="service-1"><input id="service-1" type="checkbox" name="services" value="Drain cleaning"><span>Drain cleaning</span></label>
 <label class="service-option" for="service-2"><input id="service-2" type="checkbox" name="services" value="Blockage response"><span>Blockage response</span></label>
