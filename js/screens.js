@@ -1218,12 +1218,7 @@ const Screens = (function () {
       return PortalModel.sampleForecast(horizon,vulnerability).days;
     } else {
       const cur = resolveActive(allProps);
-      const sel = (allProps || []).find(p => p.property_id === cur);
-      const {lat,lon}=PortalModel.coordinates(allProps,cur);
-      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=precipitation_sum,precipitation_probability_max,weather_code&timezone=Africa%2FLagos&forecast_days=${horizon}`);
-      const j = await r.json();
-      const wc = (j.daily && j.daily.weather_code) || [];
-      days = j.daily.time.map((t, i) => ({ date: new Date(t), mm: j.daily.precipitation_sum[i] || 0, prob: j.daily.precipitation_probability_max[i] || 0, code: wc[i] }));
+      days = await ClientEstateWeather.daily(cur,horizon);
     }
     return days.map(d => {
       const mmFactor = Math.min(100, d.mm * 4);
@@ -1268,8 +1263,8 @@ const Screens = (function () {
       el.innerHTML = `
         <div class="panel panel-pad">
           <div class="row-between" style="margin-bottom:12px">
-            <h3 style="margin:0">The week ahead</h3>
-            <span class="muted" style="font-size:12px">7-day</span>
+            <h3 style="margin:0">${rows.length===7?'The week ahead':'The days ahead'}</h3>
+            <span class="muted" style="font-size:12px">${rows.length}-day</span>
           </div>
           <p class="weather-takeaway">${worst.level==='high'?'Prepare before '+UI.esc(preparationDay.date.toLocaleDateString('en-GB',{weekday:'long'}))+'.':'Keep an eye on the weather.'}</p><p class="forecast-caption">${worst.level==='high'?'Higher risk starts then. Arrange a drain check ahead of time.':'Check back for changes before making plans.'}</p>
           <div class="fc-mini">
@@ -1280,16 +1275,17 @@ const Screens = (function () {
             </div>`).join('')}
           </div>
           <div class="row-between" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
-            <span class="muted" style="font-size:12px">Risk outlook, not a guarantee of flooding.</span>
+            <span class="muted" style="font-size:12px">${Demo.isOn()?'Illustrative sample.':'Data: WeatherAPI.com. '}Risk outlook, not a guarantee of flooding.</span>
             <a class="portal-text-link" href="#forecast">Full forecast →</a>
           </div>
+          ${Demo.isOn()?'':'<p class="forecast-caption">Weather is general guidance and may be inaccurate locally. Do not rely on it alone for personal safety or emergency decisions; consult official meteorological services and relevant authorities.</p>'}
         </div>
       `;
     } catch (e) { el.innerHTML = '<div class="panel panel-pad"><h3>Forecast unavailable</h3><p>'+UI.esc(e.message)+'</p></div>'; }
   }
 
   // ---------------- RISK FORECAST ----------------
-  let _fcRange = 7; // days; Open-Meteo free forecast caps at 16
+  let _fcRange = 3; // Live WeatherAPI free plan: up to three calendar days.
   function setFcRange(d) { _fcRange = d; App.go('forecast'); }
 
   // 48-hour hourly risk curve — color-graded with peak-risk window
@@ -1299,11 +1295,7 @@ const Screens = (function () {
       hours = PortalModel.sampleForecast(3,vulnerability).hours;
     } else {
       const cur = resolveActive(allProps);
-      const sel = (allProps || []).find(p => p.property_id === cur);
-      const {lat,lon}=PortalModel.coordinates(allProps,cur);
-      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation,precipitation_probability&timezone=Africa%2FLagos&forecast_hours=48`);
-      const j = await r.json();
-      hours = j.hourly.time.map((t, i) => ({ t: new Date(t), mm: j.hourly.precipitation[i] || 0, prob: j.hourly.precipitation_probability[i] || 0 }));
+      hours = await ClientEstateWeather.hourly(cur,48);
     }
     const pts = hours.map(hh => {
       if(Demo.isOn())return hh;
@@ -1360,11 +1352,12 @@ const Screens = (function () {
 
   async function forecast(view) {
     const document=UI.scopedDocument(view);
+    if(!Demo.isOn())_fcRange=3;
     const allProps = await getMyProperties();
     view.innerHTML = `
       <div class="top"><div><h1>Your weather outlook</h1><div class="sub">Know when to prepare. This is a risk outlook, not a prediction that flooding will happen.</div></div>
       <span class="seg">
-        ${[7, 14, 16].map(d => `<button class="${_fcRange === d ? 'on' : ''}" onclick="App.setFcRange(${d})">${d}d</button>`).join('')}
+        ${(Demo.isOn()?[3,7,14,16]:[3]).map(d => `<button class="${_fcRange === d ? 'on' : ''}" onclick="App.setFcRange(${d})">${d}d</button>`).join('')}
       </span></div>
       ${demoBanner()}
       <section class="forecast-intro"><p class="eyebrow">WEATHER & SITE INTELLIGENCE</p><h2>Your outlook. Before the rain.</h2><p>${UI.esc(allProps.find(p=>p.property_id===resolveActive(allProps))?.property_name||"Selected property")} · ${_fcRange}-day outlook</p></section>
@@ -1387,14 +1380,15 @@ const Screens = (function () {
     const health = computeHealth(reports, risk, alerts);
     if(!health){document.getElementById('fc-body').innerHTML=UI.state('awaiting','Insufficient site data','A condition assessment and reporting sensors are required before displaying a site risk estimate.');return;}
     const vulnerability = health ? (100 - health.score) : 45;
-    const horizon = Math.min(_fcRange, 16);
+    let horizon = Math.min(_fcRange, Demo.isOn()?16:3);
 
     let rows;
     try { rows = await computeForecastDays(horizon, allProps, vulnerability); }
-    catch (_) {
-      document.getElementById('fc-body').innerHTML = UI.state('error', "Couldn't load the weather forecast", 'Please check your connection and try again.', 'Retry', "onclick=\"App.go('forecast')\"");
+    catch (error) {
+      document.getElementById('fc-body').innerHTML = UI.state('error', "Couldn't load the weather forecast", error.message||'Please try again.', 'Retry', "onclick=\"App.go('forecast')\"");
       return;
     }
+    horizon=rows.length;
     const today = rows[0];
     const worst = rows.reduce((x, y) => y.chance > x.chance ? y : x, rows[0]);
     const dayLbl = d => d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -1458,7 +1452,7 @@ const Screens = (function () {
           ${recs.map(r => `<div style="padding:11px 0;border-bottom:1px solid var(--line)"><b style="font-size:13px">${r.t}</b><div class="muted" style="margin:3px 0 8px;line-height:1.5">${r.d}</div>${r.cta ? `<button class="btn sm" onclick="${r.cta[1]}">${r.cta[0]}</button>` : ''}</div>`).join('')}
         </div>
       </div>
-      <p class="muted" style="margin-top:14px">How this works: each day blends your drainage health (40%), forecast rainfall volume (45%), and rain probability (15%). ${Demo.isOn()?'Forecast data: illustrative local sample.':'Weather source: Open-Meteo; check supplied forecast timestamps.'} This is not a calibrated flood probability; weather and site data may be incomplete.</p>`;
+      <p class="muted" style="margin-top:14px">How this works: each day blends your drainage health (40%), forecast rainfall volume (45%), and rain probability (15%). ${Demo.isOn()?'Forecast data: illustrative local sample.':'Weather data: <a href="https://www.weatherapi.com/" target="_blank" rel="noopener noreferrer">WeatherAPI.com</a> · free plan, up to 3 days. Calendar-day rainfall is an estimate, not an estate rain-gauge reading.'} This is not a calibrated flood probability; weather and site data may be incomplete. Weather is general guidance and may be inaccurate locally. Do not rely on it alone for personal safety or emergency decisions; consult official meteorological services and relevant authorities.</p>`;
     try { document.getElementById('fc-hourly').innerHTML = await hourlyRiskChart(allProps, vulnerability); } catch (e) { document.getElementById('fc-hourly').innerHTML='<p class="record-context">Hourly forecast unavailable: '+UI.esc(e.message)+'</p>'; }
     if (!Demo.isOn()) renderNearTerm(document,resolveActive(allProps));
   }
